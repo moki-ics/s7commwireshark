@@ -34,7 +34,7 @@
 
 
 /* TODO:
- * Redefines from main-file, must be corrected! 
+ * Redefines from main-file, has to be corrected! 
  */
 
 
@@ -79,7 +79,6 @@ static const value_string item_return_valuenames[] = {
 	{ S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH,		"Write data size error" },
 	{ 0,								NULL }
 };
-
 
 static gint ett_s7comm_szl = -1;
 
@@ -469,11 +468,11 @@ s7comm_register_szl_types(int proto)
 		{ "SZL-Index",		"s7comm.data.userdata.szl_index", FT_UINT16, BASE_HEX, NULL, 0x0,
 		  "SZL-Index (System Status List)", HFILL }},
 		{ &hf_s7comm_userdata_szl_tree,
-		{ "SZL data",						"s7comm.data.userdata.szl_data", FT_NONE,	BASE_NONE, NULL, 0x0,
+		{ "SZL data",		"s7comm.data.userdata.szl_data", FT_NONE,	BASE_NONE, NULL, 0x0,
       	  "SZL data", HFILL }},
 		/* Raw and unknown data */
 		{ &hf_s7comm_userdata_szl_data,
-		{ "SZL data",			"s7comm.param.userdata.szl_data", FT_BYTES, BASE_NONE, NULL, 0x0,
+		{ "SZL data",		"s7comm.param.userdata.szl_data", FT_BYTES, BASE_NONE, NULL, 0x0,
 		  "SZL data", HFILL }},
 	};
 
@@ -498,8 +497,7 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0132_0002_register(proto);
 	s7comm_szl_0132_0004_register(proto);
 
-	s7comm_szl_0424_0000_register(proto);
-	
+	s7comm_szl_0424_0000_register(proto);	
 }
 
 /*******************************************************************************************************
@@ -574,7 +572,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 					proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list count: %d", list_count);
 					/* Some SZL responses got more lists than fit one PDU (e.g. Diagnosepuffer) and must be read
 					 * out in several telegrams, so we have to check here if the list_count is above limits
-					 * of the lenght of data part. The remainding bytes will be print as raw bytes, because
+					 * of the length of data part. The remainding bytes will be print as raw bytes, because
 					 * it's not possible to decode this and following telegrams without knowing the previous requests.
 					 */
 					tbytes = 0;
@@ -697,6 +695,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
  *		W#16#0F13: only partial list header information
  * 
  *******************************************************************************************************/
+ /*----------------------------------------------------------------------------------------------------*/
 void
 s7comm_szl_0013_0000_register(int proto)
 {
@@ -769,7 +768,7 @@ s7comm_szl_0013_0000_register(int proto)
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -840,7 +839,7 @@ s7comm_szl_0111_0001_register(int proto)
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+ /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0111_idx_0001(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -897,7 +896,7 @@ s7comm_szl_0131_0001_register(int proto)
 
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0001(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1182,7 +1181,7 @@ s7comm_szl_0131_0002_register(int proto)
 
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0002(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1464,7 +1463,7 @@ s7comm_szl_0131_0003_register(int proto)
 
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0003(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1773,6 +1772,7 @@ s7comm_szl_0131_0004_register(int proto)
 	proto_register_field_array(proto, hf, array_length(hf));
 }
 
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1883,7 +1883,7 @@ s7comm_szl_0132_0002_register(int proto)
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0002(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1945,7 +1945,7 @@ s7comm_szl_0132_0004_register(int proto)
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0004(tvbuff_t *tvb,
 									proto_tree *tree, 
@@ -1970,7 +1970,6 @@ s7comm_decode_szl_id_0132_idx_0004(tvbuff_t *tvb,
 
 	return offset;
 }
-
 
 /*******************************************************************************************************
  *
@@ -2025,7 +2024,7 @@ s7comm_szl_0424_0000_register(int proto)
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
 }
-
+/*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0424_idx_0000(tvbuff_t *tvb,
 									proto_tree *tree, 

@@ -44,7 +44,7 @@
 static int proto_s7comm = -1;
 
 /* Forward declaration */
-static gboolean dissect_s7comm(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree);
+static gboolean dissect_s7comm(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);
 
 /**************************************************************************
  * Function tree of the dissect process
@@ -499,31 +499,31 @@ static const true_false_string fragment_descriptions = {
  **************************************************************************/
 static gint hf_s7comm = -1;
 static gint hf_s7comm_header = -1;
-static gint hf_s7comm_const = -1;			/* Header Byte  0 */
-static gint hf_s7comm_pdu_type = -1;		/* Header Bytes 1 */
-static gint hf_s7comm_reserved = -1;		/* Header Bytes 2, 3 */
-static gint hf_s7comm_seq_number = -1;		/* Header Bytes 4, 5 */
-static gint hf_s7comm_plength = -1;			/* Header Bytes 6, 7 */
-static gint hf_s7comm_dlength = -1;			/* Header Bytes 8, 9 */
-static gint hf_s7comm_errcode = -1;			/* Header Bytes 10, 11 only available at type 2 or 3 */
+static gint hf_s7comm_const = -1;					/* Header Byte  0 */
+static gint hf_s7comm_pdu_type = -1;				/* Header Bytes 1 */
+static gint hf_s7comm_reserved = -1;				/* Header Bytes 2, 3 */
+static gint hf_s7comm_seq_number = -1;				/* Header Bytes 4, 5 */
+static gint hf_s7comm_plength = -1;					/* Header Bytes 6, 7 */
+static gint hf_s7comm_dlength = -1;					/* Header Bytes 8, 9 */
+static gint hf_s7comm_errcode = -1;					/* Header Bytes 10, 11 only available at type 2 or 3 */
 
 static gint hf_s7comm_param = -1;
-static gint hf_s7comm_param_func = -1;		/* Parameter part: function */
-static gint hf_s7comm_param_itemcount = -1;	/* Parameter part: item count */
-static gint hf_s7comm_param_data = -1;		/* Parameter part: data */
+static gint hf_s7comm_param_func = -1;				/* Parameter part: function */
+static gint hf_s7comm_param_itemcount = -1;			/* Parameter part: item count */
+static gint hf_s7comm_param_data = -1;				/* Parameter part: data */
 static gint hf_s7comm_param_neg_pdu_length = -1;	/* Parameter part: Negotiate PDU length */
 
 /* Item data */
 static gint hf_s7comm_param_item = -1;
-static gint hf_s7comm_item_head = -1;		/* Item Header 0x12, 0x0a, 0x10, 3 Bytes */
-static gint hf_s7comm_item_transport_size = -1; /* Transport size, 1 Byte*/
-static gint hf_s7comm_item_length = -1;		/* length, 2 Bytes*/
-static gint hf_s7comm_item_db = -1;			/* DB/M/E/A, 2 Bytes */
-static gint hf_s7comm_item_area = -1;		/* Area code, 1 byte */
-static gint hf_s7comm_item_address = -1;	/* Bit adress, 3 Bytes */
+static gint hf_s7comm_item_head = -1;				/* Item Header 0x12, 0x0a, 0x10, 3 Bytes */
+static gint hf_s7comm_item_transport_size = -1; 	/* Transport size, 1 Byte*/
+static gint hf_s7comm_item_length = -1;				/* length, 2 Bytes*/
+static gint hf_s7comm_item_db = -1;					/* DB/M/E/A, 2 Bytes */
+static gint hf_s7comm_item_area = -1;				/* Area code, 1 byte */
+static gint hf_s7comm_item_address = -1;			/* Bit adress, 3 Bytes */
 
 static gint hf_s7comm_data = -1;
-static gint hf_s7comm_data_transport_size = -1;	/* unknown part, kind of "transport size"? constant 0x09, 1 byte */
+static gint hf_s7comm_data_transport_size = -1;		/* unknown part, kind of "transport size"? constant 0x09, 1 byte */
 static gint hf_s7comm_data_item = -1;
 
 static gint hf_s7comm_readresponse_data = -1;
@@ -556,12 +556,12 @@ static gint hf_s7comm_userdata_blockinfo_nonretain = -1;	/* Some flags in Block 
 
 
 /* These are the ids of the subtrees that we are creating */
-static gint ett_s7comm = -1;			/* S7 communication tree, parent of all other subtree */
-static gint ett_s7comm_header = -1;		/* Subtree for header */
-static gint ett_s7comm_param = -1;		/* Subtree for parameter */
-static gint ett_s7comm_param_item = -1;	/* Subtree for items in parameter part */
-static gint ett_s7comm_data = -1;		/* Subtree for data */
-static gint ett_s7comm_data_item = -1;	/* Subtree for an item in data part */
+static gint ett_s7comm = -1;								/* S7 communication tree, parent of all other subtree */
+static gint ett_s7comm_header = -1;							/* Subtree for header */
+static gint ett_s7comm_param = -1;							/* Subtree for parameter */
+static gint ett_s7comm_param_item = -1;						/* Subtree for items in parameter part */
+static gint ett_s7comm_data = -1;							/* Subtree for data */
+static gint ett_s7comm_data_item = -1;						/* Subtree for an item in data part */
 
 
 /* Register this protocol */
@@ -654,7 +654,7 @@ proto_register_s7comm (void)
 		  "This is the data part of S7 communication", HFILL }},
 		{ &hf_s7comm_data_transport_size,
 		{ "Transport size",				"s7comm.data.userdata.transportsize", FT_UINT8,	BASE_HEX, VALS(data_transportsizenames), 0x0,
-      	  "Data type / Transport size)", HFILL }},
+      	  "Data type / Transport size", HFILL }},
 		{ &hf_s7comm_data_item,
 		{ "Item",						"s7comm.data.item", FT_NONE, BASE_NONE, NULL, 0x0,
 		  "Item", HFILL }},
@@ -760,8 +760,9 @@ proto_register_s7comm (void)
  *******************************************************************************************************/
 static gboolean /*use a gboolean return value for a heuristic dissector, void  otherwise*/
 dissect_s7comm(tvbuff_t *tvb, 
-			   packet_info *pinfo, 
-			   proto_tree *tree)
+				packet_info *pinfo, 
+				proto_tree *tree, 
+				void *data _U_)
 {
 	proto_item *s7comm_item = NULL;
 	proto_item *s7comm_sub_item = NULL;
@@ -859,7 +860,6 @@ dissect_s7comm(tvbuff_t *tvb,
 	}
 	return TRUE;
 }
-
 
 /*******************************************************************************************************
  *
@@ -1119,6 +1119,7 @@ s7comm_decode_pdu_length_negotiation(tvbuff_t *tvb,
 	offset += 2;
 	return offset;
 }
+
 /*******************************************************************************************************
  *
  * PDU Type: Response -> Function Write  -> Data part 
@@ -1148,6 +1149,7 @@ s7comm_decode_response_write_data(tvbuff_t *tvb,
 	}
 	return offset;
 }
+
 /*******************************************************************************************************
  *
  * PDU Type: Response -> Function Read  -> Data part 
@@ -1218,6 +1220,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
 	} 
 	return offset;
 }
+
 /*******************************************************************************************************
  *
  * PDU Type: Request or Response -> Function 0x28 (PLC control functions)
@@ -1288,6 +1291,7 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 
 	return offset;
 }
+
 /*******************************************************************************************************
  *
  * PDU Type: Request or Response -> Function 0x29 (PLC control functions -> STOP)
@@ -1306,7 +1310,7 @@ s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb,
 
 	function = tvb_get_guint8( tvb, offset );
 	offset += 1;
-	/* First part is unknown */
+	/* Meaning of first 5 bytes (Part 1) is unknown */
 	proto_tree_add_text(tree, tvb, offset, 5, "Unknown 5 bytes: 0x%02x%02x%02x%02x%02x", 
 						tvb_get_guint8(tvb, offset),
 						tvb_get_guint8(tvb, offset+1),
@@ -1325,6 +1329,7 @@ s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb,
 
 	return offset;
 }
+
 /*******************************************************************************************************
  *
  * PDU Type: Request or Response -> Function 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f (block control functions)
@@ -1344,7 +1349,7 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	function = tvb_get_guint8( tvb, offset );
 	offset += 1;
 
-	/* First part is unknown */
+	/* Meaning of first 5 bytes is unknown */
 	proto_tree_add_text(tree, tvb, offset, 7, "Unknown 7 bytes: 0x%02x%02x%02x%02x%02x%02x%02x", 
 						tvb_get_guint8(tvb, offset),
 						tvb_get_guint8(tvb, offset+1),
@@ -1431,8 +1436,8 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	param_tree = proto_item_add_subtree( item, ett_s7comm_param);	
 
 	/* Try do decode some functions... 
-	* Some functions may use data that does't fit one telegram
-	*/
+	 * Some functions may use data that does't fit one telegram
+	 */
 	offset_temp = offset;	/* Save offset */
 	/* 3 bytes constant head */
 	proto_tree_add_item(param_tree, hf_s7comm_userdata_param_head, tvb, offset_temp, 3, FALSE);
@@ -1449,12 +1454,12 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	proto_tree_add_item(param_tree, hf_s7comm_userdata_param_type, tvb, offset_temp, 1, FALSE);
 
 	s7comm_info_append_str(pinfo, "Function", 
-		val_to_str(type, userdata_type_names, "Unknown type:0x%02x"));
+		val_to_str(type, userdata_type_names, "Unknown type: 0x%02x"));
 	s7comm_info_append_str(pinfo, "->", 
-		val_to_str(funcgroup, userdata_functiongroup_names, "Unknown function:0x%02x"));
+		val_to_str(funcgroup, userdata_functiongroup_names, "Unknown function: 0x%02x"));
 
-	proto_item_append_text(param_tree, ": (%s)", val_to_str(type, userdata_type_names, "Unknown type:0x%02x"));
-	proto_item_append_text(param_tree, " ->(%s)", val_to_str(funcgroup, userdata_functiongroup_names, "Unknown function:0x%02x"));
+	proto_item_append_text(param_tree, ": (%s)", val_to_str(type, userdata_type_names, "Unknown type: 0x%02x"));
+	proto_item_append_text(param_tree, " ->(%s)", val_to_str(funcgroup, userdata_functiongroup_names, "Unknown function: 0x%02x"));
 
 	/* Low nibble function group  */
 	proto_tree_add_item(param_tree, hf_s7comm_userdata_param_funcgroup, tvb, offset_temp, 1, FALSE);
@@ -1542,7 +1547,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
 		offset += 1;
 		/* Not definitely known part, kind of "transport size"? constant 0x09, 1 byte 
 		 * The position is the same as in a data response/write telegram,
-		*/
+		 */
 		tsize = tvb_get_guint8( tvb, offset );
 		proto_tree_add_uint(data_tree, hf_s7comm_data_transport_size, tvb, offset, 1, tsize);
 		offset += 1;
@@ -1672,7 +1677,6 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
  * PDU Type: User Data -> Function group 1 -> Programmer commands -> Variable table -> request
  *
  *******************************************************************************************************/
-
 static guint32
 s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb, 
 						  guint32 offset, 
@@ -1786,7 +1790,6 @@ s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb,
  * PDU Type: User Data -> Function group 1 -> Programmer commands -> Variable table -> response
  *
  *******************************************************************************************************/
-
 static guint32
 s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb, 
 						  guint32 offset, 
@@ -1849,7 +1852,6 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 /*******************************************************************************************************
  *
  * PDU Type: User Data -> Function group 2 -> cyclic data
- * userdata_cyclic_subfunc_names
  *
  *******************************************************************************************************/
 static guint32
@@ -2040,7 +2042,6 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					 * Standard FC/FC/DB -> 0x0101        0x0100 -> dieses Bit (8) bei FBs für Multiinstanzfähigkeit?
 					 * SFC:  0x0009  SFB: 0x0109 or 0x010d (e.g. SFB8, 414)
 					 */
-
 				
 					proto_tree_add_item(data_tree, hf_s7comm_userdata_blockinfo_flags, tvb, offset, 1, FALSE);
 					proto_tree_add_item(data_tree, hf_s7comm_userdata_blockinfo_linked, tvb, offset, 1, FALSE);
@@ -2111,9 +2112,6 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 	return offset;
 }
 
-
-
-
 /*******************************************************************************************************
  *
  * PDU Type: User Data -> Function group 5 -> Security functions?
@@ -2139,7 +2137,6 @@ s7comm_decode_ud_security_subfunc(tvbuff_t *tvb,
 	}
 	return offset;
 }
-
 
 /*******************************************************************************************************
  *

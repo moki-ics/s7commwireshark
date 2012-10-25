@@ -30,9 +30,9 @@
 #include <string.h>
 #include <time.h>
 
-/**************************************************************************
+/*******************************************************************************************************
  * Weekday names in DATE_AND_TIME
- */
+ *******************************************************************************************************/
 static const value_string weekdaynames[] = {
 	{ 0,								"Undefined" },
 	{ 1,								"Sunday" },
@@ -77,7 +77,6 @@ s7comm_info_append_uint16hex(packet_info *pinfo, const char *abbrev, guint16 val
   if (check_col(pinfo->cinfo, COL_INFO))
     col_append_fstr(pinfo->cinfo, COL_INFO, " %s=0x%04x", abbrev, val);
 }
-
 
 /*******************************************************************************************************
  *
@@ -124,7 +123,7 @@ s7comm_guint8_from_bcd(guint8 i)
 /*******************************************************************************************************
  *
  * Helper for time functions
- * Add a BCD coded timestamp (10 Bytes lenght) to tree
+ * Add a BCD coded timestamp (10 Bytes length) to tree
  *
  *******************************************************************************************************/
 guint32
