@@ -1,7 +1,7 @@
 # Makefile.am
 # Automake file for H.223 plugin
 #
-# $Id: Makefile.am 21961 2007-05-27 18:35:55Z guy $
+# $Id$
 #
 # Wireshark - Network traffic analyzer
 # By Gerald Combs <gerald@wireshark.org>
