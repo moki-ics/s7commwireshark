@@ -809,7 +809,7 @@ dissect_s7comm(tvbuff_t *tvb,
 	if (check_col(pinfo->cinfo, COL_INFO)) {
 		col_add_fstr(pinfo->cinfo, COL_INFO, "%d > %d PDU-Type:[%s]",
 				pinfo->srcport, pinfo->destport,			
-				val_to_str(pdu_type, pdutypenames, "Unknown PDU-Type:0x%02x")
+				val_to_str(pdu_type, pdutypenames, "Unknown PDU-Type: 0x%02x")
 				);
 	}
 	
@@ -828,7 +828,7 @@ dissect_s7comm(tvbuff_t *tvb,
 
 		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_pdu_type, tvb, offset, 1, pdu_type);
 		/* Show pdu type beside the header tree */
-		proto_item_append_text(s7comm_header_tree, ": (%s)", val_to_str(pdu_type, pdutypenames, "Unknown PDU Type:0x%02x"));
+		proto_item_append_text(s7comm_header_tree, ": (%s)", val_to_str(pdu_type, pdutypenames, "Unknown PDU Type: 0x%02x"));
 		offset += 1;
 		/* Reserved part */
 		proto_tree_add_item(s7comm_header_tree, hf_s7comm_reserved, tvb, offset, 2, FALSE);
@@ -895,11 +895,11 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 		function = tvb_get_guint8( tvb, offset );
 		/* add param.function to info column */
 		if (check_col(pinfo->cinfo, COL_INFO)) {
-			col_append_fstr(pinfo->cinfo, COL_INFO, " Function:[%s]", val_to_str(function, param_functionnames, "Unknown function:0x%02x"));
+			col_append_fstr(pinfo->cinfo, COL_INFO, " Function:[%s]", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
 		}
 		proto_tree_add_uint(param_tree, hf_s7comm_param_func, tvb, offset, 1, function);
 		/* show param.function code at the tree */
-		proto_item_append_text(param_tree, ": (%s)", val_to_str(function, param_functionnames, "Unknown function:0x%02x"));
+		proto_item_append_text(param_tree, ": (%s)", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
 		offset += 1;
 
 		if (pdu_type == S7COMM_PDU_TYPE_REQUEST) {
@@ -1094,7 +1094,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		proto_item_append_text(item, " %d)", address);
 	} else {
 		proto_item_append_text(item, " %d.%d ", bytepos, bitpos);	
-		proto_item_append_text(item, val_to_str(t_size, item_transportsizenames, "Unknown transport size :0x%02x"));
+		proto_item_append_text(item, val_to_str(t_size, item_transportsizenames, "Unknown transport size: 0x%02x"));
 		proto_item_append_text(item, " %d)", len);
 	}
 	
@@ -1148,7 +1148,7 @@ s7comm_decode_response_write_data(tvbuff_t *tvb,
 		/* Insert a new tree for every item */
 		item = proto_tree_add_item( tree, hf_s7comm_data_item, tvb, offset, 1, FALSE );
 		item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
-		proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code:0x%02x"));
+		proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
 		proto_tree_add_uint(item_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
 		offset += 1;
 	}
@@ -1205,7 +1205,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
 		/* Insert a new tree for every item */
 		item = proto_tree_add_item( tree, hf_s7comm_data_item, tvb, offset, len + head_len, FALSE );
 		item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
-		proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code:0x%02x"));
+		proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
 
 		proto_tree_add_uint(item_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
 		proto_tree_add_uint(item_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);	
@@ -1218,7 +1218,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
 					tvb_get_ptr (tvb, offset, len));
 			offset += len;			
 			if (len != len2) {
-					proto_tree_add_text(item_tree, tvb, offset, 1 , "Fill byte: 0x%02x", tvb_get_guint8( tvb, offset ));
+					proto_tree_add_text(item_tree, tvb, offset, 1 , "Padding byte: 0x%02x", tvb_get_guint8( tvb, offset ));
 					offset += 1;
 			}
 		}
@@ -1274,9 +1274,9 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 		for (i = 0; i < count; i++) {
 			/* First byte of block type is every time '0' */
 			proto_tree_add_text(tree, tvb, offset, 2, "Block type: %s", 
-					val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type:0x%02x"));
+					val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
 			s7comm_info_append_str(pinfo, "Type", 
-				val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type:0x%02x"));
+				val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
 			offset += 2;
 			proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", tvb_get_ephemeral_string(tvb, offset, 5));
 			s7comm_info_append_str(pinfo, "No.", tvb_get_ephemeral_string(tvb, offset, 5));
@@ -1378,9 +1378,9 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	offset += 1;
 	/* First byte of block type is every time '0' */
 	proto_tree_add_text(tree, tvb, offset, 2, "Block type: %s", 
-		val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type:0x%02x"));
+		val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
 	s7comm_info_append_str(pinfo, "Type", 
-		val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type:0x%02x"));
+		val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
 	offset += 2;
 
 	proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", tvb_get_ephemeral_string(tvb, offset, 5));
@@ -1622,7 +1622,7 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 			/* online status in variable table */		
 			data_type = tvb_get_guint8(tvb, offset+ 1);			/* 1 Byte const 0 + 1 Byte type: 0x14 = Request, 0x04 = Response */
 			proto_tree_add_text(data_tree, tvb, offset, 2, "Type of data: %s (0x%02x)", 
-						val_to_str(data_type, userdata_prog_vartab_type_names, "Unknown Type of data:0x%02x"), data_type);
+						val_to_str(data_type, userdata_prog_vartab_type_names, "Unknown Type of data: 0x%02x"), data_type);
 			offset += 2;
 			
 			byte_count = tvb_get_ntohs(tvb, offset);			/* 2 Bytes: Number of bytes of item-data including item-count */
@@ -1835,7 +1835,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 	item = proto_tree_add_item( sub_tree, hf_s7comm_data_item, tvb, offset, len + head_len, FALSE );
 	sub_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
 
-	proto_item_append_text(item, " [%d]: (%s)", item_no + 1, val_to_str(ret_val, item_return_valuenames, "Unknown code:0x%02x"));
+	proto_item_append_text(item, " [%d]: (%s)", item_no + 1, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
 	proto_tree_add_uint(sub_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
 
 	proto_tree_add_uint(sub_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);
@@ -1847,7 +1847,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 				tvb_get_ptr (tvb, offset, len));
 		offset += len;
 		if (len != len2) {
-			proto_tree_add_text(sub_tree, tvb, offset, 1 , "Fill byte: 0x%02x", tvb_get_guint8( tvb, offset ));
+			proto_tree_add_text(sub_tree, tvb, offset, 1 , "Padding byte: 0x%02x", tvb_get_guint8( tvb, offset ));
 			offset += 1;
 		}
 	}
@@ -2055,10 +2055,10 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					offset += 1;
 
 					proto_tree_add_text(data_tree, tvb, offset , 1,   "Block language  : %s",
-						val_to_str(tvb_get_guint8(tvb, offset), blocklanguage_names, "Unknown Block language:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset), blocklanguage_names, "Unknown Block language: 0x%02x"));
 					offset += 1;
 					proto_tree_add_text(data_tree, tvb, offset , 1,   "Subblk type     : %s",
-						val_to_str(tvb_get_guint8(tvb, offset), subblktype_names, "Unknown Bubblk type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset), subblktype_names, "Unknown Subblk type: 0x%02x"));
 					offset += 1;
 					proto_tree_add_text(data_tree, tvb, offset , 2,   "Block number    : %d", tvb_get_ntohs(tvb, offset));
 					s7comm_info_append_uint16(pinfo, "No.", tvb_get_ntohs(tvb, offset));
