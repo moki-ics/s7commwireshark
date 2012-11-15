@@ -29,16 +29,16 @@ void proto_register_s7comm (void);
 
 static gboolean dissect_s7comm(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);
 
-static guint32 s7comm_decode_req_resp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint16 dlength, guint32 offset, guint8 pdu_type);
+static guint32 s7comm_decode_req_resp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint16 dlength, guint32 offset, guint8 rosctr);
 
 static guint32 s7comm_decode_param_item(tvbuff_t *tvb, guint32 offset, packet_info *pinfo, proto_tree *sub_tree, guint8 item_no);
-static guint32 s7comm_decode_pdu_length_negotiation(tvbuff_t *tvb, proto_tree *tree, guint16 plength, guint32 offset);
+static guint32 s7comm_decode_pdu_setup_communication(tvbuff_t *tvb, proto_tree *tree, guint16 plength, guint32 offset);
 static guint32 s7comm_decode_response_write_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 dlength, guint8 item_count, guint32 offset);
 static guint32 s7comm_decode_response_read_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 dlength, guint8 item_count, guint32 offset);
 
-static guint32 s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 pdu_type);
-static guint32 s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 pdu_type);
-static guint32 s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 pdu_type);
+static guint32 s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 rosctr);
+static guint32 s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 rosctr);
+static guint32 s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint32 offset, guint8 rosctr);
 
 
 static guint32 s7comm_decode_ud						(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint16 plength, guint16 dlength, guint32 offset );

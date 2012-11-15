@@ -45,6 +45,9 @@
 /* Min. telegram length for heuristic check */
 #define S7COMM_MIN_TELEGRAM_LENGTH		10
 
+/* Protocol identifier */
+#define S7COMM_PROT_ID					0x32
+
 /* Wireshark ID of the S7COMM protocol */
 static int proto_s7comm = -1;
 
@@ -56,30 +59,30 @@ static gboolean dissect_s7comm(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tr
 
 dissect_s7comm()
     +
-    +------	s7comm_decode_req_resp()
+    +-------s7comm_decode_req_resp()
     +        +        +
-    +        resp.	request
+    +     response	request
     +        +        +
     +        +        +------ s7comm_decode_param_item()
     +        +        +       s7comm_decode_response_read_data()
     +        +        +
-    +        +        +------ s7comm_decode_pdu_length_negotiation()
+    +        +        +------ s7comm_decode_pdu_setup_communication()
     +        +        +------ s7comm_decode_plc_controls_param_hex1x()
     +        +        +------ s7comm_decode_plc_controls_param_hex28()
     +        +        +------ s7comm_decode_plc_controls_param_hex29()
     +        +
     +        +------ s7comm_decode_response_read_data()
     +        +------ s7comm_decode_response_write_data()
-    +        +------ s7comm_decode_pdu_length_negotiation()
+    +        +------ s7comm_decode_pdu_setup_communication()
     +
-    +	
-    +------	s7comm_decode_ud()
+    +
+    +-------s7comm_decode_ud()
              +
              +------	s7comm_decode_ud_prog_subfunc()
-			 +                  +
-			 +                  +------- s7comm_decode_ud_prog_vartab_req_item()
-			 +                  +------- s7comm_decode_ud_prog_vartab_res_item()
-			 +
+             +                  +
+             +                  +------- s7comm_decode_ud_prog_vartab_req_item()
+             +                  +------- s7comm_decode_ud_prog_vartab_res_item()
+             +
              +------	s7comm_decode_ud_cyclic_subfunc()
              +------	s7comm_decode_ud_block_subfunc()
              +------	s7comm_decode_ud_szl_subfunc()
@@ -93,24 +96,47 @@ dissect_s7comm()
 /**************************************************************************
  * PDU types 
  */
-#define S7COMM_PDU_TYPE_REQUEST			0x01
-#define S7COMM_PDU_TYPE_UNKNOWN1		0x02
-#define S7COMM_PDU_TYPE_RESPONSE		0x03
-#define S7COMM_PDU_TYPE_USERDATA		0x07
+#define S7COMM_ROSCTR_JOB			0x01
+#define S7COMM_ROSCTR_ACK			0x02
+#define S7COMM_ROSCTR_ACK_DATA		0x03
+#define S7COMM_ROSCTR_USERDATA		0x07
 
-static const value_string pdutypenames[] = {
-	{ S7COMM_PDU_TYPE_REQUEST,			"Request " },
-	{ S7COMM_PDU_TYPE_UNKNOWN1,			"Unknown " },
-	{ S7COMM_PDU_TYPE_RESPONSE,			"Response" },
-	{ S7COMM_PDU_TYPE_USERDATA,			"Userdata" },
+static const value_string rosctr_names[] = {
+	{ S7COMM_ROSCTR_JOB,				"Job" },	/* Request: job with acknowledgement */
+	{ S7COMM_ROSCTR_ACK,				"Ack" },	/* acknowledgement without additional field */ 
+	{ S7COMM_ROSCTR_ACK_DATA,			"Ack_Data" }, /* Response: acknowledgement with additional field */
+	{ S7COMM_ROSCTR_USERDATA,			"Userdata" },
+	{ 0,							 	NULL }
+};
+/**************************************************************************
+ * Error classes in header
+ */
+#define S7COMM_ERRCLS_NONE				0x00
+#define S7COMM_ERRCLS_APPREL			0x81
+#define S7COMM_ERRCLS_OBJDEF			0x82
+#define S7COMM_ERRCLS_RESSOURCE			0x83
+#define S7COMM_ERRCLS_SERVICE			0x84
+#define S7COMM_ERRCLS_SUPPLIES			0x85
+#define S7COMM_ERRCLS_ACCESS			0x87
+
+static const value_string errcls_names[] = {
+	{ S7COMM_ERRCLS_NONE,				"No error" },
+	{ S7COMM_ERRCLS_APPREL	,			"Application relationship" },
+	{ S7COMM_ERRCLS_OBJDEF,				"Object definition" },
+	{ S7COMM_ERRCLS_RESSOURCE,			"No ressources available" },
+	{ S7COMM_ERRCLS_SERVICE,			"Error on service processing" },
+	{ S7COMM_ERRCLS_SUPPLIES,			"Error on supplies" },
+	{ S7COMM_ERRCLS_ACCESS,				"Access error" },
 	{ 0,							 	NULL }
 };
 /**************************************************************************
  * Function codes in parameter part
  */
-#define S7COMM_FUNCNEGPDULENGTH			0xF0
-#define S7COMM_FUNCREAD					0x04
-#define S7COMM_FUNCWRITE				0x05
+#define S7COMM_SERV_CPU					0x00
+#define S7COMM_SERV_SETUPCOMM			0xF0
+#define S7COMM_SERV_READVAR				0x04
+#define S7COMM_SERV_WRITEVAR			0x05
+
 #define S7COMM_FUNCREQUESTDOWNLOAD		0x1A
 #define S7COMM_FUNCDOWNLOADBLOCK		0x1B
 #define S7COMM_FUNCDOWNLOADENDED		0x1C
@@ -121,9 +147,11 @@ static const value_string pdutypenames[] = {
 #define S7COMM_FUNC_PLC_STOP			0x29
 
 static const value_string param_functionnames[] = {
-	{ S7COMM_FUNCNEGPDULENGTH,			"Negotiate PDU length" },
-	{ S7COMM_FUNCREAD,					"Read" },
-	{ S7COMM_FUNCWRITE,					"Write" },
+	{ S7COMM_SERV_CPU,					"CPU services" },
+	{ S7COMM_SERV_SETUPCOMM,			"Setup communication" },
+	{ S7COMM_SERV_READVAR,				"Read Var" },
+	{ S7COMM_SERV_WRITEVAR,				"Write Var" },
+	/* Block management services */
 	{ S7COMM_FUNCREQUESTDOWNLOAD,		"Request download" },
 	{ S7COMM_FUNCDOWNLOADBLOCK,			"Download block" },
 	{ S7COMM_FUNCDOWNLOADENDED,			"Download ended" },
@@ -131,7 +159,7 @@ static const value_string param_functionnames[] = {
 	{ S7COMM_FUNCUPLOAD,				"Upload" },
 	{ S7COMM_FUNCENDUPLOAD,				"End upload" },
 	{ S7COMM_FUNC_PLC_CONTROL,			"PLC Control" },
-	{ S7COMM_FUNC_PLC_STOP,				"PLC STOP" },
+	{ S7COMM_FUNC_PLC_STOP,				"PLC Stop" },
 	{ 0,								NULL }
 };
 /**************************************************************************
@@ -163,7 +191,7 @@ static const value_string item_areanames[] = {
 	{ S7COMM_AREA_ANAOUT,				"Analog outputs of 200 family" },
 	{ S7COMM_AREA_P,					"Direct peripheral access (P)" },
 	{ S7COMM_AREA_INPUTS,				"Inputs (I)" },
-	{ S7COMM_AREA_OUTPUTS,				"Outputs (O)" },
+	{ S7COMM_AREA_OUTPUTS,				"Outputs (Q)" },
 	{ S7COMM_AREA_FLAGS,				"Flags (M)" },
 	{ S7COMM_AREA_DB,					"Data blocks (DB)" },
 	{ S7COMM_AREA_DI,					"Instance data blocks (DI)" },
@@ -191,11 +219,18 @@ static const value_string item_areanames[] = {
 #define S7COMM_TRANSPORT_SIZE_DWORD		6
 #define S7COMM_TRANSPORT_SIZE_DINT		7
 #define S7COMM_TRANSPORT_SIZE_REAL  	8
+	/* Special types */
+#define S7COMM_TRANSPORT_SIZE_DATE	 	9
+#define S7COMM_TRANSPORT_SIZE_TOD	 	10
+#define S7COMM_TRANSPORT_SIZE_TIME	 	11
+#define S7COMM_TRANSPORT_SIZE_S5TIME 	12
+#define S7COMM_TRANSPORT_SIZE_DT		15
 	/* Timer or counter */
-#define S7COMM_TRANSPORT_SIZE_TIMER  	S7COMM_AREA_TIMER
-#define S7COMM_TRANSPORT_SIZE_COUNTER 	S7COMM_AREA_COUNTER
-
-
+#define S7COMM_TRANSPORT_SIZE_COUNTER 	28
+#define S7COMM_TRANSPORT_SIZE_TIMER  	29
+#define S7COMM_TRANSPORT_SIZE_IEC_COUNTER	30
+#define S7COMM_TRANSPORT_SIZE_IEC_TIMER		31
+#define S7COMM_TRANSPORT_SIZE_HS_COUNTER	32
 static const value_string item_transportsizenames[] = {
 	{ S7COMM_TRANSPORT_SIZE_BIT,		"BIT" },
 	{ S7COMM_TRANSPORT_SIZE_BYTE,		"BYTE" },
@@ -205,8 +240,15 @@ static const value_string item_transportsizenames[] = {
 	{ S7COMM_TRANSPORT_SIZE_DWORD,		"DWORD" },
 	{ S7COMM_TRANSPORT_SIZE_DINT,		"DINT" },
 	{ S7COMM_TRANSPORT_SIZE_REAL,		"REAL" },
+	{ S7COMM_TRANSPORT_SIZE_TOD,		"TOD" },
+	{ S7COMM_TRANSPORT_SIZE_TIME,		"TIME" },
+	{ S7COMM_TRANSPORT_SIZE_S5TIME,		"S5TIME" },
+	{ S7COMM_TRANSPORT_SIZE_DT,			"DATE_AND_TIME" },
+	{ S7COMM_TRANSPORT_SIZE_COUNTER,	"COUNTER" },	
 	{ S7COMM_TRANSPORT_SIZE_TIMER,		"TIMER" },
-	{ S7COMM_TRANSPORT_SIZE_COUNTER,	"COUNTER" },
+	{ S7COMM_TRANSPORT_SIZE_IEC_COUNTER,"IEC TIMER" },	
+	{ S7COMM_TRANSPORT_SIZE_IEC_TIMER,	"IEC COUNTER" },	
+	{ S7COMM_TRANSPORT_SIZE_HS_COUNTER,	"HS COUNTER" },	
 	{ 0,								NULL }
 };
 /**************************************************************************
@@ -232,18 +274,23 @@ static const value_string data_transportsizenames[] = {
  * Returnvalues of an item response
  */
 #define S7COMM_ITEM_RETVAL_RESERVED				0x00
-#define S7COMM_ITEM_RETVAL_DATA_OK				0xff
-#define S7COMM_ITEM_RETVAL_DATA_ERR				0x0a	/* the desired item is not available in the PLC, e.g. when trying to read a non existing DB*/
+#define S7COMM_ITEM_RETVAL_DATA_HW_FAULT		0x01
+#define S7COMM_ITEM_RETVAL_DATA_ACCESS_FAULT	0x03
 #define S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE		0x05	/* the desired address is beyond limit for this PLC */
-#define S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH	0x07	/* Write data size error */
-
+#define S7COMM_ITEM_RETVAL_DATA_NOT_SUP			0x06	/* Type is not supported */
+#define S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH	0x07	/* Data type inconsistent */
+#define S7COMM_ITEM_RETVAL_DATA_ERR				0x0a	/* the desired item is not available in the PLC, e.g. when trying to read a non existing DB*/
+#define S7COMM_ITEM_RETVAL_DATA_OK				0xff
 static const value_string item_return_valuenames[] = {
 	{ S7COMM_ITEM_RETVAL_RESERVED,				"Reserved" },
-	{ S7COMM_ITEM_RETVAL_DATA_OK,				"Item OK" },
-	{ S7COMM_ITEM_RETVAL_DATA_ERR,				"Item not available" },
-	{ S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE,		"Adress out of range" },
-	{ S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH,		"Write data size error" },
-	{ 0,								NULL }
+	{ S7COMM_ITEM_RETVAL_DATA_HW_FAULT,			"Hardware error" },
+	{ S7COMM_ITEM_RETVAL_DATA_ACCESS_FAULT,		"Accessing the object not allowed" },
+	{ S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE,		"Invalid address" },
+	{ S7COMM_ITEM_RETVAL_DATA_NOT_SUP,			"Data type not supported" },
+	{ S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH,		"Data type inconsistent" },
+	{ S7COMM_ITEM_RETVAL_DATA_ERR,				"Object does not exist" },		
+	{ S7COMM_ITEM_RETVAL_DATA_OK,				"Success" },
+	{ 0,										NULL }
 };
 /**************************************************************************
  * Block Types
@@ -297,7 +344,7 @@ static const value_string subblktype_names[] = {
 
 static const value_string blocksecurity_names[] = {
 	{ S7COMM_BLOCKSECURITY_OFF,				"None" },
-	{ S7COMM_BLOCKSECURITY_KNOWHOWPROTECT,	"KNOW HOW Protect" },
+	{ S7COMM_BLOCKSECURITY_KNOWHOWPROTECT,	"Kow How Protect" },
 	{ 0,									NULL }
 };
 /**************************************************************************
@@ -311,10 +358,9 @@ static const value_string blocklanguage_names[] = {
 	{ 0x04,								"SCL" },
 	{ 0x05,								"DB" },
 	{ 0x06,								"GRAPH" },
+	{ 0x07,								"SDB" },
 	{ 0,								NULL }
 };
-
-
 
 /**************************************************************************
  * Names of types in userdata parameter part
@@ -324,9 +370,21 @@ static const value_string blocklanguage_names[] = {
 #define S7COMM_UD_TYPE_RES				0x8
 
 static const value_string userdata_type_names[] = {
-	{ S7COMM_UD_TYPE_FOLLOW,			"Follow  " },	/* this type comes when 2 telegrams follow aftes another from the same partner, or initiated from PLC */
-	{ S7COMM_UD_TYPE_REQ,				"Request " },
+	{ S7COMM_UD_TYPE_FOLLOW,			"Follow" },	/* this type comes when 2 telegrams follow aftes another from the same partner, or initiated from PLC */
+	{ S7COMM_UD_TYPE_REQ,				"Request" },
 	{ S7COMM_UD_TYPE_RES,				"Response" },
+	{ 0,								NULL }
+};
+
+/**************************************************************************
+ * Userdata Parameter, last data unit 
+ */
+#define S7COMM_UD_LASTDATAUNIT_YES		0x00
+#define S7COMM_UD_LASTDATAUNIT_NO		0x01
+
+static const value_string userdata_lastdataunit_names[] = {
+	{ S7COMM_UD_LASTDATAUNIT_YES,		"Yes" },
+	{ S7COMM_UD_LASTDATAUNIT_NO,		"No" },
 	{ 0,								NULL }
 };
 
@@ -375,8 +433,6 @@ static const value_string userdata_prog_vartab_type_names[] = {
 	{ S7COMM_UD_SUBF_PROG_VARTAB_TYPE_RES,		"Response" },		/* Response from plc with data */
 	{ 0,								NULL }
 };
-
-
 
 /**************************************************************************
  * Vartab: area of data request
@@ -502,25 +558,26 @@ static const true_false_string fragment_descriptions = {
 
 /**************************************************************************
  **************************************************************************/
+/* Header Block */
 static gint hf_s7comm = -1;
 static gint hf_s7comm_header = -1;
-static gint hf_s7comm_const = -1;					/* Header Byte  0 */
-static gint hf_s7comm_pdu_type = -1;				/* Header Bytes 1 */
-static gint hf_s7comm_reserved = -1;				/* Header Bytes 2, 3 */
-static gint hf_s7comm_seq_number = -1;				/* Header Bytes 4, 5 */
-static gint hf_s7comm_plength = -1;					/* Header Bytes 6, 7 */
-static gint hf_s7comm_dlength = -1;					/* Header Bytes 8, 9 */
-static gint hf_s7comm_errcode = -1;					/* Header Bytes 10, 11 only available at type 2 or 3 */
-
+static gint hf_s7comm_header_protid = -1;			/* Header Byte  0 */
+static gint hf_s7comm_header_rosctr = -1;			/* Header Bytes 1 */
+static gint hf_s7comm_header_redid = -1;			/* Header Bytes 2, 3 */
+static gint hf_s7comm_header_pduref = -1;			/* Header Bytes 4, 5 */
+static gint hf_s7comm_header_parlg = -1;			/* Header Bytes 6, 7 */
+static gint hf_s7comm_header_datlg = -1;			/* Header Bytes 8, 9 */
+static gint hf_s7comm_header_errcls = -1;			/* Header Byte 10, only available at type 2 or 3 */
+static gint hf_s7comm_header_errcod = -1;			/* Header Byte 11, only available at type 2 or 3 */
+/* Parameter Block */
 static gint hf_s7comm_param = -1;
-static gint hf_s7comm_param_func = -1;				/* Parameter part: function */
+static gint hf_s7comm_param_service = -1;			/* Parameter part: service */
 static gint hf_s7comm_param_itemcount = -1;			/* Parameter part: item count */
 static gint hf_s7comm_param_data = -1;				/* Parameter part: data */
 static gint hf_s7comm_param_neg_pdu_length = -1;	/* Parameter part: Negotiate PDU length */
 
 /* Item data */
 static gint hf_s7comm_param_item = -1;
-static gint hf_s7comm_item_head = -1;				/* Item Header 0x12, 0x0a, 0x10, 3 Bytes */
 static gint hf_s7comm_item_transport_size = -1; 	/* Transport size, 1 Byte*/
 static gint hf_s7comm_item_length = -1;				/* length, 2 Bytes*/
 static gint hf_s7comm_item_db = -1;					/* DB/M/E/A, 2 Bytes */
@@ -549,7 +606,8 @@ static gint hf_s7comm_userdata_param_type = -1;
 static gint hf_s7comm_userdata_param_funcgroup = -1;
 static gint hf_s7comm_userdata_param_subfunc = -1;
 static gint hf_s7comm_userdata_param_seq_num = -1;
-static gint hf_s7comm_userdata_param_reserved = -1;
+static gint hf_s7comm_userdata_param_unknown1 = -1;
+static gint hf_s7comm_userdata_param_dataunit = -1;
 
 
 static gint hf_s7comm_userdata_blockinfo_flags = -1;		/* Some flags in Block info response */
@@ -562,11 +620,11 @@ static gint hf_s7comm_userdata_blockinfo_nonretain = -1;	/* Some flags in Block 
 
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7comm = -1;								/* S7 communication tree, parent of all other subtree */
-static gint ett_s7comm_header = -1;							/* Subtree for header */
-static gint ett_s7comm_param = -1;							/* Subtree for parameter */
-static gint ett_s7comm_param_item = -1;						/* Subtree for items in parameter part */
-static gint ett_s7comm_data = -1;							/* Subtree for data */
-static gint ett_s7comm_data_item = -1;						/* Subtree for an item in data part */
+static gint ett_s7comm_header = -1;							/* Subtree for header block */
+static gint ett_s7comm_param = -1;							/* Subtree for parameter block */
+static gint ett_s7comm_param_item = -1;						/* Subtree for items in parameter block */
+static gint ett_s7comm_data = -1;							/* Subtree for data block */
+static gint ett_s7comm_data_item = -1;						/* Subtree for an item in data block */
 
 
 /* Register this protocol */
@@ -594,34 +652,39 @@ proto_register_s7comm (void)
 		{ &hf_s7comm,
 		{ "S7 Communication Data",		"s7comm.gendata",		FT_NONE, BASE_NONE, NULL, 0x0,
 		  "S7 Communication Data", HFILL }},
+		  
 		{ &hf_s7comm_header,
-		{ "Header",						"s7comm.head",			FT_NONE, BASE_NONE, NULL, 0x0,
+		{ "Header",						"s7comm.header",		FT_NONE, BASE_NONE, NULL, 0x0,
 		  "This is the header of S7 communication", HFILL }},
-		{ &hf_s7comm_const,
-		{ "Identifier",					"s7comm.head.ident",	FT_UINT8, BASE_HEX, NULL, 0x0,
-		  "This is constant 0x32 and identifies the S7 communication", HFILL }},
-		{ &hf_s7comm_pdu_type,
-		{ "PDU Type",					"s7comm.head.pdu_type",	FT_UINT8, BASE_DEC, VALS(pdutypenames), 0x0,
-		  "Indicates the type of the PDU", HFILL }},
-		{ &hf_s7comm_reserved,
-		{ "Reserved",					"s7comm.head.reserved", FT_UINT16, BASE_HEX, NULL, 0x0,
-		  "Reserved (for redundancy)", HFILL }},
-		{ &hf_s7comm_seq_number,
-		{ "Sequence number",			"s7comm.head.seq_number", FT_UINT16, BASE_DEC, NULL, 0x0,
-		  "Sequence number", HFILL }},
-		{ &hf_s7comm_plength,
-		{ "Parameter length",			"s7comm.head.plength", FT_UINT16, BASE_DEC, NULL, 0x0,
-		  "Parameter length", HFILL }},
-		{ &hf_s7comm_dlength,
-		{ "Data length",				"s7comm.head.dlength", FT_UINT16, BASE_DEC, NULL, 0x0,
-		  "Data length", HFILL }}, 
-		{ &hf_s7comm_errcode,
-		{ "Error code",					"s7comm.head.errcode", FT_UINT16, BASE_HEX, NULL, 0x0,
+		{ &hf_s7comm_header_protid,
+		{ "Protocol Id",				"s7comm.header.protid",	FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Protocol Identification, 0x32 for S7", HFILL }},
+		{ &hf_s7comm_header_rosctr,
+		{ "ROSCTR",						"s7comm.header.rosctr",	FT_UINT8, BASE_DEC, VALS(rosctr_names), 0x0,
+		  "Remote Operating Service Control", HFILL }},
+		{ &hf_s7comm_header_redid,
+		{ "Redundancy Identification (Reserved)",	"s7comm.header.redid", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "Redundancy Identification (Reserved), should be always 0x0000", HFILL }},
+		{ &hf_s7comm_header_pduref,
+		{ "Protocol Data Unit Reference",			"s7comm.header.pduref", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Protocol Data Unit Reference", HFILL }},
+		{ &hf_s7comm_header_parlg,
+		{ "Parameter length",			"s7comm.header.parlg", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Specifies the entire length of the parameter block in bytes", HFILL }},
+		{ &hf_s7comm_header_datlg,
+		{ "Data length",				"s7comm.header.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Specifies the entire length of the data block in bytes", HFILL }}, 
+		{ &hf_s7comm_header_errcls,
+		{ "Error class",				"s7comm.header.errcls", FT_UINT8, BASE_HEX, VALS(errcls_names), 0x0,
+		  "Error class", HFILL }},
+		{ &hf_s7comm_header_errcod,
+		{ "Error code",					"s7comm.header.errcod", FT_UINT8, BASE_HEX, NULL, 0x0,
 		  "Error code", HFILL }},
+		  
 		{ &hf_s7comm_param,
 		{ "Parameter",					"s7comm.param",			FT_NONE, BASE_NONE, NULL, 0x0,
 		  "This is the parameter part of S7 communication", HFILL }},
-		{ &hf_s7comm_param_func,
+		{ &hf_s7comm_param_service,
 		{ "Function",					"s7comm.param.func",	FT_UINT8, BASE_HEX, VALS(param_functionnames), 0x0,
 		  "Indicates the function of parameter/data", HFILL }},
 		{ &hf_s7comm_param_neg_pdu_length,
@@ -636,9 +699,6 @@ proto_register_s7comm (void)
 		{ &hf_s7comm_param_item,
 		{ "Item",						"s7comm.param.item",	FT_NONE, BASE_NONE, NULL, 0x0,
 		  "Item", HFILL }},
-		{ &hf_s7comm_item_head,
-		{ "Item head",					"s7comm.param.item.head", FT_UINT24, BASE_HEX, NULL, 0x0,
-		  "Header before every item (constant 0x120a10)", HFILL }},
 		{ &hf_s7comm_item_transport_size,
 		{ "Transport size",				"s7comm.param.item.transp_size", FT_UINT8, BASE_DEC, VALS(item_transportsizenames), 0x0,
 		  "Transport size", HFILL }},
@@ -711,9 +771,13 @@ proto_register_s7comm (void)
 		{ "Sequence number",			"s7comm.param.userdata.seq_num", FT_UINT8, BASE_DEC, NULL, 0x0,
 		  "Sequence number", HFILL }},
 
-		{ &hf_s7comm_userdata_param_reserved,
-		{ "Reserved",				"s7comm.param.userdata.head", FT_UINT16, BASE_HEX, NULL, 0x0,
-		  "Reserved", HFILL }},
+		{ &hf_s7comm_userdata_param_unknown1,
+		{ "Unknown",				"s7comm.param.userdata.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Unknown", HFILL }},
+		  
+		{ &hf_s7comm_userdata_param_dataunit,
+		{ "Last data unit",				"s7comm.param.userdata.lastdataunit", FT_UINT8, BASE_HEX, VALS(userdata_lastdataunit_names), 0x0,
+		  "Last data unit", HFILL }},
 
 		  /* Flags in blockinfo response */
 		{ &hf_s7comm_userdata_blockinfo_flags,
@@ -729,7 +793,7 @@ proto_register_s7comm (void)
       	  "Standard block", HFILL }},
 		/* Bit : 5 -> DB Non Retain = true */
 		  { &hf_s7comm_userdata_blockinfo_nonretain,
-		{ "Non Retain",				"s7comm.param.userdata.blockinfo.nonretain", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x08,
+		{ "Non Retain",					"s7comm.param.userdata.blockinfo.nonretain", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x08,
       	  "Non Retain", HFILL }},
 
 	};
@@ -778,7 +842,7 @@ dissect_s7comm(tvbuff_t *tvb,
 
 	guint32 offset = 0;
 
-	guint8 pdu_type = 0;
+	guint8 rosctr = 0;
 	guint8 hlength = 10; /* Header 10 Bytes, when type 2 or 3 (Response) -> 12 Bytes */
 	guint16 plength = 0;
 	guint16 dlength = 0;
@@ -788,7 +852,7 @@ dissect_s7comm(tvbuff_t *tvb,
 	if(tvb_length(tvb) < S7COMM_MIN_TELEGRAM_LENGTH) 
 		return 0;
 	/* 2) first byte must be 0x32 */
-	if ( tvb_get_guint8(tvb, 0) != 0x32 )
+	if ( tvb_get_guint8(tvb, 0) != S7COMM_PROT_ID )
 		return 0;
 	/* 3) second byte is a type field and only can contain values between 0x01-0x07 (1/2/3/7) */
 	if ( tvb_get_guint8(tvb, 1) < 0x01 || tvb_get_guint8(tvb, 1) > 0x07)
@@ -802,14 +866,13 @@ dissect_s7comm(tvbuff_t *tvb,
 		col_clear(pinfo->cinfo, COL_INFO);
 	}
 
-	pdu_type = tvb_get_guint8( tvb, 1 );						/* Get the type byte */
-	if (pdu_type == 2 || pdu_type == 3) hlength = 12;			/* Header 10 Bytes, when type 2 or 3 (response) -> 12 Bytes */
+	rosctr = tvb_get_guint8( tvb, 1 );						/* Get the type byte */
+	if (rosctr == 2 || rosctr == 3) hlength = 12;			/* Header 10 Bytes, when type 2 or 3 (response) -> 12 Bytes */
 
 	/* display some infos in info-column of wireshark */
 	if (check_col(pinfo->cinfo, COL_INFO)) {
-		col_add_fstr(pinfo->cinfo, COL_INFO, "%d > %d PDU-Type:[%s]",
-				pinfo->srcport, pinfo->destport,			
-				val_to_str(pdu_type, pdutypenames, "Unknown PDU-Type: 0x%02x")
+		col_add_fstr(pinfo->cinfo, COL_INFO, "ROSCTR:[%-8s]",
+				val_to_str(rosctr, rosctr_names, "Unknown: 0x%02x")
 				);
 	}
 	
@@ -824,38 +887,44 @@ dissect_s7comm(tvbuff_t *tvb,
 
 		/* insert sub-items in header tree */
 		s7comm_header_tree = proto_item_add_subtree(s7comm_sub_item, ett_s7comm);
+		
+		/* Protocol Identifier, constant 0x32 */
+		proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_protid, tvb, offset, 1, FALSE);		
 		offset += 1;
-
-		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_pdu_type, tvb, offset, 1, pdu_type);
+		
+		/* ROSCTR (Remote Operating Service Control) - PDU Type */
+		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_header_rosctr, tvb, offset, 1, rosctr);
 		/* Show pdu type beside the header tree */
-		proto_item_append_text(s7comm_header_tree, ": (%s)", val_to_str(pdu_type, pdutypenames, "Unknown PDU Type: 0x%02x"));
+		proto_item_append_text(s7comm_header_tree, ": (%s)", val_to_str(rosctr, rosctr_names, "Unknown ROSCTR: 0x%02x"));
 		offset += 1;
-		/* Reserved part */
-		proto_tree_add_item(s7comm_header_tree, hf_s7comm_reserved, tvb, offset, 2, FALSE);
+		/* Redundacy ID, reserved */
+		proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_redid, tvb, offset, 2, FALSE);
 		offset += 2;
-		/* Sequence number */
-		proto_tree_add_item(s7comm_header_tree, hf_s7comm_seq_number, tvb, offset, 2, FALSE);
+		/* Protocol Data Unit Reference */
+		proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_pduref, tvb, offset, 2, FALSE);
 		offset += 2;
 		/* Parameter length */
 		plength = tvb_get_ntohs(tvb, offset);
-		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_plength, tvb, offset, 2, plength);
+		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_header_parlg, tvb, offset, 2, plength);
 		offset += 2;
 		/* Data length */
 		dlength = tvb_get_ntohs(tvb, offset);
-		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_dlength, tvb, offset, 2, dlength);		
+		proto_tree_add_uint(s7comm_header_tree, hf_s7comm_header_datlg, tvb, offset, 2, dlength);		
 		offset += 2;
-		/* when type is 2 or 3 there are 2 bytes with an errorcode */
-		if (hlength == 12) {
-			proto_tree_add_item(s7comm_header_tree, hf_s7comm_errcode, tvb, offset, 2, FALSE);
-			offset += 2;
+		/* when type is 2 or 3 there are 2 bytes with errorclass and errorcode */
+		if (hlength == 12) {			
+			proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_errcls, tvb, offset, 1, FALSE);
+			offset += 1;
+			proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_errcod, tvb, offset, 1, FALSE);
+			offset += 1;
 		}
 
-		switch (pdu_type) {
-			case S7COMM_PDU_TYPE_REQUEST:
-			case S7COMM_PDU_TYPE_RESPONSE:
-				offset = s7comm_decode_req_resp(tvb, pinfo, s7comm_tree, plength, dlength, offset, pdu_type );
+		switch (rosctr) {
+			case S7COMM_ROSCTR_JOB:
+			case S7COMM_ROSCTR_ACK_DATA:
+				offset = s7comm_decode_req_resp(tvb, pinfo, s7comm_tree, plength, dlength, offset, rosctr);
 				break;
-			case S7COMM_PDU_TYPE_USERDATA:
+			case S7COMM_ROSCTR_USERDATA:
 				offset = s7comm_decode_ud(tvb, pinfo, s7comm_tree, plength, dlength, offset );
 				break;
 		}
@@ -878,7 +947,7 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 					  guint16 plength, 
 					  guint16 dlength, 
 					  guint32 offset,
-					  guint8 pdu_type)
+					  guint8 rosctr)
 {
 	proto_item *item = NULL;
 	proto_tree *param_tree = NULL;
@@ -897,15 +966,15 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 		if (check_col(pinfo->cinfo, COL_INFO)) {
 			col_append_fstr(pinfo->cinfo, COL_INFO, " Function:[%s]", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
 		}
-		proto_tree_add_uint(param_tree, hf_s7comm_param_func, tvb, offset, 1, function);
+		proto_tree_add_uint(param_tree, hf_s7comm_param_service, tvb, offset, 1, function);
 		/* show param.function code at the tree */
 		proto_item_append_text(param_tree, ": (%s)", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
 		offset += 1;
 
-		if (pdu_type == S7COMM_PDU_TYPE_REQUEST) {
+		if (rosctr == S7COMM_ROSCTR_JOB) {
 			switch (function){
-				case S7COMM_FUNCREAD:
-				case S7COMM_FUNCWRITE:
+				case S7COMM_SERV_READVAR:
+				case S7COMM_SERV_WRITEVAR:
 					item_count = tvb_get_guint8( tvb, offset );
 					proto_tree_add_uint(param_tree, hf_s7comm_param_itemcount, tvb, offset, 1, item_count);
 					offset += 1;
@@ -914,15 +983,15 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 						offset = s7comm_decode_param_item(tvb, offset, pinfo, param_tree, i);
 					}
 					/* in write-function there is a data part */
-					if ((function == S7COMM_FUNCWRITE) && (dlength > 0)) {
+					if ((function == S7COMM_SERV_WRITEVAR) && (dlength > 0)) {
 						item = proto_tree_add_item( tree, hf_s7comm_data, tvb, offset, dlength, FALSE );
 						data_tree = proto_item_add_subtree( item, ett_s7comm_data);
 						/* Add returned data to data-tree */
 						offset = s7comm_decode_response_read_data( tvb, pinfo, data_tree, dlength, item_count, offset);
 					}
 					break;
-				case S7COMM_FUNCNEGPDULENGTH:
-					offset = s7comm_decode_pdu_length_negotiation(tvb, param_tree, plength, offset);
+				case S7COMM_SERV_SETUPCOMM:
+					offset = s7comm_decode_pdu_setup_communication(tvb, param_tree, plength, offset);
 					break;
 				/* Special functions */
 				case S7COMM_FUNCREQUESTDOWNLOAD:
@@ -931,13 +1000,13 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 				case S7COMM_FUNCSTARTUPLOAD:
 				case S7COMM_FUNCUPLOAD:
 				case S7COMM_FUNCENDUPLOAD:
-					offset = s7comm_decode_plc_controls_param_hex1x(tvb, pinfo, param_tree, plength, offset -1, pdu_type);
+					offset = s7comm_decode_plc_controls_param_hex1x(tvb, pinfo, param_tree, plength, offset -1, rosctr);
 					break;
 				case S7COMM_FUNC_PLC_CONTROL:
-					offset = s7comm_decode_plc_controls_param_hex28(tvb, pinfo, param_tree, plength, offset -1, pdu_type);
+					offset = s7comm_decode_plc_controls_param_hex28(tvb, pinfo, param_tree, plength, offset -1, rosctr);
 					break;
 				case S7COMM_FUNC_PLC_STOP:
-					offset = s7comm_decode_plc_controls_param_hex29(tvb, pinfo, param_tree, plength, offset -1, pdu_type);
+					offset = s7comm_decode_plc_controls_param_hex29(tvb, pinfo, param_tree, plength, offset -1, rosctr);
 					break;
 
 				default:
@@ -960,10 +1029,10 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 					}
 					break;
 			}
-		} else if (pdu_type == S7COMM_PDU_TYPE_RESPONSE) {
+		} else if (rosctr == S7COMM_ROSCTR_ACK_DATA) {
 			switch (function){
-				case S7COMM_FUNCREAD:
-				case S7COMM_FUNCWRITE:
+				case S7COMM_SERV_READVAR:
+				case S7COMM_SERV_WRITEVAR:
 					/* This is a read-response, so the requested data may follow when address in request was ok */
 					item_count = tvb_get_guint8( tvb, offset );
 					proto_tree_add_uint(param_tree, hf_s7comm_param_itemcount, tvb, offset, 1, item_count);
@@ -972,14 +1041,14 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 					item = proto_tree_add_item( tree, hf_s7comm_data, tvb, offset, dlength, FALSE );
 					data_tree = proto_item_add_subtree( item, ett_s7comm_data);
 					/* Add returned data to data-tree */
-					if ((function == S7COMM_FUNCREAD) && (dlength > 0)) {
+					if ((function == S7COMM_SERV_READVAR) && (dlength > 0)) {
 						offset = s7comm_decode_response_read_data( tvb, pinfo, data_tree, dlength, item_count, offset);
-					} else if ((function == S7COMM_FUNCWRITE) && (dlength > 0)) {
+					} else if ((function == S7COMM_SERV_WRITEVAR) && (dlength > 0)) {
 						offset = s7comm_decode_response_write_data( tvb, pinfo, data_tree, dlength, item_count, offset);
 					}
 					break;
-				case S7COMM_FUNCNEGPDULENGTH:
-					offset = s7comm_decode_pdu_length_negotiation(tvb, param_tree, plength, offset);
+				case S7COMM_SERV_SETUPCOMM:
+					offset = s7comm_decode_pdu_setup_communication(tvb, param_tree, plength, offset);
 					break;
 				default:
 					/* Print unknown part as raw bytes */
@@ -1033,9 +1102,14 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 
 	proto_item_append_text(item, " [%d]:", item_no + 1);
 
-	/* Item head, constant 3 bytes */
-	proto_tree_add_item(item, hf_s7comm_item_head, tvb, offset, 3, FALSE);
-	offset += 3;
+	/* Item head, constant 3 bytes */	
+	proto_tree_add_text(item, tvb, offset, 1, "Variable specification (fix): 0x%02x",  tvb_get_guint8(tvb, offset));
+	offset += 1;
+	proto_tree_add_text(item, tvb, offset, 1, "Length of following address-specification (10 for ANY): %d bytes",  tvb_get_guint8(tvb, offset));
+	offset += 1;
+	proto_tree_add_text(item, tvb, offset, 1, "Syntax Id (0x10 for Any-Pointer): 0x%02x",  tvb_get_guint8(tvb, offset));
+	offset += 1;	
+	
 	/* Transport size, 1 byte */
 	t_size = tvb_get_guint8(tvb, offset);
 	proto_tree_add_uint(item, hf_s7comm_item_transport_size, tvb, offset, 1, t_size);	
@@ -1104,20 +1178,20 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Decode parameter part of a PDU length negotiate request/response
+ * Decode parameter part of a PDU for setup communication
  *
  *******************************************************************************************************/
 static guint32
-s7comm_decode_pdu_length_negotiation(tvbuff_t *tvb, 
+s7comm_decode_pdu_setup_communication(tvbuff_t *tvb, 
 									 proto_tree *tree, 
 									 guint16 plength, 
 									 guint32 offset )
 {
-	proto_tree_add_text(tree, tvb, offset, 1, "Unknown: 0x%02x", tvb_get_guint8( tvb, offset ));
+	proto_tree_add_text(tree, tvb, offset, 1, "Reserved: 0x%02x", tvb_get_guint8( tvb, offset ));
 	offset += 1;
-	proto_tree_add_text(tree, tvb, offset, 2, "Max number of parallel jobs: %d", tvb_get_ntohs( tvb, offset ));
+	proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) calling: %d", tvb_get_ntohs( tvb, offset ));
 	offset += 2;
-	proto_tree_add_text(tree, tvb, offset, 2, "Max number of parallel jobs: %d", tvb_get_ntohs( tvb, offset ));
+	proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) called : %d", tvb_get_ntohs( tvb, offset ));
 	offset += 2;
 
 	proto_tree_add_item(tree, hf_s7comm_param_neg_pdu_length, tvb, offset, 2, FALSE);
@@ -1218,7 +1292,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
 					tvb_get_ptr (tvb, offset, len));
 			offset += len;			
 			if (len != len2) {
-					proto_tree_add_text(item_tree, tvb, offset, 1 , "Padding byte: 0x%02x", tvb_get_guint8( tvb, offset ));
+					proto_tree_add_text(item_tree, tvb, offset, 1 , "Fill byte: 0x%02x", tvb_get_guint8( tvb, offset ));
 					offset += 1;
 			}
 		}
@@ -1237,7 +1311,7 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 					  proto_tree *tree, 
 					  guint16 plength,
 					  guint32 offset,
-					  guint8 pdu_type)
+					  guint8 rosctr)
 {
 	guint16 len;
 	guint8 count;
@@ -1263,7 +1337,8 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 	offset += 2;
 	/* no block function, cold start e.g. */
 	if (len == 2) {
-		proto_tree_add_text(tree, tvb, offset,2, "Function: %c%c", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
+		/* C = cold start */
+		proto_tree_add_text(tree, tvb, offset,2, "Argument: %c%c", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
 		offset +=2;
 	} else if (len > 2) {
 		count = tvb_get_guint8(tvb, offset);			/* number of blocks following */
@@ -1281,8 +1356,12 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 			proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", tvb_get_ephemeral_string(tvb, offset, 5));
 			s7comm_info_append_str(pinfo, "No.", tvb_get_ephemeral_string(tvb, offset, 5));
 			offset += 5;
-			/* 'P', 'B' or 'A' is following */
-			proto_tree_add_text(tree, tvb, offset,1, "Direction?: %c", tvb_get_guint8(tvb, offset));
+			/* 'P', 'B' or 'A' is following 
+			 Destination filesystem?
+				P = passive filesystem
+				A = active filesystem?
+			 */
+			proto_tree_add_text(tree, tvb, offset,1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
 			offset += 1;
 		}
 	}
@@ -1290,8 +1369,15 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 	len = tvb_get_guint8(tvb, offset);
 	proto_tree_add_text(tree, tvb, offset, 1, "Length part 2: %d bytes", len);
 	offset += 1;
-	/* Function as string */
-	proto_tree_add_text(tree, tvb, offset , len, "Command: %s", tvb_get_ephemeral_string(tvb, offset, len));
+	/* Function (PI_SERVICE) as string  (program invocation)
+		Known funktions:
+		_INSE = Activate a module
+		_DELE = Delete a passive module
+		_PROGRAM = Start/Stop the PLC
+		_PLC_MEMORYRESET = Reset the PLC memory
+	*/
+	
+	proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_ephemeral_string(tvb, offset, len));
 	offset += len;
 
 	return offset;
@@ -1308,7 +1394,7 @@ s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb,
 					  proto_tree *tree, 
 					  guint16 plength,
 					  guint32 offset,
-					  guint8 pdu_type)
+					  guint8 rosctr)
 {
 	guint8 len;
 	guint8 function;
@@ -1329,7 +1415,7 @@ s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb,
 	proto_tree_add_text(tree, tvb, offset, 1, "Length part 2: %d bytes", len);
 	offset += 1;
 	/* Function as string */
-	proto_tree_add_text(tree, tvb, offset , len, "Command: %s", tvb_get_ephemeral_string(tvb, offset, len));
+	proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_ephemeral_string(tvb, offset, len));
 	offset += len;
 
 	return offset;
@@ -1346,7 +1432,7 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 					  proto_tree *tree, 
 					  guint16 plength, 
 					  guint32 offset,
-					  guint8 pdu_type)
+					  guint8 rosctr)
 {
 	guint8 len;
 	guint8 function;
@@ -1373,8 +1459,12 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	len = tvb_get_guint8(tvb, offset);
 	proto_tree_add_text(tree, tvb, offset, 1, "Length part 1: %d bytes", len);
 	offset += 1;
-	/* Prefix '_' */
-	proto_tree_add_text(tree, tvb, offset, 1, "Prefix: %c", tvb_get_guint8(tvb, offset));
+	/* Prefix
+		File identifier:
+		_ Bedeutet: "complete module"
+		$ bedeutet: "Module header for up-loading"
+	*/
+	proto_tree_add_text(tree, tvb, offset, 1, "File identifier: %c", tvb_get_guint8(tvb, offset));
 	offset += 1;
 	/* First byte of block type is every time '0' */
 	proto_tree_add_text(tree, tvb, offset, 2, "Block type: %s", 
@@ -1387,7 +1477,7 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	s7comm_info_append_str(pinfo, "No.", tvb_get_ephemeral_string(tvb, offset, 5));
 	offset += 5;
 	/* 'P', 'B' or 'A' is following */
-	proto_tree_add_text(tree, tvb, offset,1, "Direction?: %c", tvb_get_guint8(tvb, offset));
+	proto_tree_add_text(tree, tvb, offset,1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
 	offset += 1;
 
 	
@@ -1529,9 +1619,12 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	proto_tree_add_item(param_tree, hf_s7comm_userdata_param_seq_num, tvb, offset_temp, 1, FALSE);
 	offset_temp += 1;
 	if (plength >= 12) {
-		/* 2 bytes reserved */
-		proto_tree_add_item(param_tree, hf_s7comm_userdata_param_reserved, tvb, offset_temp, 2, FALSE);
-		offset_temp += 2;
+		/* 1 Byte unknown, if this is not the last data unit (telegram is fragmented) this is != 0 */
+		proto_tree_add_item(param_tree, hf_s7comm_userdata_param_unknown1, tvb, offset_temp, 1, FALSE);
+		offset_temp += 1;
+		/* 1 Byte fragmented flag, if this is not the last data unit (telegram is fragmented) this is != 0 */
+		proto_tree_add_item(param_tree, hf_s7comm_userdata_param_dataunit, tvb, offset_temp, 1, FALSE);
+		offset_temp += 1;
 		proto_tree_add_text(param_tree, tvb, offset_temp, 2, "Error code: 0x%04x", tvb_get_ntohs(tvb, offset_temp));
 		offset_temp += 2;
 	}	
@@ -1847,7 +1940,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 				tvb_get_ptr (tvb, offset, len));
 		offset += len;
 		if (len != len2) {
-			proto_tree_add_text(sub_tree, tvb, offset, 1 , "Padding byte: 0x%02x", tvb_get_guint8( tvb, offset ));
+			proto_tree_add_text(sub_tree, tvb, offset, 1 , "Fill byte: 0x%02x", tvb_get_guint8( tvb, offset ));
 			offset += 1;
 		}
 	}
@@ -1930,6 +2023,8 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 	guint16 i;
 	guint8 *blocknumber;
 	gboolean know_data = FALSE;
+	proto_item *item = NULL;	
+	proto_tree *item_tree = NULL;
 	char str_timestamp[25];
 
 	switch (subfunc) {
@@ -1942,11 +2037,15 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 
 			} else if (type == S7COMM_UD_TYPE_RES) {			/*** Response ***/						
 				count = len / 4;
-				for(i = 0; i < count; i++) {		
-					proto_tree_add_text(data_tree, tvb, offset, 2, "Block type: %s", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+				for(i = 0; i < count; i++) {
+					/* Insert a new tree of 4 byte length for every item */
+					item = proto_tree_add_item( data_tree, hf_s7comm_data_item, tvb, offset, 4, FALSE );
+					item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
+					proto_item_append_text(item, " [%d]: (Block type %s)", i+1, val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));	
+					proto_tree_add_text(item_tree, tvb, offset, 2, "Block type: %s", 
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					offset += 2;
-					proto_tree_add_text(data_tree, tvb, offset, 2, "Count: %d", tvb_get_ntohs(tvb, offset));
+					proto_tree_add_text(item_tree, tvb, offset, 2, "Count: %d", tvb_get_ntohs(tvb, offset));
 					offset += 2;
 				}
 				know_data = TRUE;
@@ -1959,11 +2058,11 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 			if (type == S7COMM_UD_TYPE_REQ) {					/*** Request ***/
 				if (tsize != S7COMM_DATA_TRANSPORT_SIZE_NULL) {
 					proto_tree_add_text(data_tree, tvb, offset, 2, "Block type: %s", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					s7comm_info_append_str(pinfo, "Type", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					proto_item_append_text(data_tree, ": (%s)", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					offset += 2;
 				}
 				know_data = TRUE;
@@ -1973,14 +2072,16 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					count = len / 4;
 	
 					for(i = 0; i < count; i++) {
-						proto_tree_add_text(data_tree, tvb, offset, 2, "Block number   : %d", tvb_get_ntohs(tvb, offset));
+						/* Insert a new tree of 4 byte length for every item */
+						item = proto_tree_add_item( data_tree, hf_s7comm_data_item, tvb, offset, 4, FALSE );
+						item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
+						proto_item_append_text(item, " [%d]: (Block number %d)", i+1, tvb_get_ntohs(tvb, offset));					
+						proto_tree_add_text(item_tree, tvb, offset, 2, "Block number   : %d", tvb_get_ntohs(tvb, offset));
 						offset += 2;					
-
-						/* The first Byte is unknown, but the second byte is the block language */
-						
-						proto_tree_add_text(data_tree, tvb, offset, 1, "Unknown        : 0x%02x", tvb_get_guint8(tvb, offset));
+						/* The first Byte is unknown, but the second byte is the block language */						
+						proto_tree_add_text(item_tree, tvb, offset, 1, "Unknown        : 0x%02x", tvb_get_guint8(tvb, offset));
 						offset += 1;
-						proto_tree_add_text(data_tree, tvb, offset, 1, "Block language : %s", 
+						proto_tree_add_text(item_tree, tvb, offset, 1, "Block language : %s", 
 							val_to_str(tvb_get_guint8(tvb, offset), blocklanguage_names, "Unknown Block language: 0x%02x"));					
 						offset += 1;
 					}
@@ -1996,19 +2097,19 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 				if (tsize != S7COMM_DATA_TRANSPORT_SIZE_NULL) {
 					/* 8 Bytes of Data follow, 1./ 2. type, 3-7 blocknumber as ascii number, 8. 'A' or 'B' unknown */		
 					proto_tree_add_text(data_tree, tvb, offset, 2, "Block type: %s", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));										
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));										
 					proto_item_append_text(data_tree, ": (Block type: %s", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					/* Add block type and number to info column */
 					s7comm_info_append_str(pinfo, "Type", 
-						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
 					offset += 2;					
 					blocknumber = tvb_get_ephemeral_string(tvb, offset, 5);
 					proto_tree_add_text(data_tree, tvb, offset , 5, "Block number: %s", blocknumber);
 					s7comm_info_append_str(pinfo, "No.", blocknumber);
 					proto_item_append_text(data_tree, ", Number: %s)", blocknumber);
 					offset += 5;
-					proto_tree_add_text(data_tree, tvb, offset , 1, "Unknown const: '%c'", tvb_get_guint8(tvb, offset));
+					proto_tree_add_text(data_tree, tvb, offset , 1, "Filesystem: '%c'", tvb_get_guint8(tvb, offset));
 					offset += 1;
 				}
 				know_data = TRUE;
@@ -2019,14 +2120,14 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					proto_tree_add_text(data_tree, tvb, offset , 1,   "Const.          : 0x%02x", tvb_get_guint8(tvb, offset));
 					offset += 1;
 					proto_tree_add_text(data_tree, tvb, offset , 1,	  "Block type      : %s", 
-						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type: 0x%02x"));
 
 					proto_item_append_text(data_tree, ": (Block type: %s", 
-						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type: 0x%02x"));
 
 					/* Add block type and number to info column */
 					s7comm_info_append_str(pinfo, "Type", 
-						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type:0x%02x"));
+						val_to_str(tvb_get_guint8(tvb, offset), blocktype_names, "Unknown Block type: 0x%02x"));
 					offset += 1;
 					proto_tree_add_text(data_tree, tvb, offset , 2,   "Const.          : 0x%04x", tvb_get_ntohs(tvb, offset));
 					offset += 2;
@@ -2068,7 +2169,7 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					proto_tree_add_text(data_tree, tvb, offset , 4,	  "Length load mem.: %d bytes", tvb_get_ntohl(tvb, offset));
 					offset += 4;
 					proto_tree_add_text(data_tree, tvb, offset , 4,   "Block Security  : %s",
-						val_to_str(tvb_get_ntohl(tvb, offset), blocksecurity_names, "Unknown block security:%ld"));
+						val_to_str(tvb_get_ntohl(tvb, offset), blocksecurity_names, "Unknown block security: %ld"));
 					offset += 4;
 					get_timestring_from_s7time(tvb, offset, str_timestamp, sizeof(str_timestamp));
 					proto_tree_add_text(data_tree, tvb, offset , 6,   "Code timestamp  : %s", str_timestamp);
