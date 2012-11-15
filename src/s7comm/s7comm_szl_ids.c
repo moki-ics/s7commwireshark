@@ -470,8 +470,8 @@ s7comm_register_szl_types(int proto)
 		{ "SZL-Index",		"s7comm.data.userdata.szl_index", FT_UINT16, BASE_HEX, NULL, 0x0,
 		  "SZL-Index (System Status List)", HFILL }},
 		{ &hf_s7comm_userdata_szl_tree,
-		{ "SZL data",		"s7comm.data.userdata.szl_data", FT_NONE,	BASE_NONE, NULL, 0x0,
-      	  "SZL data", HFILL }},
+		{ "SZL data tree",		"s7comm.data.userdata.szl_data_tree", FT_NONE,	BASE_NONE, NULL, 0x0,
+      	  "SZL data tree", HFILL }},
 		/* Raw and unknown data */
 		{ &hf_s7comm_userdata_szl_data,
 		{ "SZL data",		"s7comm.param.userdata.szl_data", FT_BYTES, BASE_NONE, NULL, 0x0,
