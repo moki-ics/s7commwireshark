@@ -50,4 +50,7 @@ static guint32 s7comm_decode_ud_prog_subfunc		(tvbuff_t *tvb, packet_info *pinfo
 static guint32 s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb, guint32 offset, packet_info *pinfo, proto_tree *sub_tree, guint16 item_no);
 static guint32 s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb, guint32 offset, packet_info *pinfo, proto_tree *sub_tree, guint16 item_no);
 
+static guint32 s7comm_decode_ud_prog_reqdiagdata	(tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint8 tsize, guint16 len, guint16 dlength, guint32 offset);
+
+static void make_registerflag_string(gchar *str, guint8 flags, gint max);
 #endif
