@@ -176,14 +176,12 @@ static const value_string param_functionnames[] = {
 #define S7COMM_AREA_FLAGS				0x83
 #define S7COMM_AREA_DB					0x84	/* data blocks */
 #define S7COMM_AREA_DI					0x85	/* instance data blocks */
-#define S7COMM_AREA_LOCAL				0x86 	/* not tested */
-#define S7COMM_AREA_V					0x87	/* don't know what it is */
+#define S7COMM_AREA_LOCAL				0x86 	/* local data (should not be accessible over network) */
+#define S7COMM_AREA_V					0x87	/* previous (Vorgaenger) local data (should not be accessible over network)  */
 #define S7COMM_AREA_COUNTER				28		/* S7 counters */
 #define S7COMM_AREA_TIMER				29		/* S7 timers */
 #define S7COMM_AREA_COUNTER200			30		/* IEC counters (200 family) */
 #define S7COMM_AREA_TIMER200			31		/* IEC timers (200 family) */
-#define S7COMM_AREA_SYSDATAS5			0x86	/* system data area ? */
-#define S7COMM_AREA_RAWMEMORYS5			0		/* just the raw memory */
 
 static const value_string item_areanames[] = {
 	{ S7COMM_AREA_SYSINFO,				"System info of 200 family" },
@@ -202,8 +200,6 @@ static const value_string item_areanames[] = {
 	{ S7COMM_AREA_TIMER,				"S7 timers (T)" },
 	{ S7COMM_AREA_COUNTER200,			"IEC counters (200 family)" },
 	{ S7COMM_AREA_TIMER200,				"IEC timers (200 family)" },
-	{ S7COMM_AREA_SYSDATAS5,			"System data area S5 ?" },
-	{ S7COMM_AREA_RAWMEMORYS5,			"Raw memory S5" },
 	{ 0,								NULL }
 };
 /**************************************************************************
@@ -568,6 +564,53 @@ static const true_false_string fragment_descriptions = {
 	"No"
 };
 
+/**************************************************************************
+ **************************************************************************/
+ 
+ /* Possible Patent related stuff for TIA Portal */
+
+/**************************************************************************
+ * Flags for LID access
+ */
+#define S7COMM_TIA1200_VAR_ENCAPS_LID		0x2
+#define S7COMM_TIA1200_VAR_ENCAPS_IDX		0x3
+#define S7COMM_TIA1200_VAR_OBTAIN_LID		0x4
+#define S7COMM_TIA1200_VAR_OBTAIN_IDX		0x5
+
+static const value_string tia1200_var_lid_flag_names[] = {
+	{ S7COMM_TIA1200_VAR_ENCAPS_LID,		"Encapsulated LID" },
+	{ S7COMM_TIA1200_VAR_ENCAPS_IDX,		"Encapsulated Index" },
+	{ S7COMM_TIA1200_VAR_OBTAIN_LID,		"Obtain by LID" },
+	{ S7COMM_TIA1200_VAR_OBTAIN_IDX,		"Obtain by Index" },
+	{ 0,									NULL }
+};
+
+/**************************************************************************
+ * TIA 1200 Area Names for variable access
+ */
+#define S7COMM_TIA1200_VAR_ITEM_AREA_I		0x50
+#define S7COMM_TIA1200_VAR_ITEM_AREA_O		0x51
+#define S7COMM_TIA1200_VAR_ITEM_AREA_M		0x52
+#define S7COMM_TIA1200_VAR_ITEM_AREA_C		0x53
+#define S7COMM_TIA1200_VAR_ITEM_AREA_T		0x54
+
+static const value_string tia1200_var_item_area_names[] = {
+	{ S7COMM_TIA1200_VAR_ITEM_AREA_I,		"Inputs (I)" },
+	{ S7COMM_TIA1200_VAR_ITEM_AREA_O,		"Outputs (Q)" },
+	{ S7COMM_TIA1200_VAR_ITEM_AREA_M,		"Flags (M)" },
+	{ S7COMM_TIA1200_VAR_ITEM_AREA_C,		"Counter (C)" },
+	{ S7COMM_TIA1200_VAR_ITEM_AREA_T,		"Timer (TM)" },
+	{ 0,									NULL }
+};
+
+static gint hf_s7comm_tia1200_substructure_item = -1;					/* Substructure */
+static gint hf_s7comm_tia1200_var_lid_flags = -1;						/* LID Flags */
+
+/**************************************************************************
+ **************************************************************************/
+
+
+
 
 /**************************************************************************
  **************************************************************************/
@@ -843,7 +886,15 @@ proto_register_s7comm (void)
 		{ &hf_s7comm_diagdata_registerflag_db2,
 		{ "Datablock register 2",		"s7comm.diagdata.register.db2", FT_BOOLEAN, 8, NULL, 0x40,
 		  "DB2 (instance) / Datablock register 2", HFILL }},
-
+		
+		/* TIA Portal stuff */
+		{ &hf_s7comm_tia1200_var_lid_flags,
+		{ "LID flags",					"s7comm.tiap.lid_flags", FT_UINT8,	BASE_DEC, VALS(tia1200_var_lid_flag_names), 0xf0,
+      	  "LID flags", HFILL }},
+		  
+		{ &hf_s7comm_tia1200_substructure_item,
+		{ "Substructure",				"s7comm.tiap.substructure",	FT_NONE, BASE_NONE, NULL, 0x0,
+		  "Substructure", HFILL }},
 	};
 
 	static gint *ett[] = {
@@ -1141,12 +1192,17 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 	guint8 t_size = 0;
 	guint16 len = 0;
 	guint16 db = 0;
+	guint16 i;
 	guint8 area = 0;
 	proto_item *item = NULL;
 	
 	guint8 var_spec_type = 0;
 	guint8 var_spec_length = 0;
 	guint8 var_spec_syntax_id = 0;
+	proto_item *tia_struct_item = NULL;
+	guint16 tia_var_area1 = 0;
+	guint16 tia_var_area2 = 0;
+	guint8 tia_lid_flags = 0;
 	
 	/* At first check type and length of variable specification */
 	var_spec_type = tvb_get_guint8(tvb, offset);
@@ -1169,7 +1225,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 	offset += 1;
 	proto_tree_add_text(item, tvb, offset, 1, "Length of following address specification: %d bytes",  tvb_get_guint8(tvb, offset));
 	offset += 1;
-	proto_tree_add_text(item, tvb, offset, 1, "Syntax Id (0x10 for Any-Pointer): 0x%02x",  tvb_get_guint8(tvb, offset));
+	proto_tree_add_text(item, tvb, offset, 1, "Syntax Id (0x10=S7ANY 0xb2=1200SYM): 0x%02x",  tvb_get_guint8(tvb, offset));
 	offset += 1;	
 	/****************************************************************************/
 	/************************** Step 7 Classic 300 400 **************************/
@@ -1238,26 +1294,55 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		offset += 3;
 	/****************************************************************************/
 	/******************** TIA S7 1200 symbolic address mode *********************/
-	} else if (var_spec_type == 0x12 && var_spec_length == 14 && var_spec_syntax_id == 0xb2) {
-		proto_tree_add_text(item, tvb, offset, 1, "1200 sym: 0x%02x", tvb_get_guint8( tvb, offset ));
-		offset += 1;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
-		proto_tree_add_text(item, tvb, offset, 2, "1200 sym: 0x%02x%02x", tvb_get_guint8( tvb, offset ), tvb_get_guint8( tvb, offset + 1));
-		offset += 2;
+	} else if (var_spec_type == 0x12 && var_spec_length >= 14 && var_spec_syntax_id == 0xb2) {
 		proto_item_append_text(item, " 1200 symbolic address");
+		/* first byte in address seems always be 0xff */
+		proto_tree_add_text(item, tvb, offset, 1, "1200 sym Reserved: 0x%02x", tvb_get_guint8( tvb, offset ));
+		offset += 1;
+		/* When Bytes 2/3 are 0, then Bytes 4/5 defines the area as in classic 300/400 address mode
+		 * when Bytes 2/3 = 8a0e then in bytes 4/5 contain the DB number
+		 */
+		tia_var_area1 = tvb_get_ntohs(tvb, offset);
+		tia_var_area2 = tvb_get_ntohs(tvb, offset + 2);
+		if (tia_var_area1 == 0) {
+			proto_tree_add_text(item, tvb, offset, 4, "1200 sym Root area: %s", val_to_str(tia_var_area2, tia1200_var_item_area_names, "Unknown area: %u"));
+			offset += 4;
+		} else if (tia_var_area1 == 0x8a0e) {
+			proto_tree_add_text(item, tvb, offset, 2, "1200 sym Root area DB: 0x%04x", tia_var_area1);
+			offset += 2;
+			proto_tree_add_text(item, tvb, offset, 2, "1200 sym Root DB number: %u", tia_var_area2);
+			offset += 2;
+		} else {
+			proto_tree_add_text(item, tvb, offset, 2, "1200 sym Unknown Area 1: 0x%04x", tia_var_area1);
+			offset += 2;
+			proto_tree_add_text(item, tvb, offset, 2, "1200 sym Unknown Area 2: 0x%04x", tia_var_area2);
+			offset += 2;
+		}
+		proto_tree_add_text(item, tvb, offset, 4, "1200 sym CRC: 0x%08x", tvb_get_ntohl(tvb, offset));
+		offset += 4;
+
+		for (i = 0; i < (var_spec_length - 10) / 4; i++) {
+			/* Insert a new tree for every sub-struct */
+			tia_struct_item = proto_tree_add_item( sub_tree, hf_s7comm_tia1200_substructure_item, tvb, offset, 4, FALSE );
+			item = proto_item_add_subtree(tia_struct_item, ett_s7comm_param_item);
+			tia_lid_flags = tvb_get_guint8( tvb, offset ) >> 4;
+			proto_item_append_text(tia_struct_item, " [%d]: %s, Number: %lu", i + 1,
+				val_to_str(tia_lid_flags, tia1200_var_lid_flag_names, "Unknown flags: 0x%02x"),
+				(tvb_get_ntohl( tvb, offset ) & 0x0fffffff)				
+			);			
+			proto_tree_add_item(tia_struct_item, hf_s7comm_tia1200_var_lid_flags, tvb, offset, 1, FALSE);
+			
+			if (tia_lid_flags == S7COMM_TIA1200_VAR_OBTAIN_LID || tia_lid_flags == S7COMM_TIA1200_VAR_ENCAPS_LID) {
+				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "LID number: %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
+			} else {
+				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Number    : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
+			}
+			offset += 4;
+		}		
 	}
 	else {
 		proto_tree_add_text(item, tvb, offset, 1, "Unknown variable specification", tvb_get_guint8( tvb, offset ));
-		offset += (var_spec_length + 2);
+		offset += var_spec_length - 1;
 		proto_item_append_text(item, " Unknown variable specification");
 	}
 	return offset;
@@ -1457,13 +1542,12 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
 	proto_tree_add_text(tree, tvb, offset, 1, "Length part 2: %d bytes", len);
 	offset += 1;
 	/* Function (PI_SERVICE) as string  (program invocation)
-		Known funktions:
+		Known functions:
 		_INSE = Activate a module
 		_DELE = Delete a passive module
 		_PROGRAM = Start/Stop the PLC
 		_PLC_MEMORYRESET = Reset the PLC memory
-	*/
-	
+	*/	
 	proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_ephemeral_string(tvb, offset, len));
 	offset += len;
 
@@ -1566,9 +1650,8 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	/* 'P', 'B' or 'A' is following */
 	proto_tree_add_text(tree, tvb, offset,1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
 	offset += 1;
-
 	
-	/* Part 2, only available in "request download"*/
+	/* Part 2, only available in "request download" */
 	if (function == S7COMM_FUNCREQUESTDOWNLOAD && plength > 18) {
 		len = tvb_get_guint8(tvb, offset);
 		proto_tree_add_text(tree, tvb, offset, 1, "Length part 2: %d bytes", len);
@@ -1721,8 +1804,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	 */
 	offset += plength;	/* set offset to the beginning of the data part */
 	item = proto_tree_add_item( tree, hf_s7comm_data, tvb, offset, dlength, FALSE );
-	data_tree = proto_item_add_subtree( item, ett_s7comm_data);	
-
+	data_tree = proto_item_add_subtree( item, ett_s7comm_data);
 
 	/* the first 4 bytes of the  data part of a userdata telegram are the same for all types */
 	if (dlength >= 4) {
@@ -1741,7 +1823,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
 		offset += 2;
 
 		/* Call function to decode the rest of the data part 
-		 *  decode only when there is a data part lenght greater 4 bytes
+		 * decode only when there is a data part lenght greater 4 bytes
 		 */
 		if (dlength > 4) {
 			switch (funcgroup){
@@ -1798,8 +1880,6 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 
 	switch(subfunc)
 	{
-		// S7COMM_UD_SUBF_PROG_READDIAGDATA
-	
 		case S7COMM_UD_SUBF_PROG_REQDIAGDATA1:
 		case S7COMM_UD_SUBF_PROG_REQDIAGDATA2:
 			/* start variable table or block online view */
@@ -1949,7 +2029,7 @@ s7comm_decode_ud_prog_reqdiagdata(tvbuff_t *tvb,
 		}
 		proto_tree_add_text(item_tree, tvb, offset, 1, "Unknown byte: 0x%02x", tvb_get_guint8(tvb, offset));
 		offset += 1;
-		//proto_tree_add_text(data_tree, tvb, offset, 1, "Register Flags : 0x%02x", tvb_get_guint8(tvb, offset));
+
 		registerflags = tvb_get_guint8(tvb, offset);
 		make_registerflag_string(str_flags, registerflags, sizeof(str_flags));
 		proto_item_append_text(item, " [%d]: (%s)", line_nr+1, str_flags);
