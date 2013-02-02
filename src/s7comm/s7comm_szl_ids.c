@@ -352,6 +352,19 @@ static gint hf_s7comm_szl_0131_0004_hoch = -1;
 static gint hf_s7comm_szl_0131_0004_ver = -1;
 static gint hf_s7comm_szl_0131_0004_res = -1;
 
+
+static gint hf_s7comm_szl_0132_0001_index = -1;
+static gint hf_s7comm_szl_0132_0001_res_pg = -1;
+static gint hf_s7comm_szl_0132_0001_res_os = -1;
+static gint hf_s7comm_szl_0132_0001_u_pg = -1;
+static gint hf_s7comm_szl_0132_0001_u_os = -1;
+static gint hf_s7comm_szl_0132_0001_proj = -1;
+static gint hf_s7comm_szl_0132_0001_auf = -1;
+static gint hf_s7comm_szl_0132_0001_free = -1;
+static gint hf_s7comm_szl_0132_0001_used = -1;
+static gint hf_s7comm_szl_0132_0001_last = -1;
+static gint hf_s7comm_szl_0132_0001_res = -1;
+
 static gint hf_s7comm_szl_0132_0002_index = -1;
 static gint hf_s7comm_szl_0132_0002_anz = -1;
 static gint hf_s7comm_szl_0132_0002_res = -1;
@@ -361,6 +374,7 @@ static gint hf_s7comm_szl_0132_0004_key = -1;
 static gint hf_s7comm_szl_0132_0004_param = -1;
 static gint hf_s7comm_szl_0132_0004_real = -1;
 static gint hf_s7comm_szl_0132_0004_bart_sch = -1;
+
 static const value_string szl_bart_sch_names[] = {
 	{ 0,	"undefined or cannot be ascertained" },
 	{ 1,	"RUN" },
@@ -495,7 +509,8 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0131_0002_register(proto);
 	s7comm_szl_0131_0003_register(proto);
 	s7comm_szl_0131_0004_register(proto);
-
+	
+	s7comm_szl_0132_0001_register(proto);
 	s7comm_szl_0132_0002_register(proto);
 	s7comm_szl_0132_0004_register(proto);
 
@@ -626,7 +641,10 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 									}
 									break;
 								case 0x0132:
-									if (index == 0x0002) {
+									if (index == 0x0001) {
+										offset = s7comm_decode_szl_id_0132_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+										szl_decoded = TRUE;
+									} else if (index == 0x0002) {
 										offset = s7comm_decode_szl_id_0132_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);
 										szl_decoded = TRUE;
 									} else if (index == 0x0004) {
@@ -1856,7 +1874,99 @@ s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb,
 	return offset;
 }
 
+/*******************************************************************************************************
+ *
+ * SZL-ID:	0x0132
+ * Index:	0x0001
+ * Content:
+ *	The partial list extract with SZL-ID W#16#0132 and index W#16#0001
+ *  contains general communication status data.
+ * 
+ *******************************************************************************************************/
+void
+s7comm_szl_0132_0001_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_0132_0001_index,
+		{ "Index",			"s7comm.szl.0132.0001.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "W#16#0001: General status data for communication", HFILL }},
 
+		{ &hf_s7comm_szl_0132_0001_res_pg,
+		{ "res pg (Guaranteed number of PG connections)",		"s7comm.szl.0132.0001.res_pg", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "res pg (Guaranteed number of PG connections)", HFILL }},
+
+		{ &hf_s7comm_szl_0132_0001_res_os,
+		{ "res os (Guaranteed number of OS connections)",		"s7comm.szl.0132.0001.res_os", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "res os (Guaranteed number of OS connections)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_u_pg,
+		{ "u pg (Current number of PG connections)",			"s7comm.szl.0132.0001.u_pg", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "u pg (Current number of PG connections)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_u_os,
+		{ "u os (Current number of OS connections)",			"s7comm.szl.0132.0001.u_os", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "u os (Current number of OS connections)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_proj,
+		{ "proj (Current number of configured connections)",	"s7comm.szl.0132.0001.proj", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "proj (Current number of configured connections)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_auf,
+		{ "auf (Current number of connections established by proj)",	"s7comm.szl.0132.0001.auf", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "auf (Current number of connections established by proj)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_free,
+		{ "free (Number of free connections)",	"s7comm.szl.0132.0001.free", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "free (Number of free connections)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_used,
+		{ "used (Number of free connections used)",	"s7comm.szl.0132.0001.used", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "used (Number of free connections used)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_last,
+		{ "last (Maximum selected communication load of the CPU in %)",	"s7comm.szl.0132.0001.last", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "last (Maximum selected communication load of the CPU in %)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0001_res,
+		{ "res (Reserved)",	"s7comm.szl.0132.0001.res", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res (Reserved)", HFILL }},
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_0132_idx_0001(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_index, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_res_pg, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_res_os, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_u_pg, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_u_os, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_proj, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_auf, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_free, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_used, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_last, tvb, offset, 2, FALSE);
+	offset += 2;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_res, tvb, offset, 10, FALSE);
+	offset += 10;
+
+	return offset;
+}
 /*******************************************************************************************************
  *
  * SZL-ID:	0x0132
