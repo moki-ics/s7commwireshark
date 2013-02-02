@@ -392,7 +392,18 @@ static const value_string szl_crst_wrst_names[] = {
 };
 static gint hf_s7comm_szl_0132_0004_res = -1;
 
+static gint hf_s7comm_szl_0132_0005_index = -1;
+static gint hf_s7comm_szl_0132_0005_erw = -1;
+static gint hf_s7comm_szl_0132_0005_send = -1;
+static gint hf_s7comm_szl_0132_0005_moeg = -1;
+static gint hf_s7comm_szl_0132_0005_ltmerz = -1;
+static gint hf_s7comm_szl_0132_0005_res = -1;
 
+static const value_string szl_0132_0005_func_exist_names[] = {
+	{ 0x0,	"No" },
+	{ 0x1,	"Yes" },
+	{ 0,	NULL }
+};
 
 static gint hf_s7comm_szl_0424_0000_ereig = -1;
 static gint hf_s7comm_szl_0424_0000_ae = -1;
@@ -513,6 +524,7 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0132_0001_register(proto);
 	s7comm_szl_0132_0002_register(proto);
 	s7comm_szl_0132_0004_register(proto);
+	s7comm_szl_0132_0005_register(proto);
 
 	s7comm_szl_0424_0000_register(proto);	
 }
@@ -649,6 +661,9 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 										szl_decoded = TRUE;
 									} else if (index == 0x0004) {
 										offset = s7comm_decode_szl_id_0132_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+										szl_decoded = TRUE;
+									} else if (index == 0x0005) {
+										offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, list_len, list_count, offset);
 										szl_decoded = TRUE;
 									}
 									break;
@@ -2079,6 +2094,69 @@ s7comm_decode_szl_id_0132_idx_0004(tvbuff_t *tvb,
 	offset += 2;
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0004_res, tvb, offset, 28, FALSE);
 	offset += 28;
+
+	return offset;
+}
+/*******************************************************************************************************
+ *
+ * SZL-ID:	0x0132
+ * Index:	0x0005
+ * Content:
+ *  The partial list extract with SZL-ID W#16#0132 and index W#16#0005
+ *  contains information about the status of the diagnostics on the module.
+ * 
+ *******************************************************************************************************/
+void
+s7comm_szl_0132_0005_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_0132_0005_index,
+		{ "Index",			"s7comm.szl.0132.0005.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "W#16#0005: Diagnostics", HFILL }},
+
+		{ &hf_s7comm_szl_0132_0005_erw,
+		{ "erw (Extended functions)",			"s7comm.szl.0132.0005.erw", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
+		  "erw (Extended functions)", HFILL }},
+
+		{ &hf_s7comm_szl_0132_0005_send,
+		{ "send (Automatic sending)",			"s7comm.szl.0132.0005.send", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
+		  "send (Automatic sending)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0005_moeg,
+		{ "moeg (Sending user-defined diagnostic messages currently possible)",			"s7comm.szl.0132.0005.moeg", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
+		  "moeg (Sending user-defined diagnostic messages currently possible)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0005_ltmerz,
+		{ "ltmerz (Generation of status message active)",			"s7comm.szl.0132.0005.ltmerz", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
+		  "ltmerz (Generation of status message active)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0005_res,
+		{ "res (Reserved)",			"s7comm.szl.0132.0005.res", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res (Reserved)", HFILL }},
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_0132_idx_0005(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_index, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_erw, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_send, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_moeg, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_ltmerz, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_res, tvb, offset, 30, FALSE);
+	offset += 30;
 
 	return offset;
 }
