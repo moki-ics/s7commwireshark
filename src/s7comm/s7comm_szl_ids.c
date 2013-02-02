@@ -405,6 +405,13 @@ static const value_string szl_0132_0005_func_exist_names[] = {
 	{ 0,	NULL }
 };
 
+static gint hf_s7comm_szl_0132_0006_index = -1;
+static gint hf_s7comm_szl_0132_0006_used = -1;
+static gint hf_s7comm_szl_0132_0006_anz_schnell = -1;
+static gint hf_s7comm_szl_0132_0006_anz_inst = -1;
+static gint hf_s7comm_szl_0132_0006_anz_multicast = -1;
+static gint hf_s7comm_szl_0132_0006_res = -1;
+
 static gint hf_s7comm_szl_0424_0000_ereig = -1;
 static gint hf_s7comm_szl_0424_0000_ae = -1;
 static gint hf_s7comm_szl_0424_0000_bzu_id = -1;
@@ -525,6 +532,7 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0132_0002_register(proto);
 	s7comm_szl_0132_0004_register(proto);
 	s7comm_szl_0132_0005_register(proto);
+	s7comm_szl_0132_0006_register(proto);
 
 	s7comm_szl_0424_0000_register(proto);	
 }
@@ -664,6 +672,9 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 										szl_decoded = TRUE;
 									} else if (index == 0x0005) {
 										offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, list_len, list_count, offset);
+										szl_decoded = TRUE;
+									} else if (index == 0x0006) {
+										offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
 										szl_decoded = TRUE;
 									}
 									break;
@@ -2160,7 +2171,71 @@ s7comm_decode_szl_id_0132_idx_0005(tvbuff_t *tvb,
 
 	return offset;
 }
+/*******************************************************************************************************
+ *
+ * SZL-ID:	0x0132
+ * Index:	0x0006
+ * Content:
+ *  The partial list extract with SZL-ID W#16#0132 and index W#16#0006
+ *  contains status data about data exchange with communication SFBs for
+ *  configured connections.
+ * 
+ *******************************************************************************************************/
+void
+s7comm_szl_0132_0006_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_0132_0006_index,
+		{ "Index",			"s7comm.szl.0132.0006.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "W#16#0006: Data exchange with communication SFBs for configured connections", HFILL }},
 
+		{ &hf_s7comm_szl_0132_0006_used,
+		{ "used (Blocks used)",	"s7comm.szl.0132.0006.used", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used (Blocks used)", HFILL }},
+
+		{ &hf_s7comm_szl_0132_0006_anz_schnell,
+		{ "anz_schnell (Reserved)",		"s7comm.szl.0132.0006.anz_schnell", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "anz_schnell (Reserved)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0132_0006_anz_inst,
+		{ "anz_inst (Number of loaded SFB instances)",		"s7comm.szl.0132.0006.anz_inst", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "anz_inst (Number of loaded SFB instances)", HFILL }},
+		
+		{ &hf_s7comm_szl_0132_0006_anz_multicast,
+		{ "anz_multicast (Number of blocks used for multicast)",		"s7comm.szl.0132.0006.anz_multicast", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "anz_multicast (Number of blocks used for multicast)", HFILL }},
+		
+		{ &hf_s7comm_szl_0132_0006_res,
+		{ "res (Reserved)",			"s7comm.szl.0132.0006.res", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res (Reserved)", HFILL }},
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_0132_idx_0006(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_index, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used, tvb, offset, 8, FALSE);
+	offset += 8;
+	/* TODO: Byte/Bit explanation from SZL ID 0x131 Index 6 */
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_schnell, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_inst, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_multicast, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_res, tvb, offset, 25, FALSE);
+	offset += 25;
+
+	return offset;
+}
 /*******************************************************************************************************
  *
  * SZL-ID:	0x0424
