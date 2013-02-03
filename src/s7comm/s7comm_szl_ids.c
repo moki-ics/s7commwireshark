@@ -352,6 +352,80 @@ static gint hf_s7comm_szl_0131_0004_hoch = -1;
 static gint hf_s7comm_szl_0131_0004_ver = -1;
 static gint hf_s7comm_szl_0131_0004_res = -1;
 
+static gint hf_s7comm_szl_0131_0006_index = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_0_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_1_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_2_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_3_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_6_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_0 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_1 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_2 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_3 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_4 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_5 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_6 = -1;
+static gint hf_s7comm_szl_0131_0006_funkt_7_7 = -1;
+static gint hf_s7comm_szl_0131_0006_schnell = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_0 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_1 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_2 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_3 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_4 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_5 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_6 = -1;
+static gint hf_s7comm_szl_0131_0006_zugtyp_7 = -1;
+static gint hf_s7comm_szl_0131_0006_res1 = -1;
+static gint hf_s7comm_szl_0131_0006_max_sd_empf = -1;
+static gint hf_s7comm_szl_0131_0006_max_sd_al8p = -1;
+static gint hf_s7comm_szl_0131_0006_max_inst = -1;
+static gint hf_s7comm_szl_0131_0006_res2 = -1;
+static gint hf_s7comm_szl_0131_0006_verb_proj = -1;
+static gint hf_s7comm_szl_0131_0006_verb_prog = -1;
+static gint hf_s7comm_szl_0131_0006_res3 = -1;
 
 static gint hf_s7comm_szl_0132_0001_index = -1;
 static gint hf_s7comm_szl_0132_0001_res_pg = -1;
@@ -406,7 +480,14 @@ static const value_string szl_0132_0005_func_exist_names[] = {
 };
 
 static gint hf_s7comm_szl_0132_0006_index = -1;
-static gint hf_s7comm_szl_0132_0006_used = -1;
+static gint hf_s7comm_szl_0132_0006_used_0 = -1;
+static gint hf_s7comm_szl_0132_0006_used_1 = -1;
+static gint hf_s7comm_szl_0132_0006_used_2 = -1;
+static gint hf_s7comm_szl_0132_0006_used_3 = -1;
+static gint hf_s7comm_szl_0132_0006_used_4 = -1;
+static gint hf_s7comm_szl_0132_0006_used_5 = -1;
+static gint hf_s7comm_szl_0132_0006_used_6 = -1;
+static gint hf_s7comm_szl_0132_0006_used_7 = -1;
 static gint hf_s7comm_szl_0132_0006_anz_schnell = -1;
 static gint hf_s7comm_szl_0132_0006_anz_inst = -1;
 static gint hf_s7comm_szl_0132_0006_anz_multicast = -1;
@@ -527,6 +608,7 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0131_0002_register(proto);
 	s7comm_szl_0131_0003_register(proto);
 	s7comm_szl_0131_0004_register(proto);
+	s7comm_szl_0131_0006_register(proto);
 	
 	s7comm_szl_0132_0001_register(proto);
 	s7comm_szl_0132_0002_register(proto);
@@ -657,6 +739,9 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 										szl_decoded = TRUE;
 									} else if (index == 0x0004) {
 										offset = s7comm_decode_szl_id_0131_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+										szl_decoded = TRUE;
+									} else if (index == 0x0006) {
+										offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
 										szl_decoded = TRUE;
 									}
 									break;
@@ -1902,6 +1987,486 @@ s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
+ * SZL-ID:	0x0131
+ * Index:	0x0006
+ * Content:
+ *  The partial list extract with SZL-ID W#16#0131 and the index W#16#0006
+ *  contains information about the functions available for data exchange with
+ *  communication SFBs for configured connections on the module.
+ * 
+ *******************************************************************************************************/
+
+void
+s7comm_szl_0131_0006_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_0131_0006_index,
+		{ "Index     ",			"s7comm.szl.0131.0006.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "W#16#0006 Data exchange with communication SFBs for configured connections", HFILL }},
+
+		/* funkt_0 */
+		{ &hf_s7comm_szl_0131_0006_funkt_0,
+		{ "funkt_0   ",			"s7comm.szl.0131.0006.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_0,
+		{ "Bit 0: USEND",		"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: USEND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_1,
+		{ "Bit 1: URCV",		"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: URCV", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_2,
+		{ "Bit 2: SEND",		"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: SEND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_3,
+		{ "Bit 3: RCV",			"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: RCV", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_4,
+		{ "Bit 4: BSEND",		"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: BSEND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_5,
+		{ "Bit 5: BRCV",		"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: BRCV", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_6,
+		{ "Bit 6: GET",			"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: GET", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_0_7,
+		{ "Bit 7: PUT",			"s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: PUT", HFILL }},
+		 
+		/* funkt_1 */
+		{ &hf_s7comm_szl_0131_0006_funkt_1,
+		{ "funkt_1   ",			"s7comm.szl.0131.0006.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_0,
+		{ "Bit 0: PRINT",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: PRINT", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_1,
+		{ "Bit 1: ABORT",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: ABORT", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_2,
+		{ "Bit 2: INITIATE",	"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: INITIATE", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_3,
+		{ "Bit 3: START",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: START", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_4,
+		{ "Bit 4: STOP",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: STOP", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_5,
+		{ "Bit 5: RESUME",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: RESUME", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_6,
+		{ "Bit 6: STATUS",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: STATUS", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_1_7,
+		{ "Bit 7: USTATUS",		"s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: USTATUS", HFILL }},
+		  
+		/* funkt_2 */
+		{ &hf_s7comm_szl_0131_0006_funkt_2,
+		{ "funkt_2   ",			"s7comm.szl.0131.0006.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_0,
+		{ "Bit 0: PI",			"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: PI", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_1,
+		{ "Bit 1: READ",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: READ", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_2,
+		{ "Bit 2: WRITE",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: WRITE", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_3,
+		{ "Bit 3: LOAD",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: LOAD", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_4,
+		{ "Bit 4: LOAD_ME",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: LOAD_ME", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_5,
+		{ "Bit 5: ALARM",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: ALARM", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_6,
+		{ "Bit 6: ALARM_8",		"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: ALARM_8", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_2_7,
+		{ "Bit 7: ALARM_8P",	"s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: ALARM_8P", HFILL }},
+		  
+		/* funkt_3 */
+		{ &hf_s7comm_szl_0131_0006_funkt_3,
+		{ "funkt_3   ",			"s7comm.szl.0131.0006.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_0,
+		{ "Bit 0: NOTIFY",		"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: NOTIFY", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_1,
+		{ "Bit 1: AR_SEND",		"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: AR_SEND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_2,
+		{ "Bit 2: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_3,
+		{ "Bit 3: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_4,
+		{ "Bit 4: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_5,
+		{ "Bit 5: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_6,
+		{ "Bit 6: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_3_7,
+		{ "Bit 7: Reserved",	"s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		  
+		/* funkt_4 */
+		{ &hf_s7comm_szl_0131_0006_funkt_4,
+		{ "funkt_4   ",			"s7comm.szl.0131.0006.funkt_4", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+		  
+		/* funkt_5 */
+		{ &hf_s7comm_szl_0131_0006_funkt_5,
+		{ "funkt_5   ",			"s7comm.szl.0131.0006.funkt_5", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+
+		/* funkt_6 */
+		{ &hf_s7comm_szl_0131_0006_funkt_6,
+		{ "funkt_6   ",			"s7comm.szl.0131.0006.funkt_6", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_0,
+		{ "Bit 0: X_SEND",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: X_SEND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_1,
+		{ "Bit 1: X_RCV",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: X_RCV", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_2,
+		{ "Bit 2: X_GET",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: X_GET", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_3,
+		{ "Bit 3: X_PUT",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: X_PUT", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_4,
+		{ "Bit 4: X_ABORT",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: X_ABORT", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_5,
+		{ "Bit 5: I_GET",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: I_GET", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_6,
+		{ "Bit 6: I_PUT",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: I_PUT", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_6_7,
+		{ "Bit 7: I_ABORT",		"s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: I_ABORT", HFILL }},
+		  
+		/* funkt_7 */
+		{ &hf_s7comm_szl_0131_0006_funkt_7,
+		{ "funkt_7   ",			"s7comm.szl.0131.0006.funkt_7", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_0,
+		{ "Bit 0: SCAN_SND",	"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: SCAN_SND", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_1,
+		{ "Bit 1: ALARM_SQ",	"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: ALARM_SQ", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_2,
+		{ "Bit 2: ALARM_S",		"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: ALARM_S", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_3,
+		{ "Bit 3: ALARM_SC",	"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: ALARM_SC", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_4,
+		{ "Bit 4: EN_MSG",		"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: EN_MSG", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_5,
+		{ "Bit 5: DIS_MSG",		"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: DIS_MSG", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_6,
+		{ "Bit 6: CONTROL",		"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: CONTROL", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0006_funkt_7_7,
+		{ "Bit 7: Reserved",	"s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		
+		/******/		
+		{ &hf_s7comm_szl_0131_0006_schnell,
+		{ "schnell (Fast reaction yes/no)",			"s7comm.szl.0131.0006.schnell", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "schnell (Fast reaction yes/no)", HFILL }},
+  
+		{ &hf_s7comm_szl_0131_0006_zugtyp_0,
+		{ "zugtyp_0  ",			"s7comm.szl.0131.0006.zugtyp_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_0 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_1,
+		{ "zugtyp_1  ",			"s7comm.szl.0131.0006.zugtyp_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_1 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_2,
+		{ "zugtyp_2  ",			"s7comm.szl.0131.0006.zugtyp_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_2 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_3,
+		{ "zugtyp_3  ",			"s7comm.szl.0131.0006.zugtyp_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_3 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_4,
+		{ "zugtyp_4  ",			"s7comm.szl.0131.0006.zugtyp_4", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_4 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_5,
+		{ "zugtyp_5  ",			"s7comm.szl.0131.0006.zugtyp_5", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_5 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_6,
+		{ "zugtyp_6  ",			"s7comm.szl.0131.0006.zugtyp_6", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_6 (Permitted module types for fast reaction)", HFILL }},
+		{ &hf_s7comm_szl_0131_0006_zugtyp_7,
+		{ "zugtyp_7  ",			"s7comm.szl.0131.0006.zugtyp_7", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "zugtyp_7 (Permitted module types for fast reaction)", HFILL }},
+		
+		{ &hf_s7comm_szl_0131_0006_res1,
+		{ "res1 (Reserved)",			"s7comm.szl.0131.0006.res1", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res1 (Reserved)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0006_max_sd_empf,
+		{ "max_sd_empf (Maximum number of send and receive parameters per block)",			"s7comm.szl.0131.0006.max_sd_empf", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "max_sd_empf (Maximum number of send and receive parameters per block)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0006_max_sd_al8p,
+		{ "max_sd_al8p (Maximum number of send parameters for ALARM_8P)",			"s7comm.szl.0131.0006.max_sd_al8p", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "max_sd_al8p (Maximum number of send parameters for ALARM_8P)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0006_max_inst,
+		{ "max_inst (Maximum number of instances for communication SFBs for configured connections)",			"s7comm.szl.0131.0006.max_inst", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "max_inst (Maximum number of instances for communication SFBs for configured connections)", HFILL }},
+		
+		{ &hf_s7comm_szl_0131_0006_res2,
+		{ "res2 (Reserved)",			"s7comm.szl.0131.0006.res2", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res2 (Reserved)", HFILL }},
+				
+		{ &hf_s7comm_szl_0131_0006_verb_proj,
+		{ "verb_proj (Connection configured (yes=1) possible)",			"s7comm.szl.0131.0006.verb_proj", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "verb_proj (Connection configured (yes=1) possible)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0006_verb_prog,
+		{ "verb_prog (Connection programmed (yes=1) possible)",			"s7comm.szl.0131.0006.verb_prog", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "verb_prog (Connection programmed (yes=1) possible)", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0006_res3,
+		{ "res3 (Reserved)",			"s7comm.szl.0131.0006.res3", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res3 (Reserved)", HFILL }},
+		  
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_0131_idx_0006(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_index, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_4, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_5, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_schnell, tvb, offset, 1, FALSE);
+	offset += 1;
+	/*  ---  */
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_4, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_5, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_zugtyp_7, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_res1, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_max_sd_empf, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_max_sd_al8p, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_max_inst, tvb, offset, 2, FALSE);
+	offset += 2;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_res2, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_verb_proj, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_verb_prog, tvb, offset, 1, FALSE);
+	offset += 1;	
+	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_res3, tvb, offset, 10, FALSE);
+	offset += 10;
+	
+	return offset;
+}
+/*******************************************************************************************************
+ *
  * SZL-ID:	0x0132
  * Index:	0x0001
  * Content:
@@ -2190,9 +2755,30 @@ s7comm_szl_0132_0006_register(int proto)
 		{ "Index",			"s7comm.szl.0132.0006.index", FT_UINT16, BASE_HEX, NULL, 0x0,
 		  "W#16#0006: Data exchange with communication SFBs for configured connections", HFILL }},
 
-		{ &hf_s7comm_szl_0132_0006_used,
-		{ "used (Blocks used)",	"s7comm.szl.0132.0006.used", FT_BYTES, BASE_NONE, NULL, 0x0,
-		  "used (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_0,
+		{ "used_0 (Blocks used)",	"s7comm.szl.0132.0006.used_0", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_0 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_1,
+		{ "used_1 (Blocks used)",	"s7comm.szl.0132.0006.used_1", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_1 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_2,
+		{ "used_2 (Blocks used)",	"s7comm.szl.0132.0006.used_2", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_2 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_3,
+		{ "used_3 (Blocks used)",	"s7comm.szl.0132.0006.used_3", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_3 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_4,
+		{ "used_4 (Blocks used)",	"s7comm.szl.0132.0006.used_4", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_4 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_5,
+		{ "used_5 (Blocks used)",	"s7comm.szl.0132.0006.used_5", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_5 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_6,
+		{ "used_6 (Blocks used)",	"s7comm.szl.0132.0006.used_6", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_6 (Blocks used)", HFILL }},
+		{ &hf_s7comm_szl_0132_0006_used_7,
+		{ "used_7 (Blocks used)",	"s7comm.szl.0132.0006.used_7", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "used_7 (Blocks used)", HFILL }},
 
 		{ &hf_s7comm_szl_0132_0006_anz_schnell,
 		{ "anz_schnell (Reserved)",		"s7comm.szl.0132.0006.anz_schnell", FT_UINT16, BASE_DEC, NULL, 0x0,
@@ -2222,9 +2808,72 @@ s7comm_decode_szl_id_0132_idx_0006(tvbuff_t *tvb,
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_index, tvb, offset, 2, FALSE);
 	offset += 2;
-	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used, tvb, offset, 8, FALSE);
-	offset += 8;
-	/* TODO: Byte/Bit explanation from SZL ID 0x131 Index 6 */
+	/* Funct from 0x131 Index 6 */
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_0_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_1_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_2_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_3_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_4, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_5, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_6_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_used_7, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_funkt_7_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_schnell, tvb, offset, 1, FALSE);
 	offset += 1;
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_inst, tvb, offset, 2, FALSE);
