@@ -83,7 +83,7 @@ s7comm_info_append_uint16hex(packet_info *pinfo, const char *abbrev, guint16 val
 /*******************************************************************************************************
  *
  * Converts a siemens special timestamp to a string of 24+1 bytes length (e.g. "15.04.2009 12:49:30.520").
- * The timestamp is 8 bytes long, one word is the number of days since 1.1.1984, and 6 bytes millisecods of the day
+ * The timestamp is 6 bytes long, one word is the number of days since 1.1.1984, and 4 bytes millisecods of the day
  *
  *******************************************************************************************************/
 void 
@@ -100,7 +100,7 @@ get_timestring_from_s7time(tvbuff_t *tvb, guint offset, char *str, gint max)
 	t = 441763200L; /* 1.1.1984 00:00:00 */
 	t += days * (24*60*60);
 	t += day_msec / 1000;
-	mt= gmtime(&t);
+	mt = gmtime(&t);
 	g_snprintf(str, max, "%02d.%02d.%04d %02d:%02d:%02d.%03d", 	mt->tm_mday, 
 																mt->tm_mon + 1,
 																mt->tm_year + 1900,
