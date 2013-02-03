@@ -33,6 +33,7 @@ guint32 s7comm_decode_szl_id_0131_idx_0001(tvbuff_t *tvb, proto_tree *tree, guin
 guint32 s7comm_decode_szl_id_0131_idx_0002(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
 guint32 s7comm_decode_szl_id_0131_idx_0003(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
 guint32 s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
+guint32 s7comm_decode_szl_id_0131_idx_0006(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
 
 guint32 s7comm_decode_szl_id_0132_idx_0001(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
 guint32 s7comm_decode_szl_id_0132_idx_0002(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
@@ -53,6 +54,7 @@ void s7comm_szl_0131_0001_register(int proto);
 void s7comm_szl_0131_0002_register(int proto);
 void s7comm_szl_0131_0003_register(int proto);
 void s7comm_szl_0131_0004_register(int proto);
+void s7comm_szl_0131_0006_register(int proto);
 
 void s7comm_szl_0132_0001_register(int proto);
 void s7comm_szl_0132_0002_register(int proto);
