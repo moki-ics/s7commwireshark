@@ -1,7 +1,7 @@
 /* packet-s7comm.c
  *
  * Author:		Thomas Wiens, 2011 (th.wiens@gmx.de)
- * Version:		0.0.2
+ * Version:		0.0.3
  * Description:	Wireshark dissector for S7-Communication
  *
  * $Id$
