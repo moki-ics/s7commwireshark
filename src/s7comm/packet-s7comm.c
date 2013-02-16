@@ -1883,8 +1883,12 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 		case S7COMM_UD_SUBF_PROG_REQDIAGDATA1:
 		case S7COMM_UD_SUBF_PROG_REQDIAGDATA2:
 			/* start variable table or block online view */
-			offset = s7comm_decode_ud_prog_reqdiagdata(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
-			know_data = TRUE;
+			/* TODO: Can only handle requests/response, not the "following" telegrams because it's neccessary to correlate them
+				with the previous request*/
+			if (type != S7COMM_UD_TYPE_FOLLOW) {
+				offset = s7comm_decode_ud_prog_reqdiagdata(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+				know_data = TRUE;
+			}
 			break;		
 			
 		case S7COMM_UD_SUBF_PROG_VARTAB1:
