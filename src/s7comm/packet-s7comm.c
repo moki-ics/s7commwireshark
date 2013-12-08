@@ -1330,17 +1330,13 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 			tia_struct_item = proto_tree_add_item( sub_tree, hf_s7comm_tia1200_substructure_item, tvb, offset, 4, FALSE );
 			item = proto_item_add_subtree(tia_struct_item, ett_s7comm_param_item);
 			tia_lid_flags = tvb_get_guint8( tvb, offset ) >> 4;
-			proto_item_append_text(tia_struct_item, " [%d]: %s, Number: %lu", i + 1,
+			proto_item_append_text(tia_struct_item, " [%d]: %s, Value: %lu", i + 1,
 				val_to_str(tia_lid_flags, tia1200_var_lid_flag_names, "Unknown flags: 0x%02x"),
 				(tvb_get_ntohl( tvb, offset ) & 0x0fffffff)				
 			);			
 			proto_tree_add_item(tia_struct_item, hf_s7comm_tia1200_var_lid_flags, tvb, offset, 1, FALSE);
+			proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);	
 			
-			if (tia_lid_flags == S7COMM_TIA1200_VAR_OBTAIN_LID || tia_lid_flags == S7COMM_TIA1200_VAR_ENCAPS_LID) {
-				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "LID number: %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
-			} else {
-				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
-			}
 			offset += 4;
 		}		
 	}
