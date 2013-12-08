@@ -576,12 +576,16 @@ static const true_false_string fragment_descriptions = {
 #define S7COMM_TIA1200_VAR_ENCAPS_IDX		0x3
 #define S7COMM_TIA1200_VAR_OBTAIN_LID		0x4
 #define S7COMM_TIA1200_VAR_OBTAIN_IDX		0x5
+#define S7COMM_TIA1200_VAR_PART_START		0x6
+#define S7COMM_TIA1200_VAR_PART_LEN			0x7
 
 static const value_string tia1200_var_lid_flag_names[] = {
 	{ S7COMM_TIA1200_VAR_ENCAPS_LID,		"Encapsulated LID" },
 	{ S7COMM_TIA1200_VAR_ENCAPS_IDX,		"Encapsulated Index" },
 	{ S7COMM_TIA1200_VAR_OBTAIN_LID,		"Obtain by LID" },
 	{ S7COMM_TIA1200_VAR_OBTAIN_IDX,		"Obtain by Index" },
+	{ S7COMM_TIA1200_VAR_PART_START,		"Part Start Address" },
+	{ S7COMM_TIA1200_VAR_PART_LEN,			"Part Length" },
 	{ 0,									NULL }
 };
 
@@ -1335,7 +1339,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 			if (tia_lid_flags == S7COMM_TIA1200_VAR_OBTAIN_LID || tia_lid_flags == S7COMM_TIA1200_VAR_ENCAPS_LID) {
 				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "LID number: %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
 			} else {
-				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Number    : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
+				proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);		
 			}
 			offset += 4;
 		}		
