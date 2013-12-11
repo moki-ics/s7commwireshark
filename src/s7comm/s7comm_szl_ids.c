@@ -427,6 +427,50 @@ static gint hf_s7comm_szl_0131_0006_verb_proj = -1;
 static gint hf_s7comm_szl_0131_0006_verb_prog = -1;
 static gint hf_s7comm_szl_0131_0006_res3 = -1;
 
+static gint hf_s7comm_szl_0131_0010_index = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_0 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_1 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_2 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_3 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_4 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_5 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_6 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_1_7 = -1;
+static gint hf_s7comm_szl_0131_0010_funk_2 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_0 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_1 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_2 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_3 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_4 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_5 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_6 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_1_7 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_meld_2 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_0 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_1 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_2 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_3 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_4 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_5 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_6 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_1_7 = -1;
+static gint hf_s7comm_szl_0131_0010_ber_zus_2 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_0 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_1 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_2 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_3 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_4 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_5 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_6 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_1_7 = -1;
+static gint hf_s7comm_szl_0131_0010_typ_zus_2 = -1;
+static gint hf_s7comm_szl_0131_0010_maxanz_arch = -1;
+static gint hf_s7comm_szl_0131_0010_res = -1;
+
 static gint hf_s7comm_szl_0132_0001_index = -1;
 static gint hf_s7comm_szl_0132_0001_res_pg = -1;
 static gint hf_s7comm_szl_0132_0001_res_os = -1;
@@ -609,6 +653,7 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0131_0003_register(proto);
 	s7comm_szl_0131_0004_register(proto);
 	s7comm_szl_0131_0006_register(proto);
+	s7comm_szl_0131_0010_register(proto);
 	
 	s7comm_szl_0132_0001_register(proto);
 	s7comm_szl_0132_0002_register(proto);
@@ -742,6 +787,9 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 										szl_decoded = TRUE;
 									} else if (index == 0x0006) {
 										offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
+										szl_decoded = TRUE;
+									} else if (index == 0x0010) {
+										offset = s7comm_decode_szl_id_0131_idx_0010(tvb, szl_item_tree, list_len, list_count, offset);
 										szl_decoded = TRUE;
 									}
 									break;
@@ -2465,6 +2513,272 @@ s7comm_decode_szl_id_0131_idx_0006(tvbuff_t *tvb,
 	
 	return offset;
 }
+
+/*******************************************************************************************************
+ *
+ * SZL-ID:	0x0131
+ * Index:	0x0010
+ * Content:
+ *  The partial list extract with SZL-ID W#16#0131 and index W#16#0010
+ *  contains message parameters.
+ * 
+ *******************************************************************************************************/
+
+void
+s7comm_szl_0131_0010_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_0131_0010_index,
+		{ "Index     ",			"s7comm.szl.0131.0010.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "W#16#0010 Message parameter", HFILL }},
+
+		/* funk_1 */
+		{ &hf_s7comm_szl_0131_0010_funk_1,
+		{ "funk_1    ",			"s7comm.szl.0131.0010.funk_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_0,
+		{ "Bit 0: Group status messages exist",		"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: Group status messages exist", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_1,
+		{ "Bit 1: Scan possible",		"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: Scan possible", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_2,
+		{ "Bit 2: NOTIFY, ALARM, ALARM_8P, ALARM_8, (multicast) possible",		"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: NOTIFY, ALARM, ALARM_8P, ALARM_8, (multicast) possible", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_3,
+		{ "Bit 3: Sending archive data possible",			"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: Sending archive data possible", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_4,
+		{ "Bit 4: Reserved",		"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_5,
+		{ "Bit 5: Reserved",		"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_6,
+		{ "Bit 6: Reserved",			"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_funk_1_7,
+		{ "Bit 7: Reserved",			"s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		  
+		/* funk_2 */
+		{ &hf_s7comm_szl_0131_0010_funk_2,
+		{ "funk_2    ",			"s7comm.szl.0131.0010.funk_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+ 
+		/* ber_meld_1 */
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1,
+		{ "ber_meld_1",			"s7comm.szl.0131.0010.ber_meld_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Permitted address areas for messages (SCAN)", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_0,
+		{ "Bit 0: PII",		"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: PII", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_1,
+		{ "Bit 1: PIQ",		"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: PIQ", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_2,
+		{ "Bit 2: M",		"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: M", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_3,
+		{ "Bit 3: DB",			"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: DB", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_4,
+		{ "Bit 4: Reserved",		"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_5,
+		{ "Bit 5: Reserved",		"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_6,
+		{ "Bit 6: Reserved",			"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_meld_1_7,
+		{ "Bit 7: Reserved",			"s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		
+		/* ber_meld_2 */
+		{ &hf_s7comm_szl_0131_0010_ber_meld_2,
+		{ "ber_meld_2",			"s7comm.szl.0131.0010.ber_meld_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+		
+		/* ber_zus_1 */
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1,
+		{ "ber_zus_1 ",			"s7comm.szl.0131.0010.ber_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Permitted address areas for messages (SCAN)", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_0,
+		{ "Bit 0: PII",		"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: PII", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_1,
+		{ "Bit 1: PIQ",		"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: PIQ", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_2,
+		{ "Bit 2: M",		"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: M", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_3,
+		{ "Bit 3: DB",			"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: DB", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_4,
+		{ "Bit 4: Reserved",		"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_5,
+		{ "Bit 5: Reserved",		"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_6,
+		{ "Bit 6: Reserved",			"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_ber_zus_1_7,
+		{ "Bit 7: Reserved",			"s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		
+		/* ber_zus_2 */
+		{ &hf_s7comm_szl_0131_0010_ber_zus_2,
+		{ "ber_zus_2 ",			"s7comm.szl.0131.0010.ber_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+		
+		/* typ_zus_1 */
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1,
+		{ "typ_zus_1 ",			"s7comm.szl.0131.0010.typ_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Permitted data types for additional values (SCAN)", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_0,
+		{ "Bit 0: Bit",		"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x01,
+		  "Bit 0: Bit", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_1,
+		{ "Bit 1: Byte",		"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x02,
+		  "Bit 1: Byte", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_2,
+		{ "Bit 2: Word",		"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x04,
+		  "Bit 2: Word", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_3,
+		{ "Bit 3: DWord",			"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x08,
+		  "Bit 3: DWord", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_4,
+		{ "Bit 4: Timer",		"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x10,
+		  "Bit 4: Timer", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_5,
+		{ "Bit 5: Counter",		"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x20,
+		  "Bit 5: Counter", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_6,
+		{ "Bit 6: Array of char[16]",			"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x40,
+		  "Bit 6: Array of char[16]", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_typ_zus_1_7,
+		{ "Bit 7: Reserved",			"s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x80,
+		  "Bit 7: Reserved", HFILL }},
+		
+		/* typ_zus_2 */
+		{ &hf_s7comm_szl_0131_0010_typ_zus_2,
+		{ "typ_zus_2 ",			"s7comm.szl.0131.0010.typ_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Reserved", HFILL }},
+
+		{ &hf_s7comm_szl_0131_0010_maxanz_arch,
+		{ "maxanz_arch (Maximum number of archives for 'Send Archive')",	"s7comm.szl.0132.0010.maxanz_arch", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "maxanz_arch (Maximum number of archives for 'Send Archive')", HFILL }},
+		  
+		{ &hf_s7comm_szl_0131_0010_res,
+		{ "res (Reserved)",			"s7comm.szl.0131.0010.res", FT_BYTES, BASE_NONE, NULL, 0x0,
+		  "res (Reserved)", HFILL }},
+		  
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_0131_idx_0010(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_index, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_1_7, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_funk_2, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_1_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_meld_2, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_1_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_ber_zus_2, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_0, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_1, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_2, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_3, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_4, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_5, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_6, tvb, offset, 1, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_1_7, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_typ_zus_2, tvb, offset, 1, FALSE);
+	offset += 1;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_maxanz_arch, tvb, offset, 2, FALSE);
+	offset += 2;	
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_res, tvb, offset, 14, FALSE);
+	offset += 14;
+	
+	return offset;
+}
+
 /*******************************************************************************************************
  *
  * SZL-ID:	0x0132
