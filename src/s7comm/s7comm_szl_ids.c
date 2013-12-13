@@ -98,6 +98,196 @@ static gint hf_s7comm_userdata_szl_id_type = -1;
 
 static gint hf_s7comm_userdata_szl_id_partlist_ex = -1;
 
+/* Partial list extract names */
+static const value_string szl_id_partlist_ex_names[] = {
+	/*  xy00 */
+	{ 0x0000,	"All SZL partial lists of the module" },
+	{ 0x0100,	"A partial list with all partial list extracts" },
+	{ 0x0200,	"A partial list extract" },
+	{ 0x0300,	"Possible indexes of a partial list extract" },
+	{ 0x0f00,	"Only partial list header information" },
+	/*  xy11 */
+	{ 0x0011,	"All identification data records of a module" },
+	{ 0x0111,	"A single identification data record" },
+	{ 0x0f11,	"Only partial list header information" },
+	/*  xy12 */
+	{ 0x0012,	"All characteristics" },
+	{ 0x0112,	"Characteristics of a group, specified by index" },
+	{ 0x0f12,	"Partial list header information" },
+	/*  xy13 */
+	{ 0x0013,	"Data records of all memory areas" },
+	{ 0x0113,	"Data record for one memory area, specified by index" },
+	{ 0x0f13,	"Only partial list header information" },
+	/*  xy14 */
+	{ 0x0014,	"All system areas of a module" },
+	{ 0x0114,	"One system area, specified by index" },
+	{ 0x0f14,	"Only for partial list header information" },
+	/*  xy15 */
+	{ 0x0015,	"Data records of all block types of a module" },
+	{ 0x0115,	"Data record of a block type, specified by index" },
+	{ 0x0f15,	"Only partial list header information" },
+	/*  xy16 */
+	{ 0x0016,	"Data records of all priority classes" },
+	{ 0x0116,	"Data record of the specified priority class, specified by index" },
+	{ 0x0f16,	"Only partial list header information" },
+	/*  xy17 */
+	{ 0x0017,	"All SDBs of a module" },
+	{ 0x0117,	"One single SDB, specified by index" },
+	{ 0x0f17,	"Only partial list header information" },
+	/*  xy18 */
+	{ 0x0018,	"All data records" },
+	{ 0x0118,	"One data record, specified by index" },
+	{ 0x0f18,	"Only partial list header information" },
+	/*  xy19 */
+	{ 0x0019,	"Status of all LEDs" },
+	{ 0x0119,	"Status of one LED, specified by index" },
+	{ 0x0f19,	"Only partial list header information" },
+	/*  xy1c */
+	{ 0x001c,	"Identification of all components" },
+	{ 0x011c,	"Identification of one component" },
+	{ 0x021c,	"Identification of all components of a CPU in an H system" },
+	{ 0x031c,	"Identification of one component of all redundant CPUs in an H system" },
+	{ 0x0f1c,	"Only partial list header information" },
+	/*  xy21 */
+	{ 0x0021,	"Data records of all possible interrupts on a module" },
+	{ 0x0121,	"Data records of all possible interrupts of one class, class specified by index" },
+	{ 0x0221,	"Data records for the specified interrupt, interrupt (OB no.) specified by index" },
+	{ 0x0921,	"Data records of all interrupts of one class and for which the corresponding interrupt OB is loaded, class specified by index" },
+	{ 0x0a21,	"Data records of all interrupts for which the corresponding interrupt OB is loaded" },
+	{ 0x0f21,	"Only partial list header information" },
+	/*  xy22 */
+	{ 0x0022,	"Data records of all possible interrupts on a module" },
+	{ 0x0122,	"Data records of all possible interrupts of one class, class specified by index" },
+	{ 0x0222,	"Data records for the specified interrupt, interrupt (OB no.) specified by index" },
+	{ 0x0822,	"Data records of all interrupts of one class and for which the ccorresponding interrupt OB is loaded, class specified by index" },
+	{ 0x0922,	"Data records of all interrupts for which the corresponding interrupt OB is loaded" },
+	{ 0x0f22,	"Only partial list header information" },
+	/*  xy23 */
+	{ 0x0023,	"Data records of all priority classes of a module" },
+	{ 0x0123,	"Data record of one priority class, specified by index" },
+	{ 0x0223,	"Data records of the priority classes being processed" },
+	{ 0x0f23,	"Only partial list header information" },
+	/*  xy24 */
+	{ 0x0024,	"All modules that can occur on the module" },
+	{ 0x0124,	"Information about the last mode transition" },
+	{ 0x0224,	"Processed mode transition" },
+	{ 0x0424,	"Current mode transition" },
+	{ 0x0524,	"Specified mode transition, specified by index" },
+	{ 0x0f24,	"Only partial list header information" },
+	/*  xy31 */
+	{ 0x0031,	"Not defined" },
+	{ 0x0131,	"Information about a communication unit, specified by index" },
+	{ 0x0f31,	"Only partial list header information" },
+	/*  xy32 */
+	{ 0x0132,	"Status data for one communication section of the CPU, section specified by index" },
+	{ 0x0f32,	"Only partial list header information" },
+	/*  xy33 */
+	{ 0x0033,	"All stations logged on for messages and diagnostic events" },
+	{ 0x0f33,	"Only partial list header information" },
+	/*  xy37 */
+	{ 0x0037,	"Details of all Ethernet interfaces" },
+	{ 0x0137,	"Details of one Ethernet interface" },
+	{ 0x0f37,	"Only partial list header information" },
+	/*  xy71 */
+	{ 0x0071,	"Information about the current status of the H system" },
+	{ 0x0f71,	"Only partial list header information" },
+	/*  xy74 */
+	{ 0x0174,	"Status of an LED, specified by index" },
+	/*  xy75 */
+	{ 0x0c75,	"Communication status between the H system and a switched DP slave, slave specified by index" },
+	/*  xy81 */
+	{ 0x0081,	"Startup information of all OBs" },
+	{ 0x0181,	"Startup information of all synchronous error OBs" },
+	{ 0x0281,	"Startup information of all synchronous error OBs of one priority class" },
+	{ 0x0381,	"Startup information of all OBs of one priority class" },
+	{ 0x0581,	"Startup information of all synchronous error OBs before processing" },
+	{ 0x0681,	"Startup information of all synchronous error OBs of a priority class before processing" },
+	{ 0x0781,	"Startup information of all OBs of one priority class before processing" },
+	{ 0x0881,	"Startup information of all OBs before processing" },
+	{ 0x0981,	"Startup information of all synchronous error OBs being processed" },
+	{ 0x0a81,	"Startup information of all synchronous error OBs of a priority class being processed" },
+	{ 0x0b81,	"Startup information of all OBs of one priority class being processed" },
+	{ 0x0c81,	"Startup information of all OBs being processed" },
+	{ 0x0f81,	"Only partial list header information" },
+	/*  xy82 */
+	{ 0x0082,	"All startup events" },
+	{ 0x0182,	"Startup events of all synchronous error OBs" },
+	{ 0x0282,	"Startup events of all synchronous error OBs of one priority class" },
+	{ 0x0382,	"Startup events of all OBs of a priority class" },
+	{ 0x0582,	"Startup events of all synchronous error OBs before processing" },
+	{ 0x0682,	"Startup events of all synchronous error OBs of a priority class before processing" },
+	{ 0x0782,	"Startup events of all OBs of one priority class before processing" },
+	{ 0x0882,	"Startup events of all OBs before processing" },
+	{ 0x0982,	"Startup events of all synchronous error OBs being processed" },
+	{ 0x0a82,	"Startup events of all synchronous error OBs of a priority class being processed" },
+	{ 0x0b82,	"Startup events of all OBs of one priority class being processed" },
+	{ 0x0c82,	"Startup events of all OBs being processed" },
+	{ 0x0f82,	"Only partial list header information" },
+	/*  xy90 */
+	{ 0x0090,	"Information of all DP master systems known to the CPU" },
+	{ 0x0190,	"Information of one DP master system" },
+	{ 0x0f90,	"Only partial list header information" },
+	/*  xy91 */
+	{ 0x0091,	"Module status information of all plugged in modules and submodules" },
+	{ 0x0191,	"Status information of all modules/racks with wrong type identifier" },
+	{ 0x0291,	"Status information of all faulty modules" },
+	{ 0x0391,	"Status information of all modules that are not available" },
+	{ 0x0591,	"Status information of all submodules of the host module" },
+	{ 0x0991,	"Module status information of a DP master system" },
+	{ 0x0a91,	"Module status information of all DP master systems" },
+	{ 0x0c91,	"Status information of a module in the central rack or connected to an integrated DP communications processor via the logical base address" },
+	{ 0x4c91,	"Status information of a module connected to an external DP communications processor via the logical base address" },
+	{ 0x0d91,	"Module status information of all modules in the specified rack/in the specified station (DP)" },
+	{ 0x0e91,	"Module status information of all configured modules" },
+	{ 0x0f91,	"Only partial list header information" },
+	/*  xy92 */
+	{ 0x0092,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0192,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0292,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0392,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0492,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0592,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
+	{ 0x0692,	"DP master system ID of a DP master system which is connected via an external DP switch" },
+	{ 0x4092,	"DP master system ID of a DP master system which is connected via an external DP switch" },
+	{ 0x4292,	"DP master system ID of a DP master system which is connected via an external DP switch" },
+	{ 0x4692,	"DP master system ID of a DP master system which is connected via an external DP switch" },
+	/*  xy94 */
+	{ 0x0094,	"Expected status of the rack in the central configuration/the stations of a DP master system/IO controller system that is connected via an integrated DP/PN interface module" },
+	{ 0x0294,	"Actual status of the rack in the central configuration/the stations of a DP master system/IO controller system that is connected via an integrated DP/PN interface module" },
+	{ 0x0694,	"Status of the expansion racks in the central configuration/the stations of a DP master system/IO controller system that is connected via an integrated DP/PN interface module" },
+	{ 0x0f94,	"Only partial list header information" },
+	/*  xy95 */
+	{ 0x0095,	"Extended information on a DP master system/PROFINET IO system" },	
+	{ 0x0f95,	"Only partial list header information" },
+	/*  xy96 */
+	{ 0x0c96,	"Module status information on a module/interface module centrally or at a PROFIBUS DP/PROFINET interface module via the start address" },	
+	{ 0x0696,	"Module status information on all interface modules in a specified module (with PROFIBUS DP and central modules, the interface module level is not present)" },
+	/*  xya0 */
+	{ 0x00a0,	"All entries possible in the current mode" },
+	{ 0x01a0,	"The most recent entries, the number of most recent entries specified by index" },
+	{ 0x04a0,	"Start information of all standard OBs" },
+	{ 0x05a0,	"All entries from communications units" },
+	{ 0x06a0,	"All entries of the object management system" },
+	{ 0x07a0,	"All entries of the test and installation function" },
+	{ 0x08a0,	"All entries due to operating statuses" },
+	{ 0x09a0,	"All entries caused by asynchronous errors" },
+	{ 0x0aa0,	"All entries caused by synchronous errors" },
+	{ 0x0ba0,	"All entries caused by STOP, abort, mode transition" },
+	{ 0x0ca0,	"All entries caused by fault-tolerant/fail-safe events" },
+	{ 0x0da0,	"All diagnostic entries" },
+	{ 0x0ea0,	"All user entries" },
+	{ 0x0fa0,	"Only partial list header information" },
+	/*  xyb1 */
+	{ 0x00b1,	"Obtain the first 4 diagnostic bytes of a module with diagnostic capability" },
+	/*  xyb2 */
+	{ 0x00b2,	"Obtain diagnostic data record 1 of a module in a central rack, rack/slot specified by index" },
+	/*  xyb3 */
+	{ 0x00b3,	"Obtain diagnostic data of a module, logical base address specified by index" },
+	/*  xyb4 */
+	{ 0x00b4,	"Obtain diagnostic data of a DP slave, diagnostic address of the module specified by index" },
+	{ 0,	NULL }
+};
+
 static const value_string szl_partial_list_names[] = {
 	{ 0x0000,	"List of all the SZL-IDs of a module" },
 	{ 0x0011,	"Module identification" },
@@ -177,11 +367,11 @@ static gint hf_s7comm_szl_0013_0000_belegt2 = -1;
 static gint hf_s7comm_szl_0013_0000_block2 = -1;
 
 
-static gint hf_s7comm_szl_0111_0001_index = -1;
-static gint hf_s7comm_szl_0111_0001_mlfb = -1;
-static gint hf_s7comm_szl_0111_0001_bgtyp = -1;
-static gint hf_s7comm_szl_0111_0001_ausbg = -1;
-static gint hf_s7comm_szl_0111_0001_ausbe = -1;
+static gint hf_s7comm_szl_xy11_0001_index = -1;
+static gint hf_s7comm_szl_xy11_0001_mlfb = -1;
+static gint hf_s7comm_szl_xy11_0001_bgtyp = -1;
+static gint hf_s7comm_szl_xy11_0001_ausbg = -1;
+static gint hf_s7comm_szl_xy11_0001_ausbe = -1;
 
 static gint hf_s7comm_szl_0131_0001_index = -1;
 static gint hf_s7comm_szl_0131_0001_pdu = -1;
@@ -615,7 +805,7 @@ s7comm_register_szl_types(int proto)
 		{ "Diagnostic type",	"s7comm.data.userdata.szl_id.diag_type", FT_UINT16, BASE_HEX, VALS(szl_module_type_names), 0xf000,
       	  "Diagnostic type", HFILL }},
 		{ &hf_s7comm_userdata_szl_id_partlist_ex,
-		{ "Number of the partial list extract",	"s7comm.data.userdata.szl_id.partlist_ex", FT_UINT16, BASE_HEX, NULL, 0x0f00,
+		{ "Number of the partial list extract",	"s7comm.data.userdata.szl_id.partlist_ex", FT_UINT16, BASE_HEX, VALS(szl_id_partlist_ex_names), 0xffff,
       	  "Number of the partial list extract", HFILL }},
 		{ &hf_s7comm_userdata_szl_id_partlist_num,
 		{ "Number of the partial list",	"s7comm.data.userdata.szl_id.partlist_num", FT_UINT16, BASE_HEX, VALS(szl_partial_list_names), 0x00ff,
@@ -646,7 +836,7 @@ s7comm_register_szl_types(int proto)
 	/* Register the SZL fields */
 	s7comm_szl_0013_0000_register(proto);
 
-	s7comm_szl_0111_0001_register(proto);
+	s7comm_szl_xy11_0001_register(proto);
 
 	s7comm_szl_0131_0001_register(proto);
 	s7comm_szl_0131_0002_register(proto);
@@ -727,113 +917,126 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 					offset += 2;					
 					proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
 					s7comm_info_append_uint16hex(pinfo, "ID", id);
-					s7comm_info_append_uint16hex(pinfo, "Index", index);					
-					/* SZL-Data, 4 Bytes header, 4 bytes id/index = 8 bytes */
-					list_len = tvb_get_ntohs(tvb, offset); /* Length of an list set in bytes */
-					proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list length: %d bytes", list_len);
-					offset += 2;
-					list_count = tvb_get_ntohs(tvb, offset); /* count of partlists */
-					proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list count: %d", list_count);
-					/* Some SZL responses got more lists than fit one PDU (e.g. Diagnosepuffer) and must be read
-					 * out in several telegrams, so we have to check here if the list_count is above limits
-					 * of the length of data part. The remainding bytes will be print as raw bytes, because
-					 * it's not possible to decode this and following telegrams without knowing the previous requests.
+					s7comm_info_append_uint16hex(pinfo, "Index", index);
+					/* When SZL id and index are both zero, then this is the second part of a fragmented
+					 * SZL response. In this case the list-length and list-count are missing, and the 
+					 * SZL-Data are following. Cause we don't know the id/index of the request, show
+					 * this data as raw SZL-Data
 					 */
-					tbytes = 0;
-					if ((list_count * list_len) > (len - 8)) {
-						list_count = (len - 8) / list_len;
-						/* remind the number of trailing bytes */
-						if (list_count > 0) {
-							tbytes = (len - 8) % list_count;
+					if (id == 0 && index == 0) {
+						proto_tree_add_bytes(data_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 8,
+							tvb_get_ptr (tvb, offset, dlength - 8));
+						offset += dlength - 8;
+						szl_decoded = TRUE;
+					} else {
+						/* SZL-Data, 4 Bytes header, 4 bytes id/index = 8 bytes */
+						list_len = tvb_get_ntohs(tvb, offset); /* Length of an list set in bytes */
+						proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list length: %d bytes", list_len);
+						offset += 2;
+						list_count = tvb_get_ntohs(tvb, offset); /* count of partlists */
+						proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list count: %d", list_count);
+						/* Some SZL responses got more lists than fit one PDU (e.g. Diagnosepuffer) and must be read
+						* out in several telegrams, so we have to check here if the list_count is above limits
+						* of the length of data part. The remainding bytes will be print as raw bytes, because
+						* it's not possible to decode this and following telegrams without knowing the previous requests.
+						*/
+						tbytes = 0;
+						if ((list_count * list_len) > (len - 8)) {
+							list_count = (len - 8) / list_len;
+							/* remind the number of trailing bytes */
+							if (list_count > 0) {
+								tbytes = (len - 8) % list_count;
+							}
 						}
-					}
+						offset += 2;		
+						/* Add a Data element for each partlist */
+						if (len > 8) {	/* minimum length of a correct szl data part is 8 bytes */
+							for (i = 1; i <= list_count; i++) {
+								/* Add a separate tree for the SZL data */
+								szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, list_len, FALSE );
+								szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
+								proto_item_append_text(szl_item, " (list count no. %d)", i);
+								
+								szl_decoded = FALSE;
+								/* lets try to decode some known szl-id and indexes */
+								switch (id) {
+									case 0x0013:
+										if (index == 0x0000) {
+											offset = s7comm_decode_szl_id_0013_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										}
+										break;
+									case 0x0011:	
+									case 0x0111:
+										if ((index == 0x0001) || (index == 0x0000)) {
+											offset = s7comm_decode_szl_id_0111_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										}
+										break;
+									case 0x0131:
+										if (index == 0x0001) {
+											offset = s7comm_decode_szl_id_0131_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0002) {
+											offset = s7comm_decode_szl_id_0131_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);	
+											szl_decoded = TRUE;
+										} else if (index == 0x0003) {
+											offset = s7comm_decode_szl_id_0131_idx_0003(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0004) {
+											offset = s7comm_decode_szl_id_0131_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0006) {
+											offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0010) {
+											offset = s7comm_decode_szl_id_0131_idx_0010(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										}
+										break;
+									case 0x0132:
+										if (index == 0x0001) {
+											offset = s7comm_decode_szl_id_0132_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0002) {
+											offset = s7comm_decode_szl_id_0132_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0004) {
+											offset = s7comm_decode_szl_id_0132_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0005) {
+											offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} else if (index == 0x0006) {
+											offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										}
+										break;
+									case 0x0424:
+										if (index == 0x0000) {
+											offset = s7comm_decode_szl_id_0424_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
+										} 
+										break;
+									default:
+										szl_decoded = FALSE;
+										break;
+								}
 
-					offset += 2;		
-					/* Add a Data element for each partlist */
-					if (len > 8) {	/* minimum length of a correct szl data part is 8 bytes */
-						for (i = 1; i <= list_count; i++) {
-							/* Add a separate tree for the SZL data */
-							szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, list_len, FALSE );
-							szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
-							proto_item_append_text(szl_item, " (list count no. %d)", i);
+								if (szl_decoded == FALSE) {
+									proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_partial_list, tvb, offset, list_len,
+											tvb_get_ptr (tvb, offset, list_len));
+									offset += list_len;
+								}
+							} /* ...for */
 							
-							szl_decoded = FALSE;
-							/* lets try to decode some known szl-id and indexes */
-							switch (id) {
-								case 0x0013:
-									if (index == 0x0000) {
-										offset = s7comm_decode_szl_id_0013_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									}
-									break;
-								case 0x0111:
-									if (index == 0x0001) {
-										offset = s7comm_decode_szl_id_0111_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									}
-									break;
-								case 0x0131:
-									if (index == 0x0001) {
-										offset = s7comm_decode_szl_id_0131_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0002) {
-										offset = s7comm_decode_szl_id_0131_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);	
-										szl_decoded = TRUE;
-									} else if (index == 0x0003) {
-										offset = s7comm_decode_szl_id_0131_idx_0003(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0004) {
-										offset = s7comm_decode_szl_id_0131_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0006) {
-										offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0010) {
-										offset = s7comm_decode_szl_id_0131_idx_0010(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									}
-									break;
-								case 0x0132:
-									if (index == 0x0001) {
-										offset = s7comm_decode_szl_id_0132_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0002) {
-										offset = s7comm_decode_szl_id_0132_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0004) {
-										offset = s7comm_decode_szl_id_0132_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0005) {
-										offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} else if (index == 0x0006) {
-										offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									}
-									break;
-								case 0x0424:
-									if (index == 0x0000) {
-										offset = s7comm_decode_szl_id_0424_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
-										szl_decoded = TRUE;
-									} 
-									break;
-								default:
-									szl_decoded = FALSE;
-									break;
-							}
-
-							if (szl_decoded == FALSE) {
-								proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_partial_list, tvb, offset, list_len,
-										tvb_get_ptr (tvb, offset, list_len));
-								offset += list_len;
-							}
 							/* add raw bytes of data part when SZL response doesn't fit one PDU */
 							if (tbytes > 0) {							
 								proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_partial_list, tvb, offset, tbytes,
 									tvb_get_ptr (tvb, offset, tbytes));
 								offset += tbytes;
 							}
-						} // for
+						}
 					}
 				} else {
 					s7comm_info_append_str(pinfo, "Return value", 
@@ -984,7 +1187,7 @@ s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb,
 
  /*******************************************************************************************************
  *
- * SZL-ID:	0x0111
+ * SZL-ID:	0xxy11
  * Index:	0x0001
  * Content:
  *	If you read the system status list with SZL-ID W#16#xy11, you obtain the
@@ -992,28 +1195,28 @@ s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb,
  * 
  *******************************************************************************************************/
 void
-s7comm_szl_0111_0001_register(int proto)
+s7comm_szl_xy11_0001_register(int proto)
 {
 	static hf_register_info hf[] = {
 		/*** SZL functions ***/
-		{ &hf_s7comm_szl_0111_0001_index,
-		{ "Index",			"s7comm.szl.0111.0001.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+		{ &hf_s7comm_szl_xy11_0001_index,
+		{ "Index",			"s7comm.szl.xy11.0001.index", FT_UINT16, BASE_HEX, NULL, 0x0,
 		  "Index of an identification data record", HFILL }},
 
-		{ &hf_s7comm_szl_0111_0001_mlfb,
-		{ "MlfB (Order number of the module)",			"s7comm.szl.0111.0001.anz", FT_STRING, BASE_NONE, NULL, 0x0,
+		{ &hf_s7comm_szl_xy11_0001_mlfb,
+		{ "MlfB (Order number of the module)",			"s7comm.szl.xy11.0001.anz", FT_STRING, BASE_NONE, NULL, 0x0,
 		  "MlfB (Order number of the module)", HFILL }},
 
-		{ &hf_s7comm_szl_0111_0001_bgtyp,
-		{ "BGTyp (Module type ID)",			"s7comm.szl.0111.0001.bgtyp", FT_UINT16, BASE_HEX, NULL, 0x0,
+		{ &hf_s7comm_szl_xy11_0001_bgtyp,
+		{ "BGTyp (Module type ID)",			"s7comm.szl.xy11.0001.bgtyp", FT_UINT16, BASE_HEX, NULL, 0x0,
 		  "BGTyp (Module type ID)", HFILL }},
 
-		{ &hf_s7comm_szl_0111_0001_ausbg,
-		{ "Ausbg (Version of the module or release of the operating system)",			"s7comm.szl.0111.0001.ausbg", FT_UINT16, BASE_DEC, NULL, 0x0,
+		{ &hf_s7comm_szl_xy11_0001_ausbg,
+		{ "Ausbg (Version of the module or release of the operating system)",			"s7comm.szl.xy11.0001.ausbg", FT_UINT16, BASE_DEC, NULL, 0x0,
 		  "Ausbg (Version of the module or release of the operating system)", HFILL }},
 
-		{ &hf_s7comm_szl_0111_0001_ausbe,
-		{ "Ausbe (Release of the PG description file)",			"s7comm.szl.0111.0001.ausbe", FT_UINT16, BASE_DEC, NULL, 0x0,
+		{ &hf_s7comm_szl_xy11_0001_ausbe,
+		{ "Ausbe (Release of the PG description file)",			"s7comm.szl.xy11.0001.ausbe", FT_UINT16, BASE_DEC, NULL, 0x0,
 		  "Ausbe (Release of the PG description file)", HFILL }},
 	};
 	proto_register_field_array(proto, hf, array_length(hf));
@@ -1026,15 +1229,15 @@ s7comm_decode_szl_id_0111_idx_0001(tvbuff_t *tvb,
 									guint16 szl_partlist_count,									
 									guint32 offset )
 {
-	proto_tree_add_item(tree, hf_s7comm_szl_0111_0001_index, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_index, tvb, offset, 2, FALSE);
 	offset += 2;
-	proto_tree_add_item(tree, hf_s7comm_szl_0111_0001_mlfb, tvb, offset, 20, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_mlfb, tvb, offset, 20, FALSE);
 	offset += 20;
-	proto_tree_add_item(tree, hf_s7comm_szl_0111_0001_bgtyp, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_bgtyp, tvb, offset, 2, FALSE);
 	offset += 2;
-	proto_tree_add_item(tree, hf_s7comm_szl_0111_0001_ausbg, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_ausbg, tvb, offset, 2, FALSE);
 	offset += 2;
-	proto_tree_add_item(tree, hf_s7comm_szl_0111_0001_ausbe, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_ausbe, tvb, offset, 2, FALSE);
 	offset += 2;
 
 	return offset;

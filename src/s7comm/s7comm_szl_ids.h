@@ -49,7 +49,7 @@ void s7comm_register_szl_types(int proto);
 
 void s7comm_szl_0013_0000_register(int proto);
 
-void s7comm_szl_0111_0001_register(int proto);
+void s7comm_szl_xy11_0001_register(int proto);
 
 void s7comm_szl_0131_0001_register(int proto);
 void s7comm_szl_0131_0002_register(int proto);
