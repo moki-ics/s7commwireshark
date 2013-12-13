@@ -248,6 +248,23 @@ static const value_string item_transportsizenames[] = {
 	{ S7COMM_TRANSPORT_SIZE_HS_COUNTER,	"HS COUNTER" },	
 	{ 0,								NULL }
 };
+
+/**************************************************************************
+ * Syntax Ids of variable specification
+ */
+#define S7COMM_SYNTAXID_S7ANY  			0x10		/* Adress data S7-Any pointer-like DB1.DBX10.2 */
+#define S7COMM_SYNTAXID_DRIVEESANY 		0xa2		/* seen on Drive ES Starter with routing over S7 */
+#define S7COMM_SYNTAXID_1200SYM  		0xb2		/* Symbolic address mode of S7-1200 */
+#define S7COMM_SYNTAXID_DBREAD  		0xb0		/* Kind of DB block read, seen only at an S7-400 */
+
+static const value_string item_syntaxid_names[] = {
+	{ S7COMM_SYNTAXID_S7ANY,			"S7ANY" },
+	{ S7COMM_SYNTAXID_DRIVEESANY,		"DRIVEESANY" },
+	{ S7COMM_SYNTAXID_1200SYM,			"1200SYM" },
+	{ S7COMM_SYNTAXID_DBREAD,			"DBREAD" },
+	{ 0,								NULL }
+};
+
 /**************************************************************************
  * Transport sizes in data
  */
@@ -567,8 +584,6 @@ static const true_false_string fragment_descriptions = {
 /**************************************************************************
  **************************************************************************/
  
- /* Possible Patent related stuff for TIA Portal */
-
 /**************************************************************************
  * Flags for LID access
  */
@@ -636,8 +651,12 @@ static gint hf_s7comm_param_itemcount = -1;			/* Parameter part: item count */
 static gint hf_s7comm_param_data = -1;				/* Parameter part: data */
 static gint hf_s7comm_param_neg_pdu_length = -1;	/* Parameter part: Negotiate PDU length */
 
+
 /* Item data */
 static gint hf_s7comm_param_item = -1;
+static gint hf_s7comm_item_varspec = -1;			/* Variable specification */
+static gint hf_s7comm_item_varspec_length = -1;		/* Length of following address specification */
+static gint hf_s7comm_item_syntax_id = -1;			/* Syntax Id */
 static gint hf_s7comm_item_transport_size = -1; 	/* Transport size, 1 Byte*/
 static gint hf_s7comm_item_length = -1;				/* length, 2 Bytes*/
 static gint hf_s7comm_item_db = -1;					/* DB/M/E/A, 2 Bytes */
@@ -766,7 +785,16 @@ proto_register_s7comm (void)
 		  "Parameter data", HFILL }},
 		{ &hf_s7comm_param_item,
 		{ "Item",						"s7comm.param.item",	FT_NONE, BASE_NONE, NULL, 0x0,
-		  "Item", HFILL }},
+		  "Item", HFILL }},		  
+		{ &hf_s7comm_item_varspec,
+		{ "Variable specification",		"s7comm.param.item.varspec",	FT_UINT8, BASE_HEX, NULL, 0x0,
+		  "Variable specification", HFILL }},
+		{ &hf_s7comm_item_varspec_length,
+		{ "Length of following address specification",		"s7comm.param.item.varspec_length",	FT_UINT8, BASE_DEC, NULL, 0x0,
+		  "Length of following address specification", HFILL }},
+		{ &hf_s7comm_item_syntax_id,
+		{ "Syntax Id",					"s7comm.param.item.syntaxid",	FT_UINT8, BASE_HEX, VALS(item_syntaxid_names), 0x0,
+		  "Syntax Id, format type of following address specification", HFILL }},		  
 		{ &hf_s7comm_item_transport_size,
 		{ "Transport size",				"s7comm.param.item.transp_size", FT_UINT8, BASE_DEC, VALS(item_transportsizenames), 0x0,
 		  "Transport size", HFILL }},
@@ -1224,16 +1252,17 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 
 	proto_item_append_text(item, " [%d]:", item_no + 1);
 
-	/* Item head, constant 3 bytes */	
-	proto_tree_add_text(item, tvb, offset, 1, "Variable specification: 0x%02x",  tvb_get_guint8(tvb, offset));
+	/* Item head, constant 3 bytes */
+	proto_tree_add_item(item, hf_s7comm_item_varspec, tvb, offset, 1, FALSE);	
 	offset += 1;
-	proto_tree_add_text(item, tvb, offset, 1, "Length of following address specification: %d bytes",  tvb_get_guint8(tvb, offset));
+	proto_tree_add_item(item, hf_s7comm_item_varspec_length, tvb, offset, 1, FALSE);	
 	offset += 1;
-	proto_tree_add_text(item, tvb, offset, 1, "Syntax Id (0x10=S7ANY 0xb2=1200SYM): 0x%02x",  tvb_get_guint8(tvb, offset));
-	offset += 1;	
+	proto_tree_add_item(item, hf_s7comm_item_syntax_id, tvb, offset, 1, FALSE);	
+	offset += 1;
+
 	/****************************************************************************/
 	/************************** Step 7 Classic 300 400 **************************/
-	if (var_spec_type == 0x12 && var_spec_length == 10 && var_spec_syntax_id == 0x10) {		
+	if (var_spec_type == 0x12 && var_spec_length == 10 && var_spec_syntax_id == S7COMM_SYNTAXID_S7ANY) {		
 		/* Transport size, 1 byte */
 		t_size = tvb_get_guint8(tvb, offset);
 		proto_tree_add_uint(item, hf_s7comm_item_transport_size, tvb, offset, 1, t_size);	
@@ -1297,8 +1326,27 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		}	
 		offset += 3;
 	/****************************************************************************/
+	/******************** S7-400 special address mode (kinf of cyclic read ******/
+	} else if (var_spec_type == 0x12 && var_spec_length >= 7 && var_spec_syntax_id == S7COMM_SYNTAXID_DBREAD) {
+		/* don't know what this is, transport size? */
+		proto_tree_add_text(item, tvb, offset, 2, "Unknown        : 0x%02x", tvb_get_guint8( tvb, offset));
+		offset += 1;
+		len = tvb_get_guint8( tvb, offset);
+		proto_tree_add_text(item, tvb, offset, 1, "Number of bytes: %u", len);
+		offset += 1;
+		/* DB number, 2 bytes */
+		db = tvb_get_ntohs(tvb, offset);
+		proto_tree_add_text(item, tvb, offset, 1, "DB number      : %u", db);
+		offset += 2;
+		/* Start address, 2 bytes */
+		bytepos = tvb_get_ntohs(tvb, offset);
+		proto_tree_add_text(item, tvb, offset, 2, "Start address  : %u", bytepos);
+		offset += 2;
+		/* Display as pseudo S7-Any Format */
+		proto_item_append_text(item, " (DB%d.DBB %d BYTE %d)", db, bytepos, len);
+	/****************************************************************************/
 	/******************** TIA S7 1200 symbolic address mode *********************/
-	} else if (var_spec_type == 0x12 && var_spec_length >= 14 && var_spec_syntax_id == 0xb2) {
+	} else if (var_spec_type == 0x12 && var_spec_length >= 14 && var_spec_syntax_id == S7COMM_SYNTAXID_1200SYM) {
 		proto_item_append_text(item, " 1200 symbolic address");
 		/* first byte in address seems always be 0xff */
 		proto_tree_add_text(item, tvb, offset, 1, "1200 sym Reserved: 0x%02x", tvb_get_guint8( tvb, offset ));
