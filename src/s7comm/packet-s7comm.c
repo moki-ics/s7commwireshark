@@ -1326,10 +1326,10 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		}	
 		offset += 3;
 	/****************************************************************************/
-	/******************** S7-400 special address mode (kinf of cyclic read ******/
+	/******************** S7-400 special address mode (kind of cyclic read) *****/
 	} else if (var_spec_type == 0x12 && var_spec_length >= 7 && var_spec_syntax_id == S7COMM_SYNTAXID_DBREAD) {
-		/* don't know what this is, transport size? */
-		proto_tree_add_text(item, tvb, offset, 2, "Unknown        : 0x%02x", tvb_get_guint8( tvb, offset));
+		/* don't know what this is, has to be always 0x10 */
+		proto_tree_add_text(item, tvb, offset, 2, "Fixed (0x10)   : 0x%02x", tvb_get_guint8( tvb, offset));
 		offset += 1;
 		len = tvb_get_guint8( tvb, offset);
 		proto_tree_add_text(item, tvb, offset, 1, "Number of bytes: %u", len);
