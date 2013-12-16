@@ -336,6 +336,13 @@ static gint hf_s7comm_userdata_szl_data = -1;				/* SZL raw data */
 
 
 /* Index description for SZL Requests */
+static const value_string szl_0111_index_names[] = {
+	{ 0x0001,	"Identification of the module" },
+	{ 0x0006,	"Identification of the basic hardware" },
+	{ 0x0007,	"Identification of the basic firmware" },
+	{ 0,	NULL }
+};
+
 static const value_string szl_0112_index_names[] = {
 	{ 0x0000,	"MC5 processing unit" },
 	{ 0x0100,	"Time system" },
@@ -362,6 +369,8 @@ static const value_string szl_0114_index_names[] = {
 	{ 0x0005,	"Counters (number)" },
 	{ 0x0006,	"Number of bytes in the logical address area" },
 	{ 0x0007,	"Size of the entire local data area of the CPU in bytes" },
+	{ 0x0008,	"Memory (number in bytes)" },
+	{ 0x0009,	"local data (entire local data area of the CPU in Kbytes)" },
 	{ 0,	NULL }
 };
 
@@ -423,14 +432,17 @@ static const value_string szl_0121_index_names[] = {
 
 static const value_string szl_0222_index_names[] = {
 	{ 0x0000,	"Free cycle" },
-	{ 0x0a0a,	"Time-of-day interrupt" },
-	{ 0x1414,	"Time-delay interrupt" },
-	{ 0x1e23,	"Cyclic interrupt" },
-	{ 0x2828,	"Hardware interrupt" },
-	{ 0x5050,	"Asynchronous error interrupt" },
+	{ 0x000a,	"Time-of-day interrupt" },
+	{ 0x0014,	"Time-delay interrupt" },
+	{ 0x001e,	"Cyclic interrupt" },
+	{ 0x0028,	"Hardware interrupt" },
+	{ 0x0032,	"DP interrupt" },
+	{ 0x003c,	"Multicomputing or synchronous cycle (isochrone) interrupt" },
+	{ 0x0048,	"Redundancy interrupt (on with S7-400H systems)" },
+	{ 0x0050,	"Asynchronous error interrupt" },
 	{ 0x005a,	"Background" },
 	{ 0x0064,	"Startup" },
-	{ 0x7878,	"Synchronous error interrupt" },
+	{ 0x0078,	"Synchronous error interrupt" },
 	{ 0,	NULL }
 };
 
@@ -471,6 +483,29 @@ static const value_string szl_0132_index_names[] = {
 	{ 0x000a,	"Communication bus status" },
 	{ 0x0010,	"S7-SCAN part 1" },
 	{ 0x0011,	"S7-SCAN part 2" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0174_index_names[] = {
+	{ 0x0001,	"SF (group error)" },
+	{ 0x0002,	"INTF (internal error)" },
+	{ 0x0003,	"EXTF (external error)" },
+	{ 0x0004,	"RUN" },
+	{ 0x0005,	"STOP" },
+	{ 0x0006,	"FRCE (force)" },
+	{ 0x0007,	"CRST (cold restart)" },
+	{ 0x0008,	"BAF (battery fault/overload, short circuit of battery voltage on bus)" },
+	{ 0x0009,	"USR (user-defined)" },
+	{ 0x000a,	"USR1 (user-defined)" },
+	{ 0x000b,	"BUS1F (bus error interface 1)" },
+	{ 0x000c,	"BUS2F (bus error interface 2)" },
+	{ 0x000d,	"REDF (redundancy error)" },
+	{ 0x000e,	"MSTR (master)" },
+	{ 0x000f,	"RACK0 (rack number 0)" },
+	{ 0x0010,	"RACK1 (rack number 1)" },
+	{ 0x0011,	"RACK2 (rack number 2)" },
+	{ 0x0012,	"IFM1F (interface error interface module 1)" },
+	{ 0x0013,	"IFM2F (interface error interface module 2)" },
 	{ 0,	NULL }
 };
 
@@ -916,6 +951,24 @@ static const value_string szl_0424_0000_anlinfo4_names[] = {
 };
 static gint hf_s7comm_szl_0424_0000_time = -1;
 
+static gint hf_s7comm_szl_xy74_0000_cpu_led_id = -1;
+static gint hf_s7comm_szl_xy74_0000_cpu_led_id_rackno = -1;
+static gint hf_s7comm_szl_xy74_0000_cpu_led_id_cputype = -1;
+static gint hf_s7comm_szl_xy74_0000_cpu_led_id_id = -1;
+static gint hf_s7comm_szl_xy74_0000_led_on = -1;
+static const value_string szl_xy74_0000_led_on_names[] = {
+	{ 0x0,	"Off" },
+	{ 0x1,	"On" },
+	{ 0,	NULL }
+};
+
+static gint hf_s7comm_szl_xy74_0000_led_blink = -1;
+static const value_string szl_xy74_0000_led_blink_names[] = {
+	{ 0x0,	"Not flashing" },
+	{ 0x1,	"Flashing normally (2 Hz)" },
+	{ 0x2,	"Flashing slowly (0.5 Hz)" },
+	{ 0,	NULL }
+};
 
 /*******************************************************************************************************
  *
@@ -984,6 +1037,8 @@ s7comm_register_szl_types(int proto)
 	s7comm_szl_0132_0004_register(proto);
 	s7comm_szl_0132_0005_register(proto);
 	s7comm_szl_0132_0006_register(proto);
+	
+	s7comm_szl_xy74_0000_register(proto);
 
 	s7comm_szl_0424_0000_register(proto);	
 }
@@ -997,6 +1052,9 @@ s7comm_get_szl_id_index_description_text(guint16 id, guint16 index)
 {
 	const gchar* str = NULL;
 	switch (id) {
+		case 0x0111: 
+			str = val_to_str(index, szl_0111_index_names, "No description available");
+			break;
 		case 0x0112: 
 			str = val_to_str(index, szl_0113_index_names, "No description available");
 			break;
@@ -1032,6 +1090,9 @@ s7comm_get_szl_id_index_description_text(guint16 id, guint16 index)
 			break;
 		case 0x0132: 
 			str = val_to_str(index, szl_0132_index_names, "No description available");
+			break;
+		case 0x0174: 
+			str = val_to_str(index, szl_0174_index_names, "No description available");
 			break;
 	}
 	return str;
@@ -1207,6 +1268,11 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 											offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
 											szl_decoded = TRUE;
 										}
+										break;
+									case 0x0074:
+									case 0x0174:
+											offset = s7comm_decode_szl_id_xy74_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											szl_decoded = TRUE;
 										break;
 									case 0x0424:
 										if (index == 0x0000) {
@@ -3601,6 +3667,65 @@ s7comm_decode_szl_id_0132_idx_0006(tvbuff_t *tvb,
 
 	return offset;
 }
+/*******************************************************************************************************
+ *
+ * SZL-ID:	0xxy74
+ * Index:	0x0000
+ * Content:
+ *	If you read the partial list SSL-ID W#16#xy74, with standard CPUs (if present) and
+ *  with the H CPUs, you obtain the status of the module LEDs.
+ * 
+ *******************************************************************************************************/
+void
+s7comm_szl_xy74_0000_register(int proto)
+{
+	static hf_register_info hf[] = {
+		/*** SZL functions ***/
+		{ &hf_s7comm_szl_xy74_0000_cpu_led_id,
+		{ "cpu_led_id",			"s7comm.szl.xy74.0000.cpu_led_id", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "cpu_led_id", HFILL }},
+		
+		{ &hf_s7comm_szl_xy74_0000_cpu_led_id_rackno,
+		{ "Bits 0, 1, 2: Rack number",		"s7comm.szl.xy74.0000.cpu_led_id.rackno", FT_UINT16, BASE_DEC, NULL, 0x0700,
+		  "Bits 0, 1, 2: Rack number", HFILL }},
+		{ &hf_s7comm_szl_xy74_0000_cpu_led_id_cputype,
+		{ "Bit 3: CPU Type (0=Standby, 1=Master)",		"s7comm.szl.xy74.0000.cpu_led_id.cputype", FT_UINT16, BASE_DEC, NULL, 0x0800,
+		  "Bit 3: CPU Type (0=Standby, 1=Master)", HFILL }},
+		  
+		{ &hf_s7comm_szl_xy74_0000_cpu_led_id_id,
+		{ "Byte 1: LED ID",		"s7comm.szl.xy74.0000.cpu_led_id.id", FT_UINT16, BASE_DEC, VALS(szl_0174_index_names), 0x00ff,
+		  "Byte 1: LED ID", HFILL }},
+		  
+		{ &hf_s7comm_szl_xy74_0000_led_on,
+		{ "Status of the LED",		"s7comm.szl.xy74.0000.led_on", FT_UINT8, BASE_DEC, VALS(szl_xy74_0000_led_on_names), 0x00,
+		  "Status of the LED", HFILL }},
+		{ &hf_s7comm_szl_xy74_0000_led_blink,
+		{ "Flashing status of the LED",		"s7comm.szl.xy74.0000.led_blink", FT_UINT8, BASE_DEC, VALS(szl_xy74_0000_led_blink_names), 0x00,
+		  "Flashing status of the LED", HFILL }},
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_xy74_idx_0000(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 szl_partlist_len,
+									guint16 szl_partlist_count,									
+									guint32 offset )
+{
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_cpu_led_id, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_cpu_led_id_rackno, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_cpu_led_id_cputype, tvb, offset, 2, FALSE);
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_cpu_led_id_id, tvb, offset, 2, FALSE);
+	offset += 2;
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_led_on, tvb, offset, 1, FALSE);
+	offset += 1;
+	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_led_blink, tvb, offset, 1, FALSE);
+	offset += 1;
+	
+	return offset;
+}
+
 /*******************************************************************************************************
  *
  * SZL-ID:	0x0424
