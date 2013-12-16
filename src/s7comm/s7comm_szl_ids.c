@@ -192,6 +192,7 @@ static const value_string szl_id_partlist_ex_names[] = {
 	{ 0x0071,	"Information about the current status of the H system" },
 	{ 0x0f71,	"Only partial list header information" },
 	/*  xy74 */
+	{ 0x0074,	"Status of all LEDs" },
 	{ 0x0174,	"Status of an LED, specified by index" },
 	/*  xy75 */
 	{ 0x0c75,	"Communication status between the H system and a switched DP slave, slave specified by index" },
@@ -241,16 +242,17 @@ static const value_string szl_id_partlist_ex_names[] = {
 	{ 0x0e91,	"Module status information of all configured modules" },
 	{ 0x0f91,	"Only partial list header information" },
 	/*  xy92 */
-	{ 0x0092,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0192,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0292,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0392,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0492,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0592,	"DP master system ID of a DP master system which is connected via an integrated DP switch" },
-	{ 0x0692,	"DP master system ID of a DP master system which is connected via an external DP switch" },
-	{ 0x4092,	"DP master system ID of a DP master system which is connected via an external DP switch" },
-	{ 0x4292,	"DP master system ID of a DP master system which is connected via an external DP switch" },
-	{ 0x4692,	"DP master system ID of a DP master system which is connected via an external DP switch" },
+	{ 0x0092,	"Expected status of the central racks/stations of a DP master system connected via an integrated DP interface" },
+	{ 0x0292,	"Actual status of the central racks/stations of a DP master system connected via an integrated DP interface" },
+	{ 0x0392,	"State of the battery backup of the racks in a central configuration" },
+	{ 0x0492,	"State of the total backup of the racks in a central configuration" },
+	{ 0x0592,	"State of the 24 V power supply of the modules in a central configuration" },
+	{ 0x0692,	"OK state of the expansion racks in the central configuration / of the stations of a DP master system connected via an integrated DP interface" },
+	{ 0x4092,	"Expected status of the stations of a DP master system connected via an external DP interface" },
+	{ 0x4292,	"Actual status of the stations of a DP master system connected via an external DP interface" },
+	{ 0x4692,	"OK state of the stations of a DP master system connected via an external DP interface" },
+	{ 0x0f92,	"Only partial list header information of the '0x92' list" },
+	{ 0x4f92,	"Only partial list header information of the '4x92' list" },
 	/*  xy94 */
 	{ 0x0094,	"Expected status of the rack in the central configuration/the stations of a DP master system/IO controller system that is connected via an integrated DP/PN interface module" },
 	{ 0x0294,	"Actual status of the rack in the central configuration/the stations of a DP master system/IO controller system that is connected via an integrated DP/PN interface module" },
@@ -332,18 +334,150 @@ static gint hf_s7comm_userdata_szl_index = -1;				/* SZL index */
 static gint hf_s7comm_userdata_szl_tree = -1;				/* SZL item tree */
 static gint hf_s7comm_userdata_szl_data = -1;				/* SZL raw data */
 
+
+/* Index description for SZL Requests */
+static const value_string szl_0112_index_names[] = {
+	{ 0x0000,	"MC5 processing unit" },
+	{ 0x0100,	"Time system" },
+	{ 0x0200,	"System response" },
+	{ 0x0300,	"Language description of the CPU" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0113_index_names[] = {
+	{ 0x0001,	"Work memory" },
+	{ 0x0002,	"Load memory integrated" },
+	{ 0x0003,	"Load memory plugged in" },
+	{ 0x0004,	"Maximum plug-in load memory" },
+	{ 0x0005,	"Size of the backup memory" },
+	{ 0x0006,	"Size of the memory reserved by the system for CFBs" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0114_index_names[] = {
+	{ 0x0001,	"PII (number in bytes)" },
+	{ 0x0002,	"PIQ (number in bytes)" },
+	{ 0x0003,	"Memory (number)" },
+	{ 0x0004,	"Timers (number)" },
+	{ 0x0005,	"Counters (number)" },
+	{ 0x0006,	"Number of bytes in the logical address area" },
+	{ 0x0007,	"Size of the entire local data area of the CPU in bytes" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0115_index_names[] = {
+	{ 0x0800,	"OB" },
+	{ 0x0a00,	"DB" },
+	{ 0x0b00,	"SDB" },
+	{ 0x0c00,	"FC" },
+	{ 0x0e00,	"FB" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0116_index_names[] = {
+	{ 0x0000,	"Free cycle" },
+	{ 0x000a,	"Time-of-day interrupt" },
+	{ 0x0014,	"Time-delay interrupt" },
+	{ 0x001e,	"Cyclic interrupt" },
+	{ 0x0028,	"Hardware interrupt" },
+	{ 0x0050,	"Asynchronous error interrupt" },
+	{ 0x005a,	"Background" },
+	{ 0x0064,	"Startup" },
+	{ 0x0078,	"Synchronous error interrupt" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0118_index_names[] = {
+	{ 0x0001,	"Number of the rack: 1" },
+	{ 0x0002,	"Number of the rack: 2" },
+	{ 0x0003,	"Number of the rack: 3" },
+	{ 0x00ff,	"Maximum number of racks (racknr) and total number of possible slots (anzst)" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0119_index_names[] = {
+	{ 0x0001,	"SF (group error)" },
+	{ 0x0002,	"INTF (internal error)" },
+	{ 0x0003,	"EXTF (external error)" },
+	{ 0x0004,	"RUN" },
+	{ 0x0005,	"STOP" },
+	{ 0x0006,	"FRCE (force)" },
+	{ 0x0007,	"CRST (complete restart)" },
+	{ 0x0008,	"BAF (battery problem/overload, battery voltage shorted on bus)" },
+	{ 0x0009,	"USR (user-defined)" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0121_index_names[] = {
+	{ 0x0000,	"Free cycle" },
+	{ 0x0a0a,	"Time-of-day interrupt" },
+	{ 0x1414,	"Time-delay interrupt" },
+	{ 0x1e23,	"Cyclic interrupt" },
+	{ 0x2828,	"Hardware interrupt" },
+	{ 0x5050,	"Asynchronous error interrupt" },
+	{ 0x005a,	"Background" },
+	{ 0x0064,	"Startup" },
+	{ 0x7878,	"Synchronous error interrupt" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0222_index_names[] = {
+	{ 0x0000,	"Free cycle" },
+	{ 0x0a0a,	"Time-of-day interrupt" },
+	{ 0x1414,	"Time-delay interrupt" },
+	{ 0x1e23,	"Cyclic interrupt" },
+	{ 0x2828,	"Hardware interrupt" },
+	{ 0x5050,	"Asynchronous error interrupt" },
+	{ 0x005a,	"Background" },
+	{ 0x0064,	"Startup" },
+	{ 0x7878,	"Synchronous error interrupt" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0524_index_names[] = {
+	{ 0x5000,	"Mode STOP" },
+	{ 0x5010,	"Mode STARTUP" },
+	{ 0x5020,	"Mode RUN" },
+	{ 0x5030,	"Mode HOLD" },
+	{ 0x4520,	"Mode DEFECT" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0131_index_names[] = {
+	{ 0x0001,	"General data for communication" },
+	{ 0x0002,	"Test and installation function constants" },
+	{ 0x0003,	"Operator interface (O/I)" },
+	{ 0x0004,	"Object management system (OMS)" },
+	{ 0x0005,	"Diagnostics" },
+	{ 0x0006,	"Communication function block (CFB)" },
+	{ 0x0007,	"Global data" },
+	{ 0x0008,	"Test and installation function time information" },
+	{ 0x0009,	"Time-of-day capability parameters" },
+	{ 0x0010,	"Message parameters" },
+	{ 0x0011,	"SCAN capability parameters" },
+	{ 0,	NULL }
+};
+
+static const value_string szl_0132_index_names[] = {
+	{ 0x0001,	"General data for communication" },
+	{ 0x0002,	"Test and installation status" },
+	{ 0x0003,	"Operator interface status" },
+	{ 0x0004,	"Object management system status" },
+	{ 0x0005,	"Diagnostics" },
+	{ 0x0006,	"Data exchange with CFBs" },
+	{ 0x0007,	"Global data" },
+	{ 0x0008,	"Time system" },
+	{ 0x0009,	"MPI status" },
+	{ 0x000a,	"Communication bus status" },
+	{ 0x0010,	"S7-SCAN part 1" },
+	{ 0x0011,	"S7-SCAN part 2" },
+	{ 0,	NULL }
+};
+
 /* Header fields of the SZL */
 
 static gint hf_s7comm_szl_0013_0000_index = -1;
-static const value_string szl_memory_area_names[] = {
-	{ 0x0001,	"work memory" },
-	{ 0x0002,	"load memory integrated" },
-	{ 0x0003,	"load memory plugged in" },
-	{ 0x0004,	"maximum plug-in load memory" },
-	{ 0x0005,	"size of the backup memory" },
-	{ 0x0005,	"size of the memory reserved by the system for CFBs" },
-	{ 0,	NULL }
-};
+
 static gint hf_s7comm_szl_0013_0000_code = -1;
 static const value_string szl_memory_type_names[] = {
 	{ 0x0001,	"volatile memory (RAM)" },
@@ -853,7 +987,55 @@ s7comm_register_szl_types(int proto)
 
 	s7comm_szl_0424_0000_register(proto);	
 }
-
+/*******************************************************************************************************
+ *
+ * Get the textual description of the szl index. Returns NULL if not description available
+ * 
+ *******************************************************************************************************/
+const gchar*
+s7comm_get_szl_id_index_description_text(guint16 id, guint16 index)
+{
+	const gchar* str = NULL;
+	switch (id) {
+		case 0x0112: 
+			str = val_to_str(index, szl_0113_index_names, "No description available");
+			break;
+		case 0x0113: 
+			str = val_to_str(index, szl_0113_index_names, "No description available");
+			break;
+		case 0x0114: 
+			str = val_to_str(index, szl_0114_index_names, "No description available");
+			break;
+		case 0x0115: 
+			str = val_to_str(index, szl_0115_index_names, "No description available");
+			break;
+		case 0x0116: 
+			str = val_to_str(index, szl_0116_index_names, "No description available");
+			break;
+		case 0x0118: 
+			str = val_to_str(index, szl_0118_index_names, "No description available");
+			break;
+		case 0x0119: 
+			str = val_to_str(index, szl_0119_index_names, "No description available");
+			break;
+		case 0x0121: 
+			str = val_to_str(index, szl_0121_index_names, "No description available");
+			break;
+		case 0x0222: 
+			str = val_to_str(index, szl_0222_index_names, "No description available");
+			break;		
+		case 0x0524: 
+			str = val_to_str(index, szl_0524_index_names, "No description available");
+			break;
+		case 0x0131: 
+			str = val_to_str(index, szl_0131_index_names, "No description available");
+			break;
+		case 0x0132: 
+			str = val_to_str(index, szl_0132_index_names, "No description available");
+			break;
+	}
+	return str;
+}
 /*******************************************************************************************************
  *
  * PDU Type: User Data -> Function group 4 -> SZL functions
@@ -876,9 +1058,11 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 	guint16 list_len;
 	guint16 list_count;
 	guint16 i;
-	guint16 tbytes;
+	guint16 tbytes = 0;
 	proto_item *szl_item = NULL;	
-	proto_tree *szl_item_tree = NULL;
+	proto_tree *szl_item_tree = NULL;	
+	proto_item *szl_item_entry = NULL;
+	const gchar* szl_index_description;
 
 	gboolean know_data = FALSE;
 	gboolean szl_decoded = FALSE;
@@ -896,8 +1080,12 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 				proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_num, tvb, offset, 2, FALSE);
 				offset += 2;	
 				index = tvb_get_ntohs(tvb, offset);
-				proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
-				offset += 2;
+				szl_item_entry = proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
+				offset += 2;				
+				szl_index_description = s7comm_get_szl_id_index_description_text(id, index);
+				if (szl_index_description != NULL) {
+					proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
+				}				
 				proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);		
 				s7comm_info_append_uint16hex(pinfo, "ID", id);
 				s7comm_info_append_uint16hex(pinfo, "Index", index);
@@ -913,8 +1101,12 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_num, tvb, offset, 2, FALSE);
 					offset += 2;
 					index = tvb_get_ntohs(tvb, offset);
-					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
-					offset += 2;					
+					szl_item_entry = proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
+					offset += 2;
+					szl_index_description = s7comm_get_szl_id_index_description_text(id, index);
+					if (szl_index_description != NULL) {
+						proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
+					}
 					proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
 					s7comm_info_append_uint16hex(pinfo, "ID", id);
 					s7comm_info_append_uint16hex(pinfo, "Index", index);
@@ -924,7 +1116,11 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 					 * this data as raw SZL-Data
 					 */
 					if (id == 0 && index == 0) {
-						proto_tree_add_bytes(data_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 8,
+						szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, dlength - 8, FALSE );
+						szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
+						proto_item_append_text(szl_item, " [Fragment, continuation of previous data]");
+						
+						proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 8,
 							tvb_get_ptr (tvb, offset, dlength - 8));
 						offset += dlength - 8;
 						szl_decoded = TRUE;
@@ -1029,13 +1225,6 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 									offset += list_len;
 								}
 							} /* ...for */
-							
-							/* add raw bytes of data part when SZL response doesn't fit one PDU */
-							if (tbytes > 0) {							
-								proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_partial_list, tvb, offset, tbytes,
-									tvb_get_ptr (tvb, offset, tbytes));
-								offset += tbytes;
-							}
 						}
 					}
 				} else {
@@ -1047,6 +1236,16 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 			break;
 		default:
 			break;
+	}
+	/* add raw bytes of data part when SZL response doesn't fit one PDU */
+	if (know_data == TRUE && tbytes > 0) {		
+		/* Add a separate tree for the SZL data fragment */
+		szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, tbytes, FALSE );
+		szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
+		proto_item_append_text(szl_item, " [Fragment, complete response doesn't fit one PDU]");		
+		proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, tbytes,
+			tvb_get_ptr (tvb, offset, tbytes));
+		offset += tbytes;
 	}
 	if (know_data == FALSE && dlength > 4) {
 		proto_tree_add_bytes(data_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 4,
@@ -1084,7 +1283,7 @@ s7comm_szl_0013_0000_register(int proto)
 	static hf_register_info hf[] = {
 		/*** SZL functions ***/
 		{ &hf_s7comm_szl_0013_0000_index,
-		{ "Index",			"s7comm.szl.0013.0000.index", FT_UINT16, BASE_HEX, VALS(szl_memory_area_names), 0x0,
+		{ "Index",			"s7comm.szl.0013.0000.index", FT_UINT16, BASE_HEX, VALS(szl_0113_index_names), 0x0,
 		  "Index of an identification data record", HFILL }},
 
 		{ &hf_s7comm_szl_0013_0000_code,

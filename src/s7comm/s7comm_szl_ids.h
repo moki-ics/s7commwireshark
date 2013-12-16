@@ -24,6 +24,8 @@
 
 guint32 s7comm_decode_ud_szl_subfunc (tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint8 tsize, guint16 len, guint16 dlength, guint32 offset);
 
+const gchar* s7comm_get_szl_id_index_description_text(guint16 id, guint16 index);
+
 /* Known SZL IDs and indexes */
 guint32 s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb, proto_tree *tree, guint16 szl_partlist_len, guint16 szl_partlist_count, guint32 offset);
 
