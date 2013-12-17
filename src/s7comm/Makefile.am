@@ -1,5 +1,5 @@
 # Makefile.am
-# Automake file for H.223 plugin
+# Automake file for s7comm plugin
 #
 # $Id$
 #
@@ -32,8 +32,8 @@ endif
 
 plugindir = @plugindir@
 
-plugin_LTLIBRARIES = hsapi.la
-hsapi_la_SOURCES = \
+plugin_LTLIBRARIES = s7comm.la
+s7comm_la_SOURCES = \
 	plugin.c \
 	moduleinfo.h \
 	$(DISSECTOR_SRC) \
@@ -80,9 +80,9 @@ LIBS =
 # a plugin.c file for a plugin.
 # All subsequent arguments are the files to scan.
 #
-plugin.c: $(DISSECTOR_SRC) $(top_srcdir)/tools/make-dissector-reg \
+plugin.c: $(DISSECTOR_SRC) Makefile.common $(top_srcdir)/tools/make-dissector-reg \
     $(top_srcdir)/tools/make-dissector-reg.py
-	@if test -n $(PYTHON); then \
+	@if test -n "$(PYTHON)"; then \
 		echo Making plugin.c with python ; \
 		$(PYTHON) $(top_srcdir)/tools/make-dissector-reg.py $(srcdir) \
 		    plugin $(DISSECTOR_SRC) ; \
@@ -122,4 +122,8 @@ EXTRA_DIST = \
 	Makefile.common		\
 	Makefile.nmake		\
 	moduleinfo.nmake	\
-	plugin.rc.in
+	plugin.rc.in		\
+	CMakeLists.txt
+
+checkapi:
+	$(PERL) $(top_srcdir)/tools/checkAPIs.pl -g abort -g termoutput -build $(DISSECTOR_SRC) $(DISSECTOR_INCLUDES)
