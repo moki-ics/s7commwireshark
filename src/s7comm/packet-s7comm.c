@@ -1086,6 +1086,8 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 	guint8 function = 0;
 	guint8 item_count = 0;
 	guint8 i;
+	guint32 offset_old;
+	guint32 len;
 
 	if (plength > 0) {
 		/* Add parameter tree */
@@ -1111,7 +1113,13 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 					offset += 1;
 					/* parse item data */
 					for (i = 0; i < item_count; i++) {
+						offset_old = offset;
 						offset = s7comm_decode_param_item(tvb, offset, pinfo, param_tree, i);
+						/* if length is not a multiple of 2 and this is not the last item, then add a fill-byte */
+						len = offset - offset_old;
+						if ((len % 2) && (i < item_count)) {
+							offset += 1;
+						}						
 					}
 					/* in write-function there is a data part */
 					if ((function == S7COMM_SERV_WRITEVAR) && (dlength > 0)) {
@@ -1328,8 +1336,8 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 	/****************************************************************************/
 	/******************** S7-400 special address mode (kind of cyclic read) *****/
 	} else if (var_spec_type == 0x12 && var_spec_length >= 7 && var_spec_syntax_id == S7COMM_SYNTAXID_DBREAD) {
-		/* don't know what this is, has to be always 0x10 */
-		proto_tree_add_text(item, tvb, offset, 2, "Fixed (0x10)   : 0x%02x", tvb_get_guint8( tvb, offset));
+		/* don't know what this is, has to be always 0x01 */
+		proto_tree_add_text(item, tvb, offset, 2, "Fixed (0x01)   : 0x%02x", tvb_get_guint8( tvb, offset));
 		offset += 1;
 		len = tvb_get_guint8( tvb, offset);
 		proto_tree_add_text(item, tvb, offset, 1, "Number of bytes: %u", len);
@@ -2307,6 +2315,8 @@ s7comm_decode_ud_cyclic_subfunc(tvbuff_t *tvb,
 									guint32 offset )			/* Offset on data part +4 */
 {
 	gboolean know_data = FALSE;
+	guint32 offset_old;
+	guint32 len_item;
 	guint8 item_count;
 	guint8 i;
 
@@ -2324,7 +2334,13 @@ s7comm_decode_ud_cyclic_subfunc(tvbuff_t *tvb,
 				offset += 1;
 				/* parse item data */				
 				for (i = 0; i < item_count; i++) {
-					offset = s7comm_decode_param_item(tvb, offset, pinfo, data_tree, i);
+					offset_old = offset;
+					offset = s7comm_decode_param_item(tvb, offset, pinfo, data_tree, i);					
+					/* if length is not a multiple of 2 and this is not the last item, then add a fill-byte */
+					len_item = offset - offset_old;
+					if ((len_item % 2) && (i < item_count)) {
+						offset += 1;
+					}					
 				}
 				
 			} else if (type == S7COMM_UD_TYPE_RES || type == S7COMM_UD_TYPE_FOLLOW) {	/* Response from PLC with the requested data */
