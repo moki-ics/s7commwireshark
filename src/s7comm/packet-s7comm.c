@@ -968,8 +968,6 @@ dissect_s7comm(tvbuff_t *tvb,
 	proto_item *s7comm_sub_item = NULL;
 	proto_tree *s7comm_tree = NULL;
 	proto_tree *s7comm_header_tree = NULL;
-	proto_tree *s7comm_param_tree = NULL;
-	proto_tree *s7comm_data_tree = NULL;
 
 	guint32 offset = 0;
 
@@ -1198,7 +1196,7 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
 					offset += plength - 1; /* 1 byte function code */
 					if (dlength > 0) {
 						/* Add data tree
-						/* First 2 bytes in data seem to be a length indicator of (dlength -4 ), so next 2 bytes
+						 * First 2 bytes in data seem to be a length indicator of (dlength -4 ), so next 2 bytes
 						 * seem to indicate something else. But I'm not sure, so leave it as it is.....
 						 */
 						item = proto_tree_add_item( tree, hf_s7comm_data, tvb, offset, dlength, FALSE );
@@ -1226,7 +1224,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 						  proto_tree *sub_tree, 
 						  guint8 item_no)
 {
-	guint32 address = 0;
+	guint32 a_address = 0;
 	guint32 bytepos = 0;
 	guint32 bitpos = 0;
 	guint8 t_size = 0;
@@ -1288,10 +1286,10 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		proto_tree_add_uint(item, hf_s7comm_item_area, tvb, offset, 1, area);	
 		offset += 1;
 		/* Address, 3 bytes */
-		address = tvb_get_ntoh24(tvb, offset);
-		proto_tree_add_uint(item, hf_s7comm_item_address, tvb, offset, 3, address);	
-		bytepos = address / 8;
-		bitpos = address % 8;
+		a_address = tvb_get_ntoh24(tvb, offset);
+		proto_tree_add_uint(item, hf_s7comm_item_address, tvb, offset, 3, a_address);	
+		bytepos = a_address / 8;
+		bitpos = a_address % 8;
 		/* build a full adress to show item data directly beside the item */
 		switch (area) {
 			case (S7COMM_AREA_P):
@@ -1326,7 +1324,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 				break;
 		}
 		if (area == S7COMM_AREA_TIMER || area == S7COMM_AREA_COUNTER) {
-			proto_item_append_text(item, " %d)", address);
+			proto_item_append_text(item, " %d)", a_address);
 		} else {
 			proto_item_append_text(item, " %d.%d ", bytepos, bitpos);	
 			proto_item_append_text(item, val_to_str(t_size, item_transportsizenames, "Unknown transport size: 0x%02x"));
@@ -1391,7 +1389,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 				(tvb_get_ntohl( tvb, offset ) & 0x0fffffff)				
 			);			
 			proto_tree_add_item(tia_struct_item, hf_s7comm_tia1200_var_lid_flags, tvb, offset, 1, FALSE);
-			proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %lu", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);	
+			proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %u", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);	
 			
 			offset += 4;
 		}		
@@ -2245,16 +2243,12 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 						  proto_tree *sub_tree, 
 						  guint16 item_no)
 {
-	guint32 address = 0;
-	guint32 bytepos = 0;
 	guint16 len = 0, len2;
-	guint16 db = 0;
-	guint8 area = 0;
-	guint8 ret_val, tsize;
+	guint8 ret_val = 0;
+	guint8 tsize = 0;
 	guint8 head_len = 4;
 
 	proto_item *item = NULL;
-
 
 	ret_val = tvb_get_guint8( tvb, offset );
 	if (ret_val == S7COMM_ITEM_RETVAL_RESERVED || 
@@ -2559,9 +2553,9 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
 					offset += 1;
 					proto_tree_add_text(data_tree, tvb, offset , 2,   "Block checksum  : 0x%04x", tvb_get_ntohs(tvb, offset));
 					offset += 2;
-					proto_tree_add_text(data_tree, tvb, offset , 4,   "Reserved1       : %ld", tvb_get_ntohl(tvb, offset));
+					proto_tree_add_text(data_tree, tvb, offset , 4,   "Reserved1       : %u", tvb_get_ntohl(tvb, offset));
 					offset += 4;
-					proto_tree_add_text(data_tree, tvb, offset , 4,   "Reserved2       : %ld", tvb_get_ntohl(tvb, offset));
+					proto_tree_add_text(data_tree, tvb, offset , 4,   "Reserved2       : %u", tvb_get_ntohl(tvb, offset));
 					offset += 4;
 				}
 				know_data = TRUE;
