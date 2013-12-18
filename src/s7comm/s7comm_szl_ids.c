@@ -1219,64 +1219,64 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 								switch (id) {
 									case 0x0013:
 										if (index == 0x0000) {
-											offset = s7comm_decode_szl_id_0013_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0013_idx_0000(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										}
 										break;
 									case 0x0011:	
 									case 0x0111:
 										if ((index == 0x0001) || (index == 0x0000)) {
-											offset = s7comm_decode_szl_id_0111_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0111_idx_0001(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										}
 										break;
 									case 0x0131:
 										if (index == 0x0001) {
-											offset = s7comm_decode_szl_id_0131_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0131_idx_0001(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0002) {
-											offset = s7comm_decode_szl_id_0131_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);	
+											offset = s7comm_decode_szl_id_0131_idx_0002(tvb, szl_item_tree, offset);	
 											szl_decoded = TRUE;
 										} else if (index == 0x0003) {
-											offset = s7comm_decode_szl_id_0131_idx_0003(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0131_idx_0003(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0004) {
-											offset = s7comm_decode_szl_id_0131_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0131_idx_0004(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0006) {
-											offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0131_idx_0006(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0010) {
-											offset = s7comm_decode_szl_id_0131_idx_0010(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0131_idx_0010(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										}
 										break;
 									case 0x0132:
 										if (index == 0x0001) {
-											offset = s7comm_decode_szl_id_0132_idx_0001(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0132_idx_0001(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0002) {
-											offset = s7comm_decode_szl_id_0132_idx_0002(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0132_idx_0002(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0004) {
-											offset = s7comm_decode_szl_id_0132_idx_0004(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0132_idx_0004(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0005) {
-											offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0132_idx_0005(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} else if (index == 0x0006) {
-											offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0132_idx_0006(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										}
 										break;
 									case 0x0074:
 									case 0x0174:
-											offset = s7comm_decode_szl_id_xy74_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_xy74_idx_0000(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										break;
 									case 0x0424:
 										if (index == 0x0000) {
-											offset = s7comm_decode_szl_id_0424_idx_0000(tvb, szl_item_tree, list_len, list_count, offset);
+											offset = s7comm_decode_szl_id_0424_idx_0000(tvb, szl_item_tree, offset);
 											szl_decoded = TRUE;
 										} 
 										break;
@@ -1418,9 +1418,7 @@ s7comm_szl_0013_0000_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_index, tvb, offset, 2, FALSE);
@@ -1489,9 +1487,7 @@ s7comm_szl_xy11_0001_register(int proto)
  /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0111_idx_0001(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 							
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_xy11_0001_index, tvb, offset, 2, FALSE);
@@ -1546,9 +1542,7 @@ s7comm_szl_0131_0001_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0001(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,							
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0001_index, tvb, offset, 2, FALSE);
@@ -1831,9 +1825,7 @@ s7comm_szl_0131_0002_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0002(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 							
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0002_index, tvb, offset, 2, FALSE);
@@ -2113,9 +2105,7 @@ s7comm_szl_0131_0003_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0003(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0003_index, tvb, offset, 2, FALSE);
@@ -2422,9 +2412,7 @@ s7comm_szl_0131_0004_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_index, tvb, offset, 2, FALSE);
@@ -2822,9 +2810,7 @@ s7comm_szl_0131_0006_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0006(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0006_index, tvb, offset, 2, FALSE);
@@ -3184,9 +3170,7 @@ s7comm_szl_0131_0010_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0131_idx_0010(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_index, tvb, offset, 2, FALSE);
@@ -3310,9 +3294,7 @@ s7comm_szl_0132_0001_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0001(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 							
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0001_index, tvb, offset, 2, FALSE);
@@ -3371,9 +3353,7 @@ s7comm_szl_0132_0002_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0002(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 								
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0002_index, tvb, offset, 2, FALSE);
@@ -3433,9 +3413,7 @@ s7comm_szl_0132_0004_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0004(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree, 							
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0004_index, tvb, offset, 2, FALSE);
@@ -3498,9 +3476,7 @@ s7comm_szl_0132_0005_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0005(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_index, tvb, offset, 2, FALSE);
@@ -3583,9 +3559,7 @@ s7comm_szl_0132_0006_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_0132_idx_0006(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_index, tvb, offset, 2, FALSE);
@@ -3708,9 +3682,7 @@ s7comm_szl_xy74_0000_register(int proto)
 /*----------------------------------------------------------------------------------------------------*/
 guint32
 s7comm_decode_szl_id_xy74_idx_0000(tvbuff_t *tvb,
-									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
+									proto_tree *tree,
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_xy74_0000_cpu_led_id, tvb, offset, 2, FALSE);
@@ -3783,8 +3755,6 @@ s7comm_szl_0424_0000_register(int proto)
 guint32
 s7comm_decode_szl_id_0424_idx_0000(tvbuff_t *tvb,
 									proto_tree *tree, 
-									guint16 szl_partlist_len,
-									guint16 szl_partlist_count,									
 									guint32 offset )
 {
 	proto_tree_add_item(tree, hf_s7comm_szl_0424_0000_ereig, tvb, offset, 2, FALSE);
