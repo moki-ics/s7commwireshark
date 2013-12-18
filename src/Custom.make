@@ -1,5 +1,5 @@
 #
-# $Id$
+# /* $Id$ */
 #
 
 _CUSTOM_SUBDIRS_ = \
