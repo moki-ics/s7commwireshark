@@ -1871,10 +1871,10 @@ s7comm_decode_ud(tvbuff_t *tvb,
 		if (dlength > 4) {
 			switch (funcgroup){
 				case S7COMM_UD_FUNCGROUP_PROG:
-					offset = s7comm_decode_ud_prog_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+					offset = s7comm_decode_ud_prog_subfunc(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
 					break;
 				case S7COMM_UD_FUNCGROUP_CYCLIC:
-					offset = s7comm_decode_ud_cyclic_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+					offset = s7comm_decode_ud_cyclic_subfunc(tvb, data_tree, type, subfunc, dlength, offset);
 					break;
 				case S7COMM_UD_FUNCGROUP_BLOCK:
 					offset = s7comm_decode_ud_block_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
@@ -1908,9 +1908,6 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 									proto_tree *data_tree, 
 									guint8 type,				/* Type of data (request/response) */
 									guint8 subfunc,				/* Subfunction */
-									guint8 ret_val,				/* Return value in data part */
-									guint8 tsize,				/* transport size in data part */
-									guint16 len,				/* length given in data part */
 									guint16 dlength,			/* length of data part given in header */
 									guint32 offset )			/* Offset on data part +4 */
 {
@@ -1960,7 +1957,7 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 	
 					/* parse item data */				
 					for (i = 0; i < item_count; i++) {
-						offset = s7comm_decode_ud_prog_vartab_req_item(tvb, offset, pinfo, data_tree, i);
+						offset = s7comm_decode_ud_prog_vartab_req_item(tvb, offset, data_tree, i);
 					}
 					know_data = TRUE;
 					break;
@@ -1978,7 +1975,7 @@ s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb,
 
 					/* parse item data */				
 					for (i = 0; i < item_count; i++) {
-						offset = s7comm_decode_ud_prog_vartab_res_item(tvb, offset, pinfo, data_tree, i);
+						offset = s7comm_decode_ud_prog_vartab_res_item(tvb, offset, data_tree, i);
 					}
 					know_data = TRUE;
 					break;
@@ -2109,7 +2106,6 @@ static void make_registerflag_string(gchar *str, guint8 flags, gint max)
 static guint32
 s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb, 
 						  guint32 offset, 
-						  packet_info *pinfo, 
 						  proto_tree *sub_tree, 
 						  guint16 item_no)
 {
@@ -2220,8 +2216,7 @@ s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb, 
-						  guint32 offset, 
-						  packet_info *pinfo, 
+						  guint32 offset,
 						  proto_tree *sub_tree, 
 						  guint16 item_no)
 {
@@ -2280,13 +2275,9 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7comm_decode_ud_cyclic_subfunc(tvbuff_t *tvb, 
-									packet_info *pinfo,
 									proto_tree *data_tree, 
 									guint8 type,				/* Type of data (request/response) */
 									guint8 subfunc,				/* Subfunction */
-									guint8 ret_val,				/* Return value in data part */
-									guint8 tsize,				/* transport size in data part */
-									guint16 len,				/* length given in data part */
 									guint16 dlength,			/* length of data part given in header */
 									guint32 offset )			/* Offset on data part +4 */
 {
