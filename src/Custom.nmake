@@ -1,0 +1,32 @@
+#
+# $Id$
+#
+
+include ..\config.nmake
+
+all: s7comm
+
+echo::
+	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+clean:
+	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ..
+
+distclean: clean
+	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ..
+
+maintainer-clean: distclean
+	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ..
+
+install-plugins:
+!IFDEF ENABLE_LIBWIRESHARK
+	xcopy s7comm\*.dll ..\$(INSTALL_DIR)\plugins\$(VERSION) /d
+!ENDIF
