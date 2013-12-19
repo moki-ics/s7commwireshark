@@ -1655,16 +1655,19 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 	function = tvb_get_guint8( tvb, offset );
 	offset += 1;
 
-	/* Meaning of first 5 bytes is unknown */
-	proto_tree_add_text(tree, tvb, offset, 7, "Unknown 7 bytes: 0x%02x%02x%02x%02x%02x%02x%02x", 
+	/* Meaning of first byte is unknown */
+	proto_tree_add_text(tree, tvb, offset, 1, "Unknown  : 0x%02x", tvb_get_guint8(tvb, offset));
+	offset += 1;
+	/* These 2 bytes seems to be an error code. If an upload fails, this value is also shown in Manager as errorcode. Zero on success. */
+	proto_tree_add_text(tree, tvb, offset, 2, "Errorcode: 0x%04x", tvb_get_ntohs(tvb, offset));
+	offset += 2;
+	
+	proto_tree_add_text(tree, tvb, offset, 7, "Unknown 4 bytes: 0x%02x%02x%02x%02x", 
 						tvb_get_guint8(tvb, offset),
 						tvb_get_guint8(tvb, offset+1),
 						tvb_get_guint8(tvb, offset+2),
-						tvb_get_guint8(tvb, offset+3),
-						tvb_get_guint8(tvb, offset+4),
-						tvb_get_guint8(tvb, offset+5),
-						tvb_get_guint8(tvb, offset+6));
-	offset += 7;
+						tvb_get_guint8(tvb, offset+3));
+	offset += 4;
 	if (plength <= 8) {
 		/* Upload or End upload functions have no other data */
 		return offset;
