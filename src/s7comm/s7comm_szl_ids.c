@@ -1091,7 +1091,7 @@ s7comm_get_szl_id_index_description_text(guint16 id, guint16 index)
 		case 0x0132: 
 			str = val_to_str(index, szl_0132_index_names, "No description available");
 			break;
-		case 0x0174: 
+		case 0x0174:
 			str = val_to_str(index, szl_0174_index_names, "No description available");
 			break;
 	}
@@ -1269,6 +1269,8 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 											szl_decoded = TRUE;
 										}
 										break;
+									case 0x0019:
+									case 0x0119:
 									case 0x0074:
 									case 0x0174:
 											offset = s7comm_decode_szl_id_xy74_idx_0000(tvb, szl_item_tree, offset);
