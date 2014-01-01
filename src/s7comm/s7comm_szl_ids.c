@@ -510,6 +510,10 @@ static const value_string szl_0174_index_names[] = {
 };
 
 /* Header fields of the SZL */
+static gint hf_s7comm_szl_0000_0000_szl_id = -1;
+static gint hf_s7comm_szl_0000_0000_module_type_class = -1;
+static gint hf_s7comm_szl_0000_0000_partlist_extr_nr = -1;
+static gint hf_s7comm_szl_0000_0000_partlist_nr = -1;
 
 static gint hf_s7comm_szl_0013_0000_index = -1;
 
@@ -1021,6 +1025,8 @@ s7comm_register_szl_types(int proto)
 	proto_register_field_array(proto, hf, array_length(hf));
 
 	/* Register the SZL fields */
+	s7comm_szl_0000_0000_register(proto);
+	
 	s7comm_szl_0013_0000_register(proto);
 
 	s7comm_szl_xy11_0001_register(proto);
@@ -1112,6 +1118,8 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 									guint8 tsize,				/* transport size in data part */
 									guint16 len,				/* length given in data part */
 									guint16 dlength,			/* length of data part given in header */
+									guint8 data_unit_ref,		/* Data-unit-reference ID from parameter part, used for response fragment detection */
+									guint8 last_data_unit,		/* 0 is last, 1 is not last data unit, used for response fragment detection */
 									guint32 offset )			/* Offset on data part +4 */
 {
 	guint16 id;
@@ -1155,28 +1163,13 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 			} else if (type == S7COMM_UD_TYPE_RES) {			/*** Response ***/						
 				/* When response OK, data follows */
 				if (ret_val == S7COMM_ITEM_RETVAL_DATA_OK ) {
-					id = tvb_get_ntohs(tvb, offset);
-					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id, tvb, offset, 2, FALSE);
-					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_type, tvb, offset, 2, FALSE);
-					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_ex, tvb, offset, 2, FALSE);
-					proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_num, tvb, offset, 2, FALSE);
-					offset += 2;
-					index = tvb_get_ntohs(tvb, offset);
-					szl_item_entry = proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
-					offset += 2;
-					szl_index_description = s7comm_get_szl_id_index_description_text(id, index);
-					if (szl_index_description != NULL) {
-						proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
-					}
-					proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
-					s7comm_info_append_uint16hex(pinfo, "ID", id);
-					s7comm_info_append_uint16hex(pinfo, "Index", index);
-					/* When SZL id and index are both zero, then this is the second part of a fragmented
-					 * SZL response. In this case the list-length and list-count are missing, and the 
-					 * SZL-Data are following. Cause we don't know the id/index of the request, show
-					 * this data as raw SZL-Data
+					/* A fragmented response has a data-unit-ref <> 0 with Last-data-unit == 1
+					 * It's only possible to decode the first response of a fragment, because
+					 * only the first PDU contains the ID/Index header. Will result in an display-error when a PDU goes over more than 2 PDUs, but ... eeeek ... no better way to realize this.
+					 * last_data_unit == 0 when it's the last unit
+					 * last_data_unit == 1 when it's not the last unit
 					 */
-					if (id == 0 && index == 0) {
+					if (data_unit_ref != 0 && last_data_unit == 0) {
 						szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, dlength - 8, FALSE );
 						szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
 						proto_item_append_text(szl_item, " [Fragment, continuation of previous data]");
@@ -1184,8 +1177,27 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 						proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 8,
 							tvb_get_ptr (tvb, offset, dlength - 8));
 						offset += dlength - 8;
+						if (check_col(pinfo->cinfo, COL_INFO))
+							col_append_fstr(pinfo->cinfo, COL_INFO, " SZL data fragment");
 						szl_decoded = TRUE;
 					} else {
+						id = tvb_get_ntohs(tvb, offset);
+						proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id, tvb, offset, 2, FALSE);
+						proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_type, tvb, offset, 2, FALSE);
+						proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_ex, tvb, offset, 2, FALSE);
+						proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_id_partlist_num, tvb, offset, 2, FALSE);
+						offset += 2;
+						index = tvb_get_ntohs(tvb, offset);
+						szl_item_entry = proto_tree_add_item(data_tree, hf_s7comm_userdata_szl_index, tvb, offset, 2, FALSE);
+						offset += 2;
+						szl_index_description = s7comm_get_szl_id_index_description_text(id, index);
+						if (szl_index_description != NULL) {
+							proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
+						}
+						proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
+						s7comm_info_append_uint16hex(pinfo, "ID", id);
+						s7comm_info_append_uint16hex(pinfo, "Index", index);
+						
 						/* SZL-Data, 4 Bytes header, 4 bytes id/index = 8 bytes */
 						list_len = tvb_get_ntohs(tvb, offset); /* Length of an list set in bytes */
 						proto_tree_add_text(data_tree, tvb, offset, 2, "SZL partial list length: %d bytes", list_len);
@@ -1217,6 +1229,10 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 								szl_decoded = FALSE;
 								/* lets try to decode some known szl-id and indexes */
 								switch (id) {
+									case 0x0000:
+										offset = s7comm_decode_szl_id_xy00(tvb, szl_item_tree, id, index, offset);
+										szl_decoded = TRUE;
+										break;
 									case 0x0013:
 										if (index == 0x0000) {
 											offset = s7comm_decode_szl_id_0013_idx_0000(tvb, szl_item_tree, offset);
@@ -1329,6 +1345,74 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
  * 
  *******************************************************************************************************
  *******************************************************************************************************/
+ 
+ /*******************************************************************************************************
+ *
+ * SZL-ID:	0xxy00
+ * Content:
+ *	If you read the partial lists with SZL-ID W#16#xy00, you obtain the
+ *   SZL-IDs supported by the module.
+ *
+ *  The SZL-ID of the partial list extract
+ * W#16#0000H: all SZL partial lists of the module
+ * W#16#0100H: a partial list with all partial list extracts
+ * W#16#0200H: a partial list extract
+ * W#16#0300H: possible indexes of a partial list extract
+ * W#16#0F00H: only partial list header information
+ * 
+ *******************************************************************************************************/
+
+ /*----------------------------------------------------------------------------------------------------*/
+void
+s7comm_szl_0000_0000_register(int proto)
+{
+	static hf_register_info hf[] = {
+		{ &hf_s7comm_szl_0000_0000_szl_id,
+		{ "SZL ID that exists",			"s7comm.szl.0000.0000.szl_id", FT_UINT16, BASE_HEX, NULL, 0x0,
+		  "SZL ID that exists", HFILL }},
+
+		{ &hf_s7comm_szl_0000_0000_module_type_class,
+		{ "Module type class",			"s7comm.szl.0000..0000.module_type_class", FT_UINT16, BASE_HEX, NULL, 0xf000,
+		  "Module type class", HFILL }},
+		  
+		{ &hf_s7comm_szl_0000_0000_partlist_extr_nr,
+		{ "Number of the SZL partial list extract",			"s7comm.szl.0000..0000.partlist_extr_nr", FT_UINT16, BASE_HEX, NULL, 0x0f00,
+		  "Number of the SZL partial list extract", HFILL }},
+		  
+		{ &hf_s7comm_szl_0000_0000_partlist_nr,
+		{ "Number of the SZL partial list",			"s7comm.szl.0000.0000.partlist_nr", FT_UINT16, BASE_HEX, NULL, 0x00ff,
+		  "Number of the SZL partial list", HFILL }}
+	};
+	proto_register_field_array(proto, hf, array_length(hf));
+}
+/*----------------------------------------------------------------------------------------------------*/
+guint32
+s7comm_decode_szl_id_xy00(tvbuff_t *tvb,
+									proto_tree *tree, 
+									guint16 id,
+									guint16 index,
+									guint32 offset )
+{
+	if (id == 0 && index == 0) {	
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_szl_id, tvb, offset, 2, FALSE);
+		offset += 2;
+	} else if (id == 0x0100) {
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_module_type_class, tvb, offset, 2, FALSE);
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_partlist_nr, tvb, offset, 2, FALSE);
+		offset += 2;
+	} else if (id == 0x0200 || id == 0x0300) {
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_module_type_class, tvb, offset, 2, FALSE);
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_partlist_extr_nr, tvb, offset, 2, FALSE);
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_partlist_nr, tvb, offset, 2, FALSE);
+		offset += 2;
+	} else {
+		/* 0x0f00 / 0x000: Partial list header information (number of all SZL-IDs of the module */
+		proto_tree_add_item(tree, hf_s7comm_szl_0000_0000_szl_id, tvb, offset, 2, FALSE);
+		offset += 2;
+	}
+
+	return offset;
+}
 
  /*******************************************************************************************************
  *

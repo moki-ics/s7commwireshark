@@ -1741,6 +1741,8 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	guint8 type;
 	guint8 funcgroup;
 	guint8 subfunc;
+	guint8 data_unit_ref = 0;
+	guint8 last_data_unit = 0;
 
 	/* Add parameter tree */
 	item = proto_tree_add_item( tree, hf_s7comm_param, tvb, offset, plength, FALSE );
@@ -1836,9 +1838,11 @@ s7comm_decode_ud(tvbuff_t *tvb,
 	offset_temp += 1;
 	if (plength >= 12) {
 		/* 1 Byte data unit reference. If packet is fragmented, all packets with this number belong together */
+		data_unit_ref = tvb_get_guint8( tvb, offset_temp );
 		proto_tree_add_item(param_tree, hf_s7comm_userdata_param_dataunitref, tvb, offset_temp, 1, FALSE);
 		offset_temp += 1;
 		/* 1 Byte fragmented flag, if this is not the last data unit (telegram is fragmented) this is != 0 */
+		last_data_unit = tvb_get_guint8( tvb, offset_temp );
 		proto_tree_add_item(param_tree, hf_s7comm_userdata_param_dataunit, tvb, offset_temp, 1, FALSE);
 		offset_temp += 1;
 		proto_tree_add_text(param_tree, tvb, offset_temp, 2, "Error code: 0x%04x", tvb_get_ntohs(tvb, offset_temp));
@@ -1883,7 +1887,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
 					offset = s7comm_decode_ud_block_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
 					break;
 				case S7COMM_UD_FUNCGROUP_SZL:
-					offset = s7comm_decode_ud_szl_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+					offset = s7comm_decode_ud_szl_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, data_unit_ref, last_data_unit, offset);
 					break;
 				case S7COMM_UD_FUNCGROUP_SEC:
 					offset = s7comm_decode_ud_security_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
@@ -2143,7 +2147,7 @@ s7comm_decode_ud_prog_vartab_req_item(tvbuff_t *tvb,
 
 	/* byte offset, 2 bytes */
 	bytepos = tvb_get_ntohs(tvb, offset);
-	proto_tree_add_text(item, tvb, offset, 2, "Startaddress: %d", bytepos);	
+	proto_tree_add_text(item, tvb, offset, 2, "Startaddress: %d", bytepos);
 	offset += 2;
 
 	/* build a full adress to show item data directly beside the item */

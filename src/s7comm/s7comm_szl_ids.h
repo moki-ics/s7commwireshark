@@ -22,11 +22,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-guint32 s7comm_decode_ud_szl_subfunc (tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint8 tsize, guint16 len, guint16 dlength, guint32 offset);
+guint32 s7comm_decode_ud_szl_subfunc (tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint8 tsize, guint16 len, guint16 dlength, guint8 data_unit_ref, guint8 last_data_unit, guint32 offset);
 
 const gchar* s7comm_get_szl_id_index_description_text(guint16 id, guint16 index);
 
 /* Known SZL IDs and indexes */
+guint32 s7comm_decode_szl_id_xy00(tvbuff_t *tvb, proto_tree *tree, guint16 id, guint16 index, guint32 offset);
+
 guint32 s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
 guint32 s7comm_decode_szl_id_0111_idx_0001(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
@@ -50,7 +52,7 @@ guint32 s7comm_decode_szl_id_0424_idx_0000(tvbuff_t *tvb, proto_tree *tree, guin
 
 void s7comm_register_szl_types(int proto);
 
-
+void s7comm_szl_0000_0000_register(int proto);
 void s7comm_szl_0013_0000_register(int proto);
 
 void s7comm_szl_xy11_0001_register(int proto);
