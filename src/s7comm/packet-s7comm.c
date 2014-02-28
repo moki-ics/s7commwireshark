@@ -1369,7 +1369,7 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 	} else if (var_spec_type == 0x12 && var_spec_length >= 7 && var_spec_syntax_id == S7COMM_SYNTAXID_DBREAD) {
 		/* Number of data area specifications following, 1 Byte */
 		number_of_areas = tvb_get_guint8(tvb, offset);
-		proto_tree_add_uint(sub_item, hf_s7comm_item_dbread_numareas, tvb, offset, 1, number_of_areas);
+		proto_tree_add_uint(item, hf_s7comm_item_dbread_numareas, tvb, offset, 1, number_of_areas);
 		proto_item_append_text(item, " (%d Data-Areas of Syntax-Id DBREAD)", number_of_areas);
 		offset += 1;
 		for (i = 1; i <= number_of_areas; i++) {
