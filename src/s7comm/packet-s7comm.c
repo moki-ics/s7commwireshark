@@ -651,9 +651,12 @@ static gint hf_s7comm_param_itemcount = -1;			/* Parameter part: item count */
 static gint hf_s7comm_param_data = -1;				/* Parameter part: data */
 static gint hf_s7comm_param_neg_pdu_length = -1;	/* Parameter part: Negotiate PDU length */
 
+static gint hf_s7comm_param_maxamq_calling = -1;	/* Parameter part: Max AmQ calling */
+static gint hf_s7comm_param_maxamq_called = -1;	/* Parameter part: Max AmQ called */
 
 /* Item data */
 static gint hf_s7comm_param_item = -1;
+static gint hf_s7comm_param_subitem = -1;			/* Substructure */
 static gint hf_s7comm_item_varspec = -1;			/* Variable specification */
 static gint hf_s7comm_item_varspec_length = -1;		/* Length of following address specification */
 static gint hf_s7comm_item_syntax_id = -1;			/* Syntax Id */
@@ -662,6 +665,11 @@ static gint hf_s7comm_item_length = -1;				/* length, 2 Bytes*/
 static gint hf_s7comm_item_db = -1;					/* DB/M/E/A, 2 Bytes */
 static gint hf_s7comm_item_area = -1;				/* Area code, 1 byte */
 static gint hf_s7comm_item_address = -1;			/* Bit adress, 3 Bytes */
+/* Special variable read with Syntax-Id 0xb0 (DBREAD) */
+static gint hf_s7comm_item_dbread_numareas = -1;	/* Number of areas following, 1 Byte*/
+static gint hf_s7comm_item_dbread_length = -1;		/* length, 1 Byte*/
+static gint hf_s7comm_item_dbread_db = -1;			/* DB number, 2 Bytes*/
+static gint hf_s7comm_item_dbread_startadr = -1;	/* Start address, 2 Bytes*/
 
 static gint hf_s7comm_data = -1;
 static gint hf_s7comm_data_transport_size = -1;		/* unknown part, kind of "transport size"? constant 0x09, 1 byte */
@@ -710,6 +718,7 @@ static gint ett_s7comm = -1;								/* S7 communication tree, parent of all othe
 static gint ett_s7comm_header = -1;							/* Subtree for header block */
 static gint ett_s7comm_param = -1;							/* Subtree for parameter block */
 static gint ett_s7comm_param_item = -1;						/* Subtree for items in parameter block */
+static gint ett_s7comm_param_subitem = -1;					/* Subtree for subitems under items in parameter block */
 static gint ett_s7comm_data = -1;							/* Subtree for data block */
 static gint ett_s7comm_data_item = -1;						/* Subtree for an item in data block */
 
@@ -774,6 +783,12 @@ proto_register_s7comm (void)
 		{ &hf_s7comm_param_service,
 		{ "Function",					"s7comm.param.func",	FT_UINT8, BASE_HEX, VALS(param_functionnames), 0x0,
 		  "Indicates the function of parameter/data", HFILL }},
+		{ &hf_s7comm_param_maxamq_calling,
+		{ "Max AmQ (parallel jobs with ack) calling",	"s7comm.param.maxamq_calling",	FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Max AmQ (parallel jobs with ack) calling", HFILL }},
+		{ &hf_s7comm_param_maxamq_called,
+		{ "Max AmQ (parallel jobs with ack) called ",	"s7comm.param.maxamq_called",	FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Max AmQ (parallel jobs with ack) called ", HFILL }},
 		{ &hf_s7comm_param_neg_pdu_length,
 		{ "PDU length",					"s7comm.param.pdu_length",	FT_UINT16, BASE_DEC, NULL, 0x0,
 		  "PDU length", HFILL }},
@@ -785,7 +800,10 @@ proto_register_s7comm (void)
 		  "Parameter data", HFILL }},
 		{ &hf_s7comm_param_item,
 		{ "Item",						"s7comm.param.item",	FT_NONE, BASE_NONE, NULL, 0x0,
-		  "Item", HFILL }},		  
+		  "Item", HFILL }},	
+		{ &hf_s7comm_param_subitem,
+		{ "Subitem",					"s7comm.param.subitem",	FT_NONE, BASE_NONE, NULL, 0x0,
+		  "Subitem", HFILL }},	
 		{ &hf_s7comm_item_varspec,
 		{ "Variable specification",		"s7comm.param.item.varspec",	FT_UINT8, BASE_HEX, NULL, 0x0,
 		  "Variable specification", HFILL }},
@@ -810,6 +828,20 @@ proto_register_s7comm (void)
 		{ &hf_s7comm_item_address,
 		{ "Address",					"s7comm.param.item.address", FT_UINT24, BASE_HEX, NULL, 0x0,
 		  "Address", HFILL }},
+		/* Special variable read with Syntax-Id 0xb0 (DBREAD) */ 
+		{ &hf_s7comm_item_dbread_numareas,
+		{ "Number of areas",			"s7comm.param.item.dbread.numareas", FT_UINT8, BASE_DEC, NULL, 0x0,
+		  "Number of area specifications following", HFILL }},
+		{ &hf_s7comm_item_dbread_length,
+		{ "Bytes to read",			"s7comm.param.item.dbread.length", FT_UINT8, BASE_DEC, NULL, 0x0,
+		  "Number of bytes to read", HFILL }},
+		{ &hf_s7comm_item_dbread_db,
+		{ "DB number    ",			"s7comm.param.item.dbread.db", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "DB number", HFILL }},
+		{ &hf_s7comm_item_dbread_startadr,
+		{ "Start address",			"s7comm.param.item.dbread.startaddress", FT_UINT16, BASE_DEC, NULL, 0x0,
+		  "Start address", HFILL }},
+		
 		{ &hf_s7comm_data,
 		{ "Data",						"s7comm.data", FT_NONE, BASE_NONE, NULL, 0x0,
 		  "This is the data part of S7 communication", HFILL }},
@@ -825,8 +857,6 @@ proto_register_s7comm (void)
 		{ &hf_s7comm_readresponse_data,
 		{ "Data",						"s7comm.resp.data", FT_BYTES,	BASE_NONE, NULL, 0x0,
       	  "Data", HFILL }},
-
-
 
 		{ &hf_s7comm_userdata_param,
 		{ "Userdata parameter",			"s7comm.param.userdata", FT_BYTES,	BASE_NONE, NULL, 0x0,
@@ -881,7 +911,7 @@ proto_register_s7comm (void)
       	  "Some block configuration flags", HFILL }},
 		 /* Bit : 0 -> DB Linked = true */ 
 		{ &hf_s7comm_userdata_blockinfo_linked,
-		{ "Linked",				"s7comm.param.userdata.blockinfo.linked", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x01,
+		{ "Linked",						"s7comm.param.userdata.blockinfo.linked", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x01,
       	  "Linked", HFILL }},
 		/* Bit : 1 -> Standard block = true */ 
 		{ &hf_s7comm_userdata_blockinfo_standard_block,
@@ -890,8 +920,7 @@ proto_register_s7comm (void)
 		/* Bit : 5 -> DB Non Retain = true */
 		{ &hf_s7comm_userdata_blockinfo_nonretain,
 		{ "Non Retain",					"s7comm.param.userdata.blockinfo.nonretain", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x08,
-      	  "Non Retain", HFILL }},
-		  
+      	  "Non Retain", HFILL }},		  
 		  
 		 /* Flags for requested registers in diagnostic data telegrams */
 		{ &hf_s7comm_diagdata_registerflag,
@@ -921,11 +950,11 @@ proto_register_s7comm (void)
 		
 		/* TIA Portal stuff */
 		{ &hf_s7comm_tia1200_var_lid_flags,
-		{ "LID flags",					"s7comm.tiap.lid_flags", FT_UINT8,	BASE_DEC, VALS(tia1200_var_lid_flag_names), 0xf0,
+		{ "LID flags",				"s7comm.tiap.lid_flags", FT_UINT8,	BASE_DEC, VALS(tia1200_var_lid_flag_names), 0xf0,
       	  "LID flags", HFILL }},
 		  
 		{ &hf_s7comm_tia1200_substructure_item,
-		{ "Substructure",				"s7comm.tiap.substructure",	FT_NONE, BASE_NONE, NULL, 0x0,
+		{ "Substructure",			"s7comm.tiap.substructure",	FT_NONE, BASE_NONE, NULL, 0x0,
 		  "Substructure", HFILL }},
 	};
 
@@ -934,6 +963,7 @@ proto_register_s7comm (void)
 		&ett_s7comm_header,
 		&ett_s7comm_param,
 		&ett_s7comm_param_item,
+		&ett_s7comm_param_subitem,
 		&ett_s7comm_data,
 		&ett_s7comm_data_item,
 	};
@@ -1232,11 +1262,12 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 	guint16 i;
 	guint8 area = 0;
 	proto_item *item = NULL;
+	guint8 number_of_areas = 0;
 	
 	guint8 var_spec_type = 0;
 	guint8 var_spec_length = 0;
 	guint8 var_spec_syntax_id = 0;
-	proto_item *tia_struct_item = NULL;
+	proto_item *sub_item = NULL;
 	guint16 tia_var_area1 = 0;
 	guint16 tia_var_area2 = 0;
 	guint8 tia_lid_flags = 0;
@@ -1325,30 +1356,40 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 		if (area == S7COMM_AREA_TIMER || area == S7COMM_AREA_COUNTER) {
 			proto_item_append_text(item, " %d)", a_address);
 		} else {
-			proto_item_append_text(item, " %d.%d ", bytepos, bitpos);	
+			proto_item_append_text(item, " %d.%d ", bytepos, bitpos);
 			proto_item_append_text(item, "%s", val_to_str(t_size, item_transportsizenames, "Unknown transport size: 0x%02x"));
 			proto_item_append_text(item, " %d)", len);
 		}	
 		offset += 3;
 	/****************************************************************************/
 	/******************** S7-400 special address mode (kind of cyclic read) *****/
+	/* The response to this kind of request can't be decoded, because in the response
+	 * the data fields don't contain any header information. There is only one byte
+	 */
 	} else if (var_spec_type == 0x12 && var_spec_length >= 7 && var_spec_syntax_id == S7COMM_SYNTAXID_DBREAD) {
-		/* don't know what this is, has to be always 0x01 */
-		proto_tree_add_text(item, tvb, offset, 2, "Fixed (0x01)   : 0x%02x", tvb_get_guint8( tvb, offset));
+		/* Number of data area specifications following, 1 Byte */
+		number_of_areas = tvb_get_guint8(tvb, offset);
+		proto_tree_add_uint(sub_item, hf_s7comm_item_dbread_numareas, tvb, offset, 1, number_of_areas);
+		proto_item_append_text(item, " (%d Data-Areas of Syntax-Id DBREAD)", number_of_areas);
 		offset += 1;
-		len = tvb_get_guint8( tvb, offset);
-		proto_tree_add_text(item, tvb, offset, 1, "Number of bytes: %u", len);
-		offset += 1;
-		/* DB number, 2 bytes */
-		db = tvb_get_ntohs(tvb, offset);
-		proto_tree_add_text(item, tvb, offset, 1, "DB number      : %u", db);
-		offset += 2;
-		/* Start address, 2 bytes */
-		bytepos = tvb_get_ntohs(tvb, offset);
-		proto_tree_add_text(item, tvb, offset, 2, "Start address  : %u", bytepos);
-		offset += 2;
-		/* Display as pseudo S7-Any Format */
-		proto_item_append_text(item, " (DB%d.DBB %d BYTE %d)", db, bytepos, len);
+		for (i = 1; i <= number_of_areas; i++) {
+			sub_item = proto_tree_add_item( sub_tree, hf_s7comm_param_subitem, tvb, offset, 5, FALSE );
+			item = proto_item_add_subtree(sub_item, ett_s7comm_param_subitem);
+			/* Number of Bytes to read, 1 Byte */
+			len = tvb_get_guint8( tvb, offset);
+			proto_tree_add_uint(sub_item, hf_s7comm_item_dbread_length, tvb, offset, 1, len);
+			offset += 1;
+			/* DB number, 2 Bytes */
+			db = tvb_get_ntohs(tvb, offset);
+			proto_tree_add_uint(sub_item, hf_s7comm_item_dbread_db, tvb, offset, 2, db);
+			offset += 2;
+			/* Start address, 2 Bytes */
+			bytepos = tvb_get_ntohs(tvb, offset);
+			proto_tree_add_uint(sub_item, hf_s7comm_item_dbread_startadr, tvb, offset, 2, bytepos);	
+			offset += 2;
+			/* Display as pseudo S7-Any Format */
+			proto_item_append_text(sub_item, " [%d]: (DB%d.DBB %d BYTE %d)", i, db, bytepos, len);
+		}
 	/****************************************************************************/
 	/******************** TIA S7 1200 symbolic address mode *********************/
 	} else if (var_spec_type == 0x12 && var_spec_length >= 14 && var_spec_syntax_id == S7COMM_SYNTAXID_1200SYM) {
@@ -1380,15 +1421,15 @@ s7comm_decode_param_item(tvbuff_t *tvb,
 
 		for (i = 0; i < (var_spec_length - 10) / 4; i++) {
 			/* Insert a new tree for every sub-struct */
-			tia_struct_item = proto_tree_add_item( sub_tree, hf_s7comm_tia1200_substructure_item, tvb, offset, 4, FALSE );
-			item = proto_item_add_subtree(tia_struct_item, ett_s7comm_param_item);
+			sub_item = proto_tree_add_item(sub_tree, hf_s7comm_tia1200_substructure_item, tvb, offset, 4, FALSE );
+			item = proto_item_add_subtree(sub_item, ett_s7comm_param_subitem);
 			tia_lid_flags = tvb_get_guint8( tvb, offset ) >> 4;
-			proto_item_append_text(tia_struct_item, " [%d]: %s, Value: %u", i + 1,
+			proto_item_append_text(sub_item, " [%d]: %s, Value: %u", i + 1,
 				val_to_str(tia_lid_flags, tia1200_var_lid_flag_names, "Unknown flags: 0x%02x"),
 				(tvb_get_ntohl( tvb, offset ) & 0x0fffffff)				
 			);			
-			proto_tree_add_item(tia_struct_item, hf_s7comm_tia1200_var_lid_flags, tvb, offset, 1, FALSE);
-			proto_tree_add_text(tia_struct_item, tvb, offset, 4, "Value     : %u", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);	
+			proto_tree_add_item(sub_item, hf_s7comm_tia1200_var_lid_flags, tvb, offset, 1, FALSE);
+			proto_tree_add_text(sub_item, tvb, offset, 4, "Value     : %u", tvb_get_ntohl( tvb, offset ) & 0x0fffffff);	
 			
 			offset += 4;
 		}		
@@ -1413,9 +1454,11 @@ s7comm_decode_pdu_setup_communication(tvbuff_t *tvb,
 {
 	proto_tree_add_text(tree, tvb, offset, 1, "Reserved: 0x%02x", tvb_get_guint8( tvb, offset ));
 	offset += 1;
-	proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) calling: %d", tvb_get_ntohs( tvb, offset ));
+	proto_tree_add_item(tree, hf_s7comm_param_maxamq_calling, tvb, offset, 2, FALSE);
+	//proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) calling: %d", tvb_get_ntohs( tvb, offset ));
 	offset += 2;
-	proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) called : %d", tvb_get_ntohs( tvb, offset ));
+	proto_tree_add_item(tree, hf_s7comm_param_maxamq_called, tvb, offset, 2, FALSE);
+	//proto_tree_add_text(tree, tvb, offset, 2, "Max AmQ (parallel jobs with ack) called : %d", tvb_get_ntohs( tvb, offset ));
 	offset += 2;
 
 	proto_tree_add_item(tree, hf_s7comm_param_neg_pdu_length, tvb, offset, 2, FALSE);
