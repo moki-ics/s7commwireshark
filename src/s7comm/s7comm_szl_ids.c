@@ -1170,13 +1170,13 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
 					 * last_data_unit == 1 when it's not the last unit
 					 */
 					if (data_unit_ref != 0 && last_data_unit == 0) {
-						szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, dlength - 8, FALSE );
+						szl_item = proto_tree_add_item( data_tree, hf_s7comm_userdata_szl_tree, tvb, offset, len, FALSE );
 						szl_item_tree = proto_item_add_subtree(szl_item, ett_s7comm_szl);
 						proto_item_append_text(szl_item, " [Fragment, continuation of previous data]");
 						
-						proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, dlength - 8,
-							tvb_get_ptr (tvb, offset, dlength - 8));
-						offset += dlength - 8;
+						proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, len,
+							tvb_get_ptr (tvb, offset, len));
+						offset += len;
 						if (check_col(pinfo->cinfo, COL_INFO))
 							col_append_fstr(pinfo->cinfo, COL_INFO, " SZL data fragment");
 						szl_decoded = TRUE;
