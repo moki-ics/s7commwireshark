@@ -2270,7 +2270,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
 						  proto_tree *sub_tree, 
 						  guint16 item_no)
 {
-	guint16 len = 0, len2;
+	guint16 len = 0, len2 = 0;
 	guint8 ret_val = 0;
 	guint8 tsize = 0;
 	guint8 head_len = 4;
