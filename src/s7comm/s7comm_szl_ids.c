@@ -3311,8 +3311,8 @@ s7comm_decode_szl_id_0131_idx_0010(tvbuff_t *tvb,
 	offset += 1;	
 	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_maxanz_arch, tvb, offset, 2, FALSE);
 	offset += 2;	
-	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_res, tvb, offset, 14, FALSE);
-	offset += 14;
+	proto_tree_add_item(tree, hf_s7comm_szl_0131_0010_res, tvb, offset, 28, FALSE);
+	offset += 28;
 	
 	return offset;
 }
