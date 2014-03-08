@@ -632,7 +632,6 @@ static gint hf_s7comm_tia1200_var_lid_flags = -1;                   /* LID Flags
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
-static gint hf_s7comm = -1;
 static gint hf_s7comm_header = -1;
 static gint hf_s7comm_header_protid = -1;           /* Header Byte  0 */
 static gint hf_s7comm_header_rosctr = -1;           /* Header Bytes 1 */
@@ -677,7 +676,6 @@ static gint hf_s7comm_readresponse_data = -1;
 static gint hf_s7comm_item_return_value = -1;
 
 /* userdata, block services */
-static gint hf_s7comm_userdata_param = -1;
 static gint hf_s7comm_userdata_data = -1;
 static gint hf_s7comm_userdata_data_return_value = -1;      /* Return value in userdata header, 1 byte */
 static gint hf_s7comm_userdata_data_length = -1;            /* Length of user data, 2 Bytes */
@@ -741,10 +739,6 @@ proto_register_s7comm (void)
     * {&(field id), {name, abbrev, type, display, strings, bitmask, blurb, HFILL}}.
     */
     static hf_register_info hf[] = {
-        { &hf_s7comm,
-        { "S7 Communication Data", "s7comm.gendata", FT_NONE, BASE_NONE, NULL, 0x0,
-          "S7 Communication Data", HFILL }},
-
         { &hf_s7comm_header,
         { "Header", "s7comm.header", FT_NONE, BASE_NONE, NULL, 0x0,
           "This is the header of S7 communication", HFILL }},
@@ -759,7 +753,7 @@ proto_register_s7comm (void)
           "Redundancy Identification (Reserved), should be always 0x0000", HFILL }},
         { &hf_s7comm_header_pduref,
         { "Protocol Data Unit Reference", "s7comm.header.pduref", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Protocol Data Unit Reference", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_header_parlg,
         { "Parameter length", "s7comm.header.parlg", FT_UINT16, BASE_DEC, NULL, 0x0,
           "Specifies the entire length of the parameter block in bytes", HFILL }},
@@ -768,10 +762,10 @@ proto_register_s7comm (void)
           "Specifies the entire length of the data block in bytes", HFILL }}, 
         { &hf_s7comm_header_errcls,
         { "Error class", "s7comm.header.errcls", FT_UINT8, BASE_HEX, VALS(errcls_names), 0x0,
-          "Error class", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_header_errcod,
         { "Error code", "s7comm.header.errcod", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "Error code", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_param,
         { "Parameter", "s7comm.param", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -781,49 +775,49 @@ proto_register_s7comm (void)
           "Indicates the function of parameter/data", HFILL }},
         { &hf_s7comm_param_maxamq_calling,
         { "Max AmQ (parallel jobs with ack) calling", "s7comm.param.maxamq_calling", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Max AmQ (parallel jobs with ack) calling", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_param_maxamq_called,
         { "Max AmQ (parallel jobs with ack) called", "s7comm.param.maxamq_called", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Max AmQ (parallel jobs with ack) called", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_param_neg_pdu_length,
         { "PDU length", "s7comm.param.pdu_length", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "PDU length", HFILL }},
+          "Negotiated PDU length", HFILL }},
         { &hf_s7comm_param_itemcount,
         { "Item count", "s7comm.param.itemcount", FT_UINT8, BASE_DEC, NULL, 0x0,
           "Number of Items in parameter/data part", HFILL }},
         { &hf_s7comm_param_data,
         { "Parameter data", "s7comm.param.data", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "Parameter data", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_param_item,
         { "Item", "s7comm.param.item", FT_NONE, BASE_NONE, NULL, 0x0,
-          "Item", HFILL }},	
+          NULL, HFILL }},	
         { &hf_s7comm_param_subitem,
         { "Subitem", "s7comm.param.subitem", FT_NONE, BASE_NONE, NULL, 0x0,
-          "Subitem", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_varspec,
         { "Variable specification", "s7comm.param.item.varspec", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "Variable specification", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_varspec_length,
         { "Length of following address specification", "s7comm.param.item.varspec_length", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "Length of following address specification", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_syntax_id,
         { "Syntax Id", "s7comm.param.item.syntaxid", FT_UINT8, BASE_HEX, VALS(item_syntaxid_names), 0x0,
           "Syntax Id, format type of following address specification", HFILL }},  
         { &hf_s7comm_item_transport_size,
         { "Transport size", "s7comm.param.item.transp_size", FT_UINT8, BASE_DEC, VALS(item_transportsizenames), 0x0,
-          "Transport size", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_length,
         { "Length", "s7comm.param.item.length", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Length", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_db,
         { "DB number", "s7comm.param.item.db", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "DB number", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_area,
         { "Area", "s7comm.param.item.area", FT_UINT8, BASE_HEX, VALS(item_areanames), 0x0,
-          "Area", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_address,
         { "Address", "s7comm.param.item.address", FT_UINT24, BASE_HEX, NULL, 0x0,
-          "Address", HFILL }},
+          NULL, HFILL }},
         /* Special variable read with Syntax-Id 0xb0 (DBREAD) */ 
         { &hf_s7comm_item_dbread_numareas,
         { "Number of areas", "s7comm.param.item.dbread.numareas", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -833,10 +827,10 @@ proto_register_s7comm (void)
           "Number of bytes to read", HFILL }},
         { &hf_s7comm_item_dbread_db,
         { "DB number", "s7comm.param.item.dbread.db", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "DB number", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_dbread_startadr,
         { "Start address", "s7comm.param.item.dbread.startaddress", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Start address", HFILL }},
+          NULL, HFILL }},
         
         { &hf_s7comm_data,
         { "Data", "s7comm.data", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -846,17 +840,14 @@ proto_register_s7comm (void)
           "Data type / Transport size", HFILL }},
         { &hf_s7comm_data_item,
         { "Item", "s7comm.data.item", FT_NONE, BASE_NONE, NULL, 0x0,
-          "Item", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_item_return_value,
         { "Return code", "s7comm.data.ret_code", FT_UINT8, BASE_HEX, VALS(item_return_valuenames), 0x0,
-          "Return code", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_readresponse_data,
         { "Data", "s7comm.resp.data", FT_BYTES,	BASE_NONE, NULL, 0x0,
-          "Data", HFILL }},
+          NULL, HFILL }},
 
-        { &hf_s7comm_userdata_param,
-        { "Userdata parameter", "s7comm.param.userdata", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "Userdata parameter", HFILL }},
         { &hf_s7comm_userdata_data,
         { "Data", "s7comm.data.userdata", FT_BYTES, BASE_NONE, NULL, 0x0,
           "Userdata data", HFILL }},
@@ -883,15 +874,15 @@ proto_register_s7comm (void)
 
         { &hf_s7comm_userdata_param_funcgroup,
         { "Function group", "s7comm.param.userdata.funcgroup", FT_UINT8, BASE_DEC, VALS(userdata_functiongroup_names), 0x0f,
-          "Function group", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_userdata_param_subfunc,
         { "Subfunction", "s7comm.param.userdata.subfunc", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "Subfunction", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_userdata_param_seq_num,
         { "Sequence number", "s7comm.param.userdata.seq_num", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "Sequence number", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_userdata_param_dataunitref,
         { "Data unit reference number", "s7comm.param.userdata.dataunitref", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -899,7 +890,7 @@ proto_register_s7comm (void)
           
         { &hf_s7comm_userdata_param_dataunit,
         { "Last data unit", "s7comm.param.userdata.lastdataunit", FT_UINT8, BASE_HEX, VALS(userdata_lastdataunit_names), 0x0,
-          "Last data unit", HFILL }},
+          NULL, HFILL }},
 
           /* Flags in blockinfo response */
         { &hf_s7comm_userdata_blockinfo_flags,
@@ -908,15 +899,15 @@ proto_register_s7comm (void)
          /* Bit : 0 -> DB Linked = true */ 
         { &hf_s7comm_userdata_blockinfo_linked,
         { "Linked", "s7comm.param.userdata.blockinfo.linked", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x01,
-          "Linked", HFILL }},
+          NULL, HFILL }},
         /* Bit : 1 -> Standard block = true */ 
         { &hf_s7comm_userdata_blockinfo_standard_block,
         { "Standard block", "s7comm.param.userdata.blockinfo.standard_block", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x02,
-          "Standard block", HFILL }},
+          NULL, HFILL }},
         /* Bit : 5 -> DB Non Retain = true */
         { &hf_s7comm_userdata_blockinfo_nonretain,
         { "Non Retain", "s7comm.param.userdata.blockinfo.nonretain", FT_BOOLEAN, 8, TFS(&fragment_descriptions), 0x08,
-          "Non Retain", HFILL }},  
+          NULL, HFILL }},  
           
          /* Flags for requested registers in diagnostic data telegrams */
         { &hf_s7comm_diagdata_registerflag,
@@ -947,11 +938,11 @@ proto_register_s7comm (void)
         /* TIA Portal stuff */
         { &hf_s7comm_tia1200_var_lid_flags,
         { "LID flags", "s7comm.tiap.lid_flags", FT_UINT8, BASE_DEC, VALS(tia1200_var_lid_flag_names), 0xf0,
-          "LID flags", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_tia1200_substructure_item,
         { "Substructure", "s7comm.tiap.substructure", FT_NONE, BASE_NONE, NULL, 0x0,
-          "Substructure", HFILL }},
+          NULL, HFILL }},
     };
 
     static gint *ett[] = {

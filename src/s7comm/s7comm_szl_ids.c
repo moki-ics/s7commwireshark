@@ -985,7 +985,7 @@ s7comm_register_szl_types(int proto)
         /*** SZL functions ***/
         { &hf_s7comm_userdata_szl_partial_list,
         { "SZL partial list data", "s7comm.param.userdata.szl_part_list", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "SZL partial list data", HFILL }},
+          NULL, HFILL }},
           /* SZL ID */
         { &hf_s7comm_userdata_szl_id,
         { "SZL-ID", "s7comm.data.userdata.szl_id", FT_UINT16, BASE_HEX, NULL, 0x0,
@@ -993,13 +993,13 @@ s7comm_register_szl_types(int proto)
 
         { &hf_s7comm_userdata_szl_id_type,
         { "Diagnostic type", "s7comm.data.userdata.szl_id.diag_type", FT_UINT16, BASE_HEX, VALS(szl_module_type_names), 0xf000,
-          "Diagnostic type", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_userdata_szl_id_partlist_ex,
         { "Number of the partial list extract", "s7comm.data.userdata.szl_id.partlist_ex", FT_UINT16, BASE_HEX, VALS(szl_id_partlist_ex_names), 0xffff,
-          "Number of the partial list extract", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_userdata_szl_id_partlist_num,
         { "Number of the partial list", "s7comm.data.userdata.szl_id.partlist_num", FT_UINT16, BASE_HEX, VALS(szl_partial_list_names), 0x00ff,
-          "Number of the partial list", HFILL }},
+          NULL, HFILL }},
 
           /* SZL index */
         { &hf_s7comm_userdata_szl_index,
@@ -1007,11 +1007,11 @@ s7comm_register_szl_types(int proto)
           "SZL-Index (System Status List)", HFILL }},
         { &hf_s7comm_userdata_szl_tree,
         { "SZL data tree", "s7comm.data.userdata.szl_data_tree", FT_NONE, BASE_NONE, NULL, 0x0,
-          "SZL data tree", HFILL }},
+          NULL, HFILL }},
         /* Raw and unknown data */
         { &hf_s7comm_userdata_szl_data,
         { "SZL data", "s7comm.param.userdata.szl_data", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "SZL data", HFILL }},
+          NULL, HFILL }},
     };
 
     /* Register Subtrees */
@@ -1367,19 +1367,19 @@ s7comm_szl_0000_0000_register(int proto)
     static hf_register_info hf[] = {
         { &hf_s7comm_szl_0000_0000_szl_id,
         { "SZL ID that exists", "s7comm.szl.0000.0000.szl_id", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "SZL ID that exists", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0000_0000_module_type_class,
         { "Module type class", "s7comm.szl.0000.0000.module_type_class", FT_UINT16, BASE_HEX, NULL, 0xf000,
-          "Module type class", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0000_0000_partlist_extr_nr,
         { "Number of the SZL partial list extract", "s7comm.szl.0000.0000.partlist_extr_nr", FT_UINT16, BASE_HEX, NULL, 0x0f00,
-          "Number of the SZL partial list extract", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0000_0000_partlist_nr,
         { "Number of the SZL partial list", "s7comm.szl.0000.0000.partlist_nr", FT_UINT16, BASE_HEX, NULL, 0x00ff,
-          "Number of the SZL partial list", HFILL }}
+          NULL, HFILL }}
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -1438,15 +1438,15 @@ s7comm_szl_0013_0000_register(int proto)
 
         { &hf_s7comm_szl_0013_0000_code,
         { "Code (Memory type)", "s7comm.szl.0013.0000.code", FT_UINT16, BASE_HEX, VALS(szl_memory_type_names), 0x0,
-          "Code (Memory type)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_size,
         { "Size (Total size of the selected memory, total of area 1 and area 2)", "s7comm.szl.0013.0000.size", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "Size (Total size of the selected memory, total of area 1 and area 2)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_mode,
         { "Mode (Logical mode of the memory)", "s7comm.szl.0013.0000.mode", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "Mode (Logical mode of the memory)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_mode_0,
         { "Volatile memory area", "s7comm.szl.0013.0000.mode", FT_BOOLEAN, 8, NULL, 0x01,
@@ -1474,27 +1474,27 @@ s7comm_szl_0013_0000_register(int proto)
 
         { &hf_s7comm_szl_0013_0000_ber1,
         { "ber1 (Size of the volatile memory area in bytes)", "s7comm.szl.0013.0000.ber1", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "ber1 (Size of the volatile memory area in bytes)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_belegt1,
         { "belegt1 (Size of the volatile memory area being used)", "s7comm.szl.0013.0000.belegt1", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "belegt1 (Size of the volatile memory area being used)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_block1,
         { "block1 (Largest free block in the volatile memory area)", "s7comm.szl.0013.0000.block1", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "block1 (Largest free block in the volatile memory area)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_ber2,
         { "ber2 (Size of the non-volatile memory area in bytes)", "s7comm.szl.0013.0000.ber2", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "ber2 (Size of the non-volatile memory area in bytes)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_belegt2,
         { "belegt2 (Size of the non-volatile memory area being used)", "s7comm.szl.0013.0000.belegt2", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "belegt2 (Size of the non-volatile memory area being used)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0013_0000_block2,
         { "block2 (Largest free block in the non-volatile memory area)", "s7comm.szl.0013.0000.block2", FT_UINT32, BASE_DEC, NULL, 0x0,
-          "block2 (Largest free block in the non-volatile memory area)", HFILL }},
+          NULL, HFILL }},
 
     };
     proto_register_field_array(proto, hf, array_length(hf));
@@ -1552,19 +1552,19 @@ s7comm_szl_xy11_0001_register(int proto)
 
         { &hf_s7comm_szl_xy11_0001_mlfb,
         { "MlfB (Order number of the module)", "s7comm.szl.xy11.0001.anz", FT_STRING, BASE_NONE, NULL, 0x0,
-          "MlfB (Order number of the module)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_xy11_0001_bgtyp,
         { "BGTyp (Module type ID)", "s7comm.szl.xy11.0001.bgtyp", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "BGTyp (Module type ID)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_xy11_0001_ausbg,
         { "Ausbg (Version of the module or release of the operating system)", "s7comm.szl.xy11.0001.ausbg", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Ausbg (Version of the module or release of the operating system)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_xy11_0001_ausbe,
         { "Ausbe (Release of the PG description file)", "s7comm.szl.xy11.0001.ausbe", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Ausbe (Release of the PG description file)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -1796,7 +1796,7 @@ s7comm_szl_0131_0002_register(int proto)
         /* trgereig_0 */
         { &hf_s7comm_szl_0131_0002_trgereig_0,
         { "trgereig_0 (Permitted trigger events)", "s7comm.szl.0131.0002.trgereig_0", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "trgereig_0 (Permitted trigger events)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0002_trgereig_0_0,
         { "Immediately", "s7comm.szl.0131.0002.trgereig_0", FT_BOOLEAN, 8, NULL, 0x01,
@@ -1833,7 +1833,7 @@ s7comm_szl_0131_0002_register(int proto)
         /* trgereig_1 */
         { &hf_s7comm_szl_0131_0002_trgereig_1,
         { "trgereig_1 (Permitted trigger events)", "s7comm.szl.0131.0002.trgereig_1", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "trgereig_1 (Permitted trigger events)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0002_trgereig_1_0,
         { "Data address area", "s7comm.szl.0131.0002.trgereig_1", FT_BOOLEAN, 8, NULL, 0x01,
@@ -1869,38 +1869,38 @@ s7comm_szl_0131_0002_register(int proto)
         /* trgereig_2 */
         { &hf_s7comm_szl_0131_0002_trgereig_2,
         { "trgereig_2 (Permitted trigger events, reserved)", "s7comm.szl.0131.0002.trgereig_2", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "trgereig_2 (Permitted trigger events, reserved)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0002_trgbed,
         { "trgbed (System data with no relevance)", "s7comm.szl.0131.0002.trgbed", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "trgbed (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_pfad,
         { "pfad (System data with no relevance)", "s7comm.szl.0131.0002.pfad", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "pfad (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_tiefe,
         { "tiefe (System data with no relevance)", "s7comm.szl.0131.0002.tiefe", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "tiefe (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_systrig,
         { "systrig (System data with no relevance)", "s7comm.szl.0131.0002.systrig", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "systrig (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_erg_par,
         { "erg par (System data with no relevance)", "s7comm.szl.0131.0002.erg_par", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "erg par (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_erg_pat_1,
         { "erg pat 1 (System data with no relevance)", "s7comm.szl.0131.0002.erg_pat_1", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "erg pat 1 (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_erg_pat_2,
         { "erg pat 2 (System data with no relevance)", "s7comm.szl.0131.0002.erg_pat_2", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "erg pat 2 (System data with no relevance)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_force,
         { "force (Number of modifiable Variables)", "s7comm.szl.0131.0002.force", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "force (Number of modifiable Variables)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0002_time,
         { "time", "s7comm.szl.0131.0002.time", FT_UINT16, BASE_HEX, NULL, 0x0,
           "time (Upper time limit run-time meas, Format: bits 0 to 11 contain the time value (0 to 4K-1); bits 12 to 15 contain the time base: 0H= 10^-10s, 1H = 10^-9s,...,AH = 100s, ... FH = 105s)", HFILL }},
         { &hf_s7comm_szl_0131_0002_res,
         { "res (Reserved)", "s7comm.szl.0131.0002.res", FT_UINT32, BASE_HEX, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
 
     proto_register_field_array(proto, hf, array_length(hf));
@@ -2168,19 +2168,19 @@ s7comm_szl_0131_0003_register(int proto)
 
         { &hf_s7comm_szl_0131_0003_data,
         { "data (Maximum size of consistently readable data)", "s7comm.szl.0131.0003.data", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "data (Maximum size of consistently readable data)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0003_anz,
         { "anz (Maximum number of cyclic read jobs)", "s7comm.szl.0131.0003.anz", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "anz (Maximum number of cyclic read jobs)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0003_per_min,
         { "per min (Minimum period for cyclic read jobs (n x 100 ms)", "s7comm.szl.0131.0003.per_min", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "per min (Minimum period for cyclic read jobs (n x 100 ms)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0003_per_max,
         { "per max (Maximum period for cyclic read jobs (n x 100 ms)", "s7comm.szl.0131.0003.per_max", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "per max (Maximum period for cyclic read jobs (n x 100 ms)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0131_0003_res,
         { "res (Reserved)", "s7comm.szl.0131.0003.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
 
     proto_register_field_array(proto, hf, array_length(hf));
@@ -2467,19 +2467,19 @@ s7comm_szl_0131_0004_register(int proto)
 
         { &hf_s7comm_szl_0131_0004_kop,
         { "kop (Maximum number of copied blocks)", "s7comm.szl.0131.0004.kop", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "kop (Maximum number of copied blocks)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0004_del,
         { "del (Maximum number of uninterruptable, deletable blocks)", "s7comm.szl.0131.0004.del", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "del (Maximum number of uninterruptable, deletable blocks)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0004_kett,
         { "kett (Maximum number of blocks chained in one job)", "s7comm.szl.0131.0004.kett", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "kett (Maximum number of blocks chained in one job)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0004_hoch,
         { "hoch (Maximum number of simultaneous upload procedures)", "s7comm.szl.0131.0004.hoch", FT_UINT8, BASE_DEC, NULL, 0x0,
-          "hoch (Maximum number of simultaneous upload procedures)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0004_ver,
         { "ver (Maximum size (in bytes) of shiftable blocks in RUN)", "s7comm.szl.0131.0004.hoch", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -2487,7 +2487,7 @@ s7comm_szl_0131_0004_register(int proto)
 
         { &hf_s7comm_szl_0131_0004_res,
         { "res (Reserved)", "s7comm.szl.0131.0004.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -2599,35 +2599,35 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_0_0,
         { "Bit 0: USEND", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: USEND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_1,
         { "Bit 1: URCV", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: URCV", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_2,
         { "Bit 2: SEND", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: SEND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_3,
         { "Bit 3: RCV", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: RCV", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_4,
         { "Bit 4: BSEND", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: BSEND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_5,
         { "Bit 5: BRCV", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: BRCV", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_6,
         { "Bit 6: GET", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: GET", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_7,
         { "Bit 7: PUT", "s7comm.szl.0131.0006.funkt_0", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: PUT", HFILL }},
+          NULL, HFILL }},
          
         /* funkt_1 */
         { &hf_s7comm_szl_0131_0006_funkt_1,
@@ -2636,35 +2636,35 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_1_0,
         { "Bit 0: PRINT", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: PRINT", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_1,
         { "Bit 1: ABORT", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: ABORT", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_2,
         { "Bit 2: INITIATE", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: INITIATE", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_3,
         { "Bit 3: START", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: START", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_4,
         { "Bit 4: STOP", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: STOP", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_5,
         { "Bit 5: RESUME", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: RESUME", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_6,
         { "Bit 6: STATUS", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: STATUS", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_7,
         { "Bit 7: USTATUS", "s7comm.szl.0131.0006.funkt_1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: USTATUS", HFILL }},
+          NULL, HFILL }},
           
         /* funkt_2 */
         { &hf_s7comm_szl_0131_0006_funkt_2,
@@ -2673,35 +2673,35 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_2_0,
         { "Bit 0: PI", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: PI", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_1,
         { "Bit 1: READ", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: READ", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_2,
         { "Bit 2: WRITE", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: WRITE", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_3,
         { "Bit 3: LOAD", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: LOAD", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_4,
         { "Bit 4: LOAD_ME", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: LOAD_ME", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_5,
         { "Bit 5: ALARM", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: ALARM", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_6,
         { "Bit 6: ALARM_8", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: ALARM_8", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_7,
         { "Bit 7: ALARM_8P", "s7comm.szl.0131.0006.funkt_2", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: ALARM_8P", HFILL }},
+          NULL, HFILL }},
           
         /* funkt_3 */
         { &hf_s7comm_szl_0131_0006_funkt_3,
@@ -2710,35 +2710,35 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_3_0,
         { "Bit 0: NOTIFY", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: NOTIFY", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_1,
         { "Bit 1: AR_SEND", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: AR_SEND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_2,
         { "Bit 2: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_3,
         { "Bit 3: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_4,
         { "Bit 4: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_5,
         { "Bit 5: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_6,
         { "Bit 6: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0006.funkt_3", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
           
         /* funkt_4 */
         { &hf_s7comm_szl_0131_0006_funkt_4,
@@ -2757,35 +2757,35 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_6_0,
         { "Bit 0: X_SEND", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: X_SEND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_1,
         { "Bit 1: X_RCV", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: X_RCV", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_2,
         { "Bit 2: X_GET", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: X_GET", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_3,
         { "Bit 3: X_PUT", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: X_PUT", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_4,
         { "Bit 4: X_ABORT", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: X_ABORT", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_5,
         { "Bit 5: I_GET", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: I_GET", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_6,
         { "Bit 6: I_PUT", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: I_PUT", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_7,
         { "Bit 7: I_ABORT", "s7comm.szl.0131.0006.funkt_6", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: I_ABORT", HFILL }},
+          NULL, HFILL }},
           
         /* funkt_7 */
         { &hf_s7comm_szl_0131_0006_funkt_7,
@@ -2794,40 +2794,40 @@ s7comm_szl_0131_0006_register(int proto)
 
         { &hf_s7comm_szl_0131_0006_funkt_7_0,
         { "Bit 0: SCAN_SND", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: SCAN_SND", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_1,
         { "Bit 1: ALARM_SQ", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: ALARM_SQ", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_2,
         { "Bit 2: ALARM_S", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: ALARM_S", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_3,
         { "Bit 3: ALARM_SC", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: ALARM_SC", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_4,
         { "Bit 4: EN_MSG", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: EN_MSG", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_5,
         { "Bit 5: DIS_MSG", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: DIS_MSG", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_6,
         { "Bit 6: CONTROL", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: CONTROL", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0006.funkt_7", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
         
         /******/
         { &hf_s7comm_szl_0131_0006_schnell,
         { "schnell (Fast reaction yes/no)", "s7comm.szl.0131.0006.schnell", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "schnell (Fast reaction yes/no)", HFILL }},
+          NULL, HFILL }},
   
         { &hf_s7comm_szl_0131_0006_zugtyp_0,
         { "zugtyp_0", "s7comm.szl.0131.0006.zugtyp_0", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -2856,35 +2856,35 @@ s7comm_szl_0131_0006_register(int proto)
         
         { &hf_s7comm_szl_0131_0006_res1,
         { "res1 (Reserved)", "s7comm.szl.0131.0006.res1", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res1 (Reserved)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0006_max_sd_empf,
         { "max_sd_empf (Maximum number of send and receive parameters per block)", "s7comm.szl.0131.0006.max_sd_empf", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "max_sd_empf (Maximum number of send and receive parameters per block)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0006_max_sd_al8p,
         { "max_sd_al8p (Maximum number of send parameters for ALARM_8P)", "s7comm.szl.0131.0006.max_sd_al8p", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "max_sd_al8p (Maximum number of send parameters for ALARM_8P)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0006_max_inst,
         { "max_inst (Maximum number of instances for communication SFBs for configured connections)", "s7comm.szl.0131.0006.max_inst", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "max_inst (Maximum number of instances for communication SFBs for configured connections)", HFILL }},
+          NULL, HFILL }},
         
         { &hf_s7comm_szl_0131_0006_res2,
         { "res2 (Reserved)", "s7comm.szl.0131.0006.res2", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res2 (Reserved)", HFILL }},
+          NULL, HFILL }},
                 
         { &hf_s7comm_szl_0131_0006_verb_proj,
         { "verb_proj (Connection configured (yes=1) possible)", "s7comm.szl.0131.0006.verb_proj", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "verb_proj (Connection configured (yes=1) possible)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0006_verb_prog,
         { "verb_prog (Connection programmed (yes=1) possible)", "s7comm.szl.0131.0006.verb_prog", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "verb_prog (Connection programmed (yes=1) possible)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0006_res3,
         { "res3 (Reserved)", "s7comm.szl.0131.0006.res3", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res3 (Reserved)", HFILL }},
+          NULL, HFILL }},
           
     };
     proto_register_field_array(proto, hf, array_length(hf));
@@ -3077,35 +3077,35 @@ s7comm_szl_0131_0010_register(int proto)
 
         { &hf_s7comm_szl_0131_0010_funk_1_0,
         { "Bit 0: Group status messages exist", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: Group status messages exist", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_1,
         { "Bit 1: Scan possible", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: Scan possible", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_2,
         { "Bit 2: NOTIFY, ALARM, ALARM_8P, ALARM_8, (multicast) possible", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: NOTIFY, ALARM, ALARM_8P, ALARM_8, (multicast) possible", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_3,
         { "Bit 3: Sending archive data possible", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: Sending archive data possible", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_4,
         { "Bit 4: Reserved", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_5,
         { "Bit 5: Reserved", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_6,
         { "Bit 6: Reserved", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0010.funk_1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
           
         /* funk_2 */
         { &hf_s7comm_szl_0131_0010_funk_2,
@@ -3119,35 +3119,35 @@ s7comm_szl_0131_0010_register(int proto)
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_0,
         { "Bit 0: PII", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: PII", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_1,
         { "Bit 1: PIQ", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: PIQ", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_2,
         { "Bit 2: M", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: M", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_3,
         { "Bit 3: DB", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: DB", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_4,
         { "Bit 4: Reserved", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_5,
         { "Bit 5: Reserved", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_6,
         { "Bit 6: Reserved", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_meld_1_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0010.ber_meld_1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
         
         /* ber_meld_2 */
         { &hf_s7comm_szl_0131_0010_ber_meld_2,
@@ -3161,35 +3161,35 @@ s7comm_szl_0131_0010_register(int proto)
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_0,
         { "Bit 0: PII", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: PII", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_1,
         { "Bit 1: PIQ", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: PIQ", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_2,
         { "Bit 2: M", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: M", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_3,
         { "Bit 3: DB", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: DB", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_4,
         { "Bit 4: Reserved", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_5,
         { "Bit 5: Reserved", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_6,
         { "Bit 6: Reserved", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: Reserved", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0010.ber_zus_1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
         
         /* ber_zus_2 */
         { &hf_s7comm_szl_0131_0010_ber_zus_2,
@@ -3203,35 +3203,35 @@ s7comm_szl_0131_0010_register(int proto)
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_0,
         { "Bit 0: Bit", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Bit 0: Bit", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_1,
         { "Bit 1: Byte", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x02,
-          "Bit 1: Byte", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_2,
         { "Bit 2: Word", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x04,
-          "Bit 2: Word", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_3,
         { "Bit 3: DWord", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x08,
-          "Bit 3: DWord", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_4,
         { "Bit 4: Timer", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x10,
-          "Bit 4: Timer", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_5,
         { "Bit 5: Counter", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x20,
-          "Bit 5: Counter", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_6,
         { "Bit 6: Array of char[16]", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x40,
-          "Bit 6: Array of char[16]", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_7,
         { "Bit 7: Reserved", "s7comm.szl.0131.0010.typ_zus_1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Bit 7: Reserved", HFILL }},
+          NULL, HFILL }},
         
         /* typ_zus_2 */
         { &hf_s7comm_szl_0131_0010_typ_zus_2,
@@ -3240,11 +3240,11 @@ s7comm_szl_0131_0010_register(int proto)
 
         { &hf_s7comm_szl_0131_0010_maxanz_arch,
         { "maxanz_arch (Maximum number of archives for 'Send Archive')", "s7comm.szl.0132.0010.maxanz_arch", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "maxanz_arch (Maximum number of archives for 'Send Archive')", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0131_0010_res,
         { "res (Reserved)", "s7comm.szl.0131.0010.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
           
     };
     proto_register_field_array(proto, hf, array_length(hf));
@@ -3334,43 +3334,43 @@ s7comm_szl_0132_0001_register(int proto)
 
         { &hf_s7comm_szl_0132_0001_res_pg,
         { "res pg (Guaranteed number of PG connections)", "s7comm.szl.0132.0001.res_pg", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "res pg (Guaranteed number of PG connections)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0001_res_os,
         { "res os (Guaranteed number of OS connections)", "s7comm.szl.0132.0001.res_os", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "res os (Guaranteed number of OS connections)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_u_pg,
         { "u pg (Current number of PG connections)", "s7comm.szl.0132.0001.u_pg", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "u pg (Current number of PG connections)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_u_os,
         { "u os (Current number of OS connections)", "s7comm.szl.0132.0001.u_os", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "u os (Current number of OS connections)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_proj,
         { "proj (Current number of configured connections)", "s7comm.szl.0132.0001.proj", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "proj (Current number of configured connections)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_auf,
         { "auf (Current number of connections established by proj)", "s7comm.szl.0132.0001.auf", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "auf (Current number of connections established by proj)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_free,
         { "free (Number of free connections)", "s7comm.szl.0132.0001.free", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "free (Number of free connections)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_used,
         { "used (Number of free connections used)", "s7comm.szl.0132.0001.used", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "used (Number of free connections used)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_last,
         { "last (Maximum selected communication load of the CPU in %)", "s7comm.szl.0132.0001.last", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "last (Maximum selected communication load of the CPU in %)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0001_res,
         { "res (Reserved)", "s7comm.szl.0132.0001.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3425,11 +3425,11 @@ s7comm_szl_0132_0002_register(int proto)
 
         { &hf_s7comm_szl_0132_0002_anz,
         { "anz (Number of initialized test and installation jobs)", "s7comm.szl.0132.0002.anz", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "anz (Number of initialized test and installation jobs)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0002_res,
         { "res (Reserved)", "s7comm.szl.0132.0002.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3469,7 +3469,7 @@ s7comm_szl_0132_0004_register(int proto)
 
         { &hf_s7comm_szl_0132_0004_key,
         { "key (Protection level for the key switch, possible values: 1,2 or 3)", "s7comm.szl.0132.0004.key", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "key (Protection level for the key switch, possible values: 1,2 or 3)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0004_param,
         { "param (Assigned protection level (possible values: 0, 1, 2 or 3)", "s7comm.szl.0132.0004.param", FT_UINT16, BASE_DEC, NULL, 0x0,
@@ -3477,19 +3477,19 @@ s7comm_szl_0132_0004_register(int proto)
 
         { &hf_s7comm_szl_0132_0004_real,
         { "real (Valid protection level of the CPU, possible values: 1, 2 or 3)", "s7comm.szl.0132.0004.real", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "real (Valid protection level of the CPU, possible values: 1, 2 or 3)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0004_bart_sch,
         { "bart_sch (Position of the mode switch)", "s7comm.szl.0132.0004.bart_sch", FT_UINT16, BASE_DEC, VALS(szl_bart_sch_names), 0x0,
-          "bart_sch (Position of the mode switch)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0004_crst_wrst,
         { "crst_wrst (Setting of the CRST/WRST switch)", "s7comm.szl.0132.0004.crst_wrst", FT_UINT16, BASE_DEC, VALS(szl_crst_wrst_names), 0x0,
-          "crst_wrst (Setting of the CRST/WRST switch)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0004_res,
         { "res (Reserved)", "s7comm.szl.0132.0004.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3536,23 +3536,23 @@ s7comm_szl_0132_0005_register(int proto)
 
         { &hf_s7comm_szl_0132_0005_erw,
         { "erw (Extended functions)", "s7comm.szl.0132.0005.erw", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
-          "erw (Extended functions)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0005_send,
         { "send (Automatic sending)", "s7comm.szl.0132.0005.send", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
-          "send (Automatic sending)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0005_moeg,
         { "moeg (Sending user-defined diagnostic messages currently possible)", "s7comm.szl.0132.0005.moeg", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
-          "moeg (Sending user-defined diagnostic messages currently possible)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0005_ltmerz,
         { "ltmerz (Generation of status message active)", "s7comm.szl.0132.0005.ltmerz", FT_UINT16, BASE_DEC, VALS(szl_0132_0005_func_exist_names), 0x0,
-          "ltmerz (Generation of status message active)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0005_res,
         { "res (Reserved)", "s7comm.szl.0132.0005.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3598,44 +3598,44 @@ s7comm_szl_0132_0006_register(int proto)
 
         { &hf_s7comm_szl_0132_0006_used_0,
         { "used_0 (Blocks used)", "s7comm.szl.0132.0006.used_0", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_0 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_1,
         { "used_1 (Blocks used)", "s7comm.szl.0132.0006.used_1", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_1 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_2,
         { "used_2 (Blocks used)", "s7comm.szl.0132.0006.used_2", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_2 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_3,
         { "used_3 (Blocks used)", "s7comm.szl.0132.0006.used_3", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_3 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_4,
         { "used_4 (Blocks used)", "s7comm.szl.0132.0006.used_4", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_4 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_5,
         { "used_5 (Blocks used)", "s7comm.szl.0132.0006.used_5", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_5 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_6,
         { "used_6 (Blocks used)", "s7comm.szl.0132.0006.used_6", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_6 (Blocks used)", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_0132_0006_used_7,
         { "used_7 (Blocks used)", "s7comm.szl.0132.0006.used_7", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "used_7 (Blocks used)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0132_0006_anz_schnell,
         { "anz_schnell (Reserved)", "s7comm.szl.0132.0006.anz_schnell", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "anz_schnell (Reserved)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_0132_0006_anz_inst,
         { "anz_inst (Number of loaded SFB instances)", "s7comm.szl.0132.0006.anz_inst", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "anz_inst (Number of loaded SFB instances)", HFILL }},
+          NULL, HFILL }},
         
         { &hf_s7comm_szl_0132_0006_anz_multicast,
         { "anz_multicast (Number of blocks used for multicast)", "s7comm.szl.0132.0006.anz_multicast", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "anz_multicast (Number of blocks used for multicast)", HFILL }},
+          NULL, HFILL }},
         
         { &hf_s7comm_szl_0132_0006_res,
         { "res (Reserved)", "s7comm.szl.0132.0006.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3740,25 +3740,25 @@ s7comm_szl_xy74_0000_register(int proto)
         /*** SZL functions ***/
         { &hf_s7comm_szl_xy74_0000_cpu_led_id,
         { "cpu_led_id", "s7comm.szl.xy74.0000.cpu_led_id", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "cpu_led_id", HFILL }},
+          NULL, HFILL }},
         
         { &hf_s7comm_szl_xy74_0000_cpu_led_id_rackno,
         { "Bits 0, 1, 2: Rack number", "s7comm.szl.xy74.0000.cpu_led_id.rackno", FT_UINT16, BASE_DEC, NULL, 0x0700,
-          "Bits 0, 1, 2: Rack number", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_xy74_0000_cpu_led_id_cputype,
         { "Bit 3: CPU Type (0=Standby, 1=Master)", "s7comm.szl.xy74.0000.cpu_led_id.cputype", FT_UINT16, BASE_DEC, NULL, 0x0800,
-          "Bit 3: CPU Type (0=Standby, 1=Master)", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_xy74_0000_cpu_led_id_id,
         { "Byte 1: LED ID", "s7comm.szl.xy74.0000.cpu_led_id.id", FT_UINT16, BASE_DEC, VALS(szl_0174_index_names), 0x00ff,
-          "Byte 1: LED ID", HFILL }},
+          NULL, HFILL }},
           
         { &hf_s7comm_szl_xy74_0000_led_on,
         { "Status of the LED", "s7comm.szl.xy74.0000.led_on", FT_UINT8, BASE_DEC, VALS(szl_xy74_0000_led_on_names), 0x00,
-          "Status of the LED", HFILL }},
+          NULL, HFILL }},
         { &hf_s7comm_szl_xy74_0000_led_blink,
         { "Flashing status of the LED", "s7comm.szl.xy74.0000.led_blink", FT_UINT8, BASE_DEC, VALS(szl_xy74_0000_led_blink_names), 0x00,
-          "Flashing status of the LED", HFILL }},
+          NULL, HFILL }},
     };
     proto_register_field_array(proto, hf, array_length(hf));
 }
@@ -3809,23 +3809,23 @@ s7comm_szl_0424_0000_register(int proto)
 
         { &hf_s7comm_szl_0424_0000_res,
         { "res (Reserved)", "s7comm.szl.0424.0000.res", FT_BYTES, BASE_NONE, NULL, 0x0,
-          "res (Reserved)", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0424_0000_anlinfo1,
         { "anlinfo1", "s7comm.szl.0424.0000.anlinfo1", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "anlinfo1", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0424_0000_anlinfo2,
         { "anlinfo2", "s7comm.szl.0424.0000.anlinfo2", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "anlinfo2", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0424_0000_anlinfo3,
         { "anlinfo3", "s7comm.szl.0424.0000.anlinfo3", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "anlinfo3", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0424_0000_anlinfo4,
         { "anlinfo4", "s7comm.szl.0424.0000.anlinfo4", FT_UINT8, BASE_HEX, NULL, 0x0,
-          "anlinfo4", HFILL }},
+          NULL, HFILL }},
 
         { &hf_s7comm_szl_0424_0000_time,
         { "time", "s7comm.szl.0424.0000.time", FT_BYTES, BASE_NONE, NULL, 0x0,
