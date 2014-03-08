@@ -6,7 +6,7 @@
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
- * 
+ * hf_s7comm_szl_0000_0000_partlist_extr_nr
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
@@ -1370,11 +1370,11 @@ s7comm_szl_0000_0000_register(int proto)
           "SZL ID that exists", HFILL }},
 
         { &hf_s7comm_szl_0000_0000_module_type_class,
-        { "Module type class", "s7comm.szl.0000..0000.module_type_class", FT_UINT16, BASE_HEX, NULL, 0xf000,
+        { "Module type class", "s7comm.szl.0000.0000.module_type_class", FT_UINT16, BASE_HEX, NULL, 0xf000,
           "Module type class", HFILL }},
           
         { &hf_s7comm_szl_0000_0000_partlist_extr_nr,
-        { "Number of the SZL partial list extract", "s7comm.szl.0000..0000.partlist_extr_nr", FT_UINT16, BASE_HEX, NULL, 0x0f00,
+        { "Number of the SZL partial list extract", "s7comm.szl.0000.0000.partlist_extr_nr", FT_UINT16, BASE_HEX, NULL, 0x0f00,
           "Number of the SZL partial list extract", HFILL }},
           
         { &hf_s7comm_szl_0000_0000_partlist_nr,
@@ -1659,12 +1659,12 @@ s7comm_szl_0131_0002_register(int proto)
     static hf_register_info hf[] = {
         /*** SZL functions ***/
         { &hf_s7comm_szl_0131_0002_index,
-        { "Index     ", "s7comm.szl.0131.0002.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Index", "s7comm.szl.0131.0002.index", FT_UINT16, BASE_HEX, NULL, 0x0,
           "W#16#0002: test and installation", HFILL }},
 
         /* funkt_0 */
         { &hf_s7comm_szl_0131_0002_funkt_0,
-        { "funkt_0   ", "s7comm.szl.0131.0002.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_0", "s7comm.szl.0131.0002.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Permitted TIS (Test and Installation) functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0002_funkt_0_0,
@@ -1701,7 +1701,7 @@ s7comm_szl_0131_0002_register(int proto)
 
         /* funkt_1 */
         { &hf_s7comm_szl_0131_0002_funkt_1,
-        { "funkt_1   ", "s7comm.szl.0131.0002.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_1", "s7comm.szl.0131.0002.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Permitted TIS (Test and Installation) functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0002_funkt_1_0,
@@ -1738,7 +1738,7 @@ s7comm_szl_0131_0002_register(int proto)
 
         /* funkt_2 */
         { &hf_s7comm_szl_0131_0002_funkt_2,
-        { "funkt_2   ", "s7comm.szl.0131.0002.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_2", "s7comm.szl.0131.0002.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Permitted TIS (Test and Installation) functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0002_funkt_2_0,
@@ -2015,12 +2015,12 @@ s7comm_szl_0131_0003_register(int proto)
     static hf_register_info hf[] = {
         /*** SZL functions ***/
         { &hf_s7comm_szl_0131_0003_index,
-        { "Index     ", "s7comm.szl.0131.0003.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Index", "s7comm.szl.0131.0003.index", FT_UINT16, BASE_HEX, NULL, 0x0,
           "W#16#0003: Index for operator interface functions", HFILL }},
 
         /* funkt_0 */
         { &hf_s7comm_szl_0131_0003_funkt_0,
-        { "funkt_0   ", "s7comm.szl.0131.0003.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_0", "s7comm.szl.0131.0003.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Bits indicating the available functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0003_funkt_0_0,
@@ -2057,7 +2057,7 @@ s7comm_szl_0131_0003_register(int proto)
 
         /* funkt_1 */
         { &hf_s7comm_szl_0131_0003_funkt_1,
-        { "funkt_1   ", "s7comm.szl.0131.0003.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_1", "s7comm.szl.0131.0003.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Bits indicating the available functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0003_funkt_1_0,
@@ -2094,7 +2094,7 @@ s7comm_szl_0131_0003_register(int proto)
 
         /* funkt_2 */
         { &hf_s7comm_szl_0131_0003_funkt_2,
-        { "funkt_2   ", "s7comm.szl.0131.0003.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_2", "s7comm.szl.0131.0003.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Bits indicating the available functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0003_funkt_2_0,
@@ -2131,7 +2131,7 @@ s7comm_szl_0131_0003_register(int proto)
 
         /* funkt_3 */
         { &hf_s7comm_szl_0131_0003_funkt_3,
-        { "funkt_3   ", "s7comm.szl.0131.0003.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_3", "s7comm.szl.0131.0003.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Bits indicating the available functions (bit = 1: function exists)", HFILL }},
 
         { &hf_s7comm_szl_0131_0003_funkt_3_0,
@@ -2264,12 +2264,12 @@ s7comm_szl_0131_0004_register(int proto)
     static hf_register_info hf[] = {
         /*** SZL functions ***/
         { &hf_s7comm_szl_0131_0004_index,
-        { "Index     ", "s7comm.szl.0131.0004.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Index", "s7comm.szl.0131.0004.index", FT_UINT16, BASE_HEX, NULL, 0x0,
           "W#16#0004 Index for OMS", HFILL }},
 
         /* funkt_0 */
         { &hf_s7comm_szl_0131_0004_funkt_0,
-        { "funkt_0   ", "s7comm.szl.0131.0004.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_0", "s7comm.szl.0131.0004.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Available object management system functions: (Bit = 1: functions available on the CPU)", HFILL }},
 
         { &hf_s7comm_szl_0131_0004_funkt_0_0,
@@ -2306,7 +2306,7 @@ s7comm_szl_0131_0004_register(int proto)
 
         /* funkt_1 */
         { &hf_s7comm_szl_0131_0004_funkt_1,
-        { "funkt_1   ", "s7comm.szl.0131.0004.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_1", "s7comm.szl.0131.0004.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Available object management system functions: (Bit = 1: functions available on the CPU)", HFILL }},
 
         { &hf_s7comm_szl_0131_0004_funkt_1_0,
@@ -2343,7 +2343,7 @@ s7comm_szl_0131_0004_register(int proto)
 
         /* funkt_2 */
         { &hf_s7comm_szl_0131_0004_funkt_2,
-        { "funkt_2   ", "s7comm.szl.0131.0004.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_2", "s7comm.szl.0131.0004.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Available object management system functions: (Bit = 1: functions available on the CPU)", HFILL }},
 
         { &hf_s7comm_szl_0131_0004_funkt_2_0,
@@ -2380,7 +2380,7 @@ s7comm_szl_0131_0004_register(int proto)
 
         /* funkt_3 */
         { &hf_s7comm_szl_0131_0004_funkt_3,
-        { "funkt_3   ", "s7comm.szl.0131.0004.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_3", "s7comm.szl.0131.0004.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Available object management system functions: (Bit = 1: functions available on the CPU)", HFILL }},
 
         { &hf_s7comm_szl_0131_0004_funkt_3_0,
@@ -2417,7 +2417,7 @@ s7comm_szl_0131_0004_register(int proto)
 
         /* funkt_4 */
         { &hf_s7comm_szl_0131_0004_funkt_4,
-        { "funkt_4   ", "s7comm.szl.0131.0004.funkt_4", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_4", "s7comm.szl.0131.0004.funkt_4", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Available object management system functions: (Bit = 1: functions available on the CPU)", HFILL }},
 
         { &hf_s7comm_szl_0131_0004_funkt_4_0,
@@ -2529,7 +2529,7 @@ s7comm_decode_szl_id_0131_idx_0004(tvbuff_t *tvb,
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_2_5, tvb, offset, 1, FALSE);
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_2_6, tvb, offset, 1, FALSE);
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_2_7, tvb, offset, 1, FALSE);
-    offset += 1
+    offset += 1;
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_3, tvb, offset, 1, FALSE);
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_3_0, tvb, offset, 1, FALSE);
     proto_tree_add_item(tree, hf_s7comm_szl_0131_0004_funkt_3_1, tvb, offset, 1, FALSE);
@@ -2589,12 +2589,12 @@ s7comm_szl_0131_0006_register(int proto)
     static hf_register_info hf[] = {
         /*** SZL functions ***/
         { &hf_s7comm_szl_0131_0006_index,
-        { "Index     ", "s7comm.szl.0131.0006.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Index", "s7comm.szl.0131.0006.index", FT_UINT16, BASE_HEX, NULL, 0x0,
           "W#16#0006 Data exchange with communication SFBs for configured connections", HFILL }},
 
         /* funkt_0 */
         { &hf_s7comm_szl_0131_0006_funkt_0,
-        { "funkt_0   ", "s7comm.szl.0131.0006.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_0", "s7comm.szl.0131.0006.funkt_0", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_0_0,
@@ -2631,7 +2631,7 @@ s7comm_szl_0131_0006_register(int proto)
          
         /* funkt_1 */
         { &hf_s7comm_szl_0131_0006_funkt_1,
-        { "funkt_1   ", "s7comm.szl.0131.0006.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_1", "s7comm.szl.0131.0006.funkt_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_1_0,
@@ -2668,7 +2668,7 @@ s7comm_szl_0131_0006_register(int proto)
           
         /* funkt_2 */
         { &hf_s7comm_szl_0131_0006_funkt_2,
-        { "funkt_2   ", "s7comm.szl.0131.0006.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_2", "s7comm.szl.0131.0006.funkt_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_2_0,
@@ -2705,7 +2705,7 @@ s7comm_szl_0131_0006_register(int proto)
           
         /* funkt_3 */
         { &hf_s7comm_szl_0131_0006_funkt_3,
-        { "funkt_3   ", "s7comm.szl.0131.0006.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_3", "s7comm.szl.0131.0006.funkt_3", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_3_0,
@@ -2742,17 +2742,17 @@ s7comm_szl_0131_0006_register(int proto)
           
         /* funkt_4 */
         { &hf_s7comm_szl_0131_0006_funkt_4,
-        { "funkt_4   ", "s7comm.szl.0131.0006.funkt_4", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_4", "s7comm.szl.0131.0006.funkt_4", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Reserved", HFILL }},
           
         /* funkt_5 */
         { &hf_s7comm_szl_0131_0006_funkt_5,
-        { "funkt_5   ", "s7comm.szl.0131.0006.funkt_5", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_5", "s7comm.szl.0131.0006.funkt_5", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Reserved", HFILL }},
 
         /* funkt_6 */
         { &hf_s7comm_szl_0131_0006_funkt_6,
-        { "funkt_6   ", "s7comm.szl.0131.0006.funkt_6", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_6", "s7comm.szl.0131.0006.funkt_6", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_6_0,
@@ -2789,7 +2789,7 @@ s7comm_szl_0131_0006_register(int proto)
           
         /* funkt_7 */
         { &hf_s7comm_szl_0131_0006_funkt_7,
-        { "funkt_7   ", "s7comm.szl.0131.0006.funkt_7", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funkt_7", "s7comm.szl.0131.0006.funkt_7", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0006_funkt_7_0,
@@ -2830,28 +2830,28 @@ s7comm_szl_0131_0006_register(int proto)
           "schnell (Fast reaction yes/no)", HFILL }},
   
         { &hf_s7comm_szl_0131_0006_zugtyp_0,
-        { "zugtyp_0  ", "s7comm.szl.0131.0006.zugtyp_0", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_0", "s7comm.szl.0131.0006.zugtyp_0", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_0 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_1,
-        { "zugtyp_1  ", "s7comm.szl.0131.0006.zugtyp_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_1", "s7comm.szl.0131.0006.zugtyp_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_1 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_2,
-        { "zugtyp_2  ", "s7comm.szl.0131.0006.zugtyp_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_2", "s7comm.szl.0131.0006.zugtyp_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_2 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_3,
-        { "zugtyp_3  ", "s7comm.szl.0131.0006.zugtyp_3", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_3", "s7comm.szl.0131.0006.zugtyp_3", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_3 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_4,
-        { "zugtyp_4  ", "s7comm.szl.0131.0006.zugtyp_4", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_4", "s7comm.szl.0131.0006.zugtyp_4", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_4 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_5,
-        { "zugtyp_5  ", "s7comm.szl.0131.0006.zugtyp_5", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_5", "s7comm.szl.0131.0006.zugtyp_5", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_5 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_6,
-        { "zugtyp_6  ", "s7comm.szl.0131.0006.zugtyp_6", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_6", "s7comm.szl.0131.0006.zugtyp_6", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_6 (Permitted module types for fast reaction)", HFILL }},
         { &hf_s7comm_szl_0131_0006_zugtyp_7,
-        { "zugtyp_7  ", "s7comm.szl.0131.0006.zugtyp_7", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "zugtyp_7", "s7comm.szl.0131.0006.zugtyp_7", FT_UINT8, BASE_HEX, NULL, 0x0,
           "zugtyp_7 (Permitted module types for fast reaction)", HFILL }},
         
         { &hf_s7comm_szl_0131_0006_res1,
@@ -3067,12 +3067,12 @@ s7comm_szl_0131_0010_register(int proto)
     static hf_register_info hf[] = {
         /*** SZL functions ***/
         { &hf_s7comm_szl_0131_0010_index,
-        { "Index     ", "s7comm.szl.0131.0010.index", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Index", "s7comm.szl.0131.0010.index", FT_UINT16, BASE_HEX, NULL, 0x0,
           "W#16#0010 Message parameter", HFILL }},
 
         /* funk_1 */
         { &hf_s7comm_szl_0131_0010_funk_1,
-        { "funk_1    ", "s7comm.szl.0131.0010.funk_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funk_1", "s7comm.szl.0131.0010.funk_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Block types available for data exchange with communication SFBs for configured connections", HFILL }},
 
         { &hf_s7comm_szl_0131_0010_funk_1_0,
@@ -3109,7 +3109,7 @@ s7comm_szl_0131_0010_register(int proto)
           
         /* funk_2 */
         { &hf_s7comm_szl_0131_0010_funk_2,
-        { "funk_2    ", "s7comm.szl.0131.0010.funk_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "funk_2", "s7comm.szl.0131.0010.funk_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Reserved", HFILL }},
  
         /* ber_meld_1 */
@@ -3156,7 +3156,7 @@ s7comm_szl_0131_0010_register(int proto)
         
         /* ber_zus_1 */
         { &hf_s7comm_szl_0131_0010_ber_zus_1,
-        { "ber_zus_1 ", "s7comm.szl.0131.0010.ber_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "ber_zus_1", "s7comm.szl.0131.0010.ber_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Permitted address areas for messages (SCAN)", HFILL }},
 
         { &hf_s7comm_szl_0131_0010_ber_zus_1_0,
@@ -3193,12 +3193,12 @@ s7comm_szl_0131_0010_register(int proto)
         
         /* ber_zus_2 */
         { &hf_s7comm_szl_0131_0010_ber_zus_2,
-        { "ber_zus_2 ", "s7comm.szl.0131.0010.ber_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "ber_zus_2", "s7comm.szl.0131.0010.ber_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Reserved", HFILL }},
         
         /* typ_zus_1 */
         { &hf_s7comm_szl_0131_0010_typ_zus_1,
-        { "typ_zus_1 ", "s7comm.szl.0131.0010.typ_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "typ_zus_1", "s7comm.szl.0131.0010.typ_zus_1", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Permitted data types for additional values (SCAN)", HFILL }},
 
         { &hf_s7comm_szl_0131_0010_typ_zus_1_0,
@@ -3235,7 +3235,7 @@ s7comm_szl_0131_0010_register(int proto)
         
         /* typ_zus_2 */
         { &hf_s7comm_szl_0131_0010_typ_zus_2,
-        { "typ_zus_2 ", "s7comm.szl.0131.0010.typ_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "typ_zus_2", "s7comm.szl.0131.0010.typ_zus_2", FT_UINT8, BASE_HEX, NULL, 0x0,
           "Reserved", HFILL }},
 
         { &hf_s7comm_szl_0131_0010_maxanz_arch,

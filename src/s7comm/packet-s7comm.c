@@ -783,8 +783,8 @@ proto_register_s7comm (void)
         { "Max AmQ (parallel jobs with ack) calling", "s7comm.param.maxamq_calling", FT_UINT16, BASE_DEC, NULL, 0x0,
           "Max AmQ (parallel jobs with ack) calling", HFILL }},
         { &hf_s7comm_param_maxamq_called,
-        { "Max AmQ (parallel jobs with ack) called ", "s7comm.param.maxamq_called", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Max AmQ (parallel jobs with ack) called ", HFILL }},
+        { "Max AmQ (parallel jobs with ack) called", "s7comm.param.maxamq_called", FT_UINT16, BASE_DEC, NULL, 0x0,
+          "Max AmQ (parallel jobs with ack) called", HFILL }},
         { &hf_s7comm_param_neg_pdu_length,
         { "PDU length", "s7comm.param.pdu_length", FT_UINT16, BASE_DEC, NULL, 0x0,
           "PDU length", HFILL }},
@@ -832,7 +832,7 @@ proto_register_s7comm (void)
         { "Bytes to read", "s7comm.param.item.dbread.length", FT_UINT8, BASE_DEC, NULL, 0x0,
           "Number of bytes to read", HFILL }},
         { &hf_s7comm_item_dbread_db,
-        { "DB number    ", "s7comm.param.item.dbread.db", FT_UINT16, BASE_DEC, NULL, 0x0,
+        { "DB number", "s7comm.param.item.dbread.db", FT_UINT16, BASE_DEC, NULL, 0x0,
           "DB number", HFILL }},
         { &hf_s7comm_item_dbread_startadr,
         { "Start address", "s7comm.param.item.dbread.startaddress", FT_UINT16, BASE_DEC, NULL, 0x0,
@@ -2527,7 +2527,7 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
                     offset += 1;
                     blocknumber = tvb_get_ntohs(tvb, offset);
                     proto_tree_add_text(data_tree, tvb, offset , 2,   "Block number    : %d", blocknumber);
-                    sprintf(str_number, "%05d", blocknumber);
+                    g_snprintf(str_number, sizeof(str_number), "%05d", blocknumber);
                     s7comm_info_append_str(pinfo, "No.", str_number);
                     proto_item_append_text(data_tree, ", Number: %05d)", blocknumber);
                     offset += 2;
