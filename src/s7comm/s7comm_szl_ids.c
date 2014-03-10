@@ -1113,7 +1113,6 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                                     guint8 type,                /* Type of data (request/response) */
                                     guint8 subfunc,             /* Subfunction */
                                     guint8 ret_val,             /* Return value in data part */
-                                    guint8 tsize,               /* transport size in data part */
                                     guint16 len,                /* length given in data part */
                                     guint16 dlength,            /* length of data part given in header */
                                     guint8 data_unit_ref,       /* Data-unit-reference ID from parameter part, used for response fragment detection */

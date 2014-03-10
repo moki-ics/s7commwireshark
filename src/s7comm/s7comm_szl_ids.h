@@ -22,7 +22,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-guint32 s7comm_decode_ud_szl_subfunc (tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint8 tsize, guint16 len, guint16 dlength, guint8 data_unit_ref, guint8 last_data_unit, guint32 offset);
+guint32 s7comm_decode_ud_szl_subfunc (tvbuff_t *tvb, packet_info *pinfo, proto_tree *data_tree, guint8 type, guint8 subfunc, guint8 ret_val, guint16 len, guint16 dlength, guint8 data_unit_ref, guint8 last_data_unit, guint32 offset);
 
 const gchar* s7comm_get_szl_id_index_description_text(guint16 id, guint16 index);
 

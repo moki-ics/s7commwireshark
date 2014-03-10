@@ -1903,7 +1903,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
         if (dlength > 4) {
             switch (funcgroup){
                 case S7COMM_UD_FUNCGROUP_PROG:
-                    offset = s7comm_decode_ud_prog_subfunc(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                    offset = s7comm_decode_ud_prog_subfunc(tvb, data_tree, type, subfunc, dlength, offset);
                     break;
                 case S7COMM_UD_FUNCGROUP_CYCLIC:
                     offset = s7comm_decode_ud_cyclic_subfunc(tvb, data_tree, type, subfunc, dlength, offset);
@@ -1912,13 +1912,13 @@ s7comm_decode_ud(tvbuff_t *tvb,
                     offset = s7comm_decode_ud_block_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
                     break;
                 case S7COMM_UD_FUNCGROUP_SZL:
-                    offset = s7comm_decode_ud_szl_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, data_unit_ref, last_data_unit, offset);
+                    offset = s7comm_decode_ud_szl_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, len, dlength, data_unit_ref, last_data_unit, offset);
                     break;
                 case S7COMM_UD_FUNCGROUP_SEC:
-                    offset = s7comm_decode_ud_security_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+                    offset = s7comm_decode_ud_security_subfunc(tvb, data_tree, dlength, offset);
                     break;
                 case S7COMM_UD_FUNCGROUP_TIME:
-                    offset = s7comm_decode_ud_time_subfunc(tvb, pinfo, data_tree, type, subfunc, ret_val, tsize, len, dlength, offset);
+                    offset = s7comm_decode_ud_time_subfunc(tvb, data_tree, type, subfunc, ret_val, dlength, offset);
                     break;
                 default:
                     break;
@@ -1936,7 +1936,6 @@ s7comm_decode_ud(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7comm_decode_ud_prog_subfunc(tvbuff_t *tvb, 
-                                    packet_info *pinfo,
                                     proto_tree *data_tree, 
                                     guint8 type,                /* Type of data (request/response) */
                                     guint8 subfunc,             /* Subfunction */
@@ -2581,13 +2580,7 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7comm_decode_ud_security_subfunc(tvbuff_t *tvb, 
-                                    packet_info *pinfo,
                                     proto_tree *data_tree, 
-                                    guint8 type,                /* Type of data (request/response) */
-                                    guint8 subfunc,             /* Subfunction */
-                                    guint8 ret_val,             /* Return value in data part */
-                                    guint8 tsize,               /* transport size in data part */
-                                    guint16 len,                /* length given in data part */
                                     guint16 dlength,            /* length of data part given in header */
                                     guint32 offset )            /* Offset on data part +4 */
 {
@@ -2607,13 +2600,10 @@ s7comm_decode_ud_security_subfunc(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7comm_decode_ud_time_subfunc(tvbuff_t *tvb, 
-                                    packet_info *pinfo,
                                     proto_tree *data_tree, 
                                     guint8 type,                /* Type of data (request/response) */
                                     guint8 subfunc,             /* Subfunction */
                                     guint8 ret_val,             /* Return value in data part */
-                                    guint8 tsize,               /* transport size in data part */
-                                    guint16 len,                /* length given in data part */
                                     guint16 dlength,            /* length of data part given in header */
                                     guint32 offset )            /* Offset on data part +4 */
 {
