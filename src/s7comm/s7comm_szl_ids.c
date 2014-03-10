@@ -1511,6 +1511,11 @@ s7comm_decode_szl_id_0013_idx_0000(tvbuff_t *tvb,
     proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_size, tvb, offset, 4, FALSE);
     offset += 4;
     proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode, tvb, offset, 2, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode_0, tvb, offset, 2, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode_1, tvb, offset, 2, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode_2, tvb, offset, 2, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode_3, tvb, offset, 2, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_mode_4, tvb, offset, 2, FALSE);
     offset += 2;
     proto_tree_add_item(tree, hf_s7comm_szl_0013_0000_granu, tvb, offset, 2, FALSE);
     offset += 2;
@@ -3718,7 +3723,7 @@ s7comm_decode_szl_id_0132_idx_0006(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_anz_multicast, tvb, offset, 2, FALSE);
     offset += 2;
-    proto_tree_add_item(tree, hf_s7comm_szl_0132_0005_res, tvb, offset, 25, FALSE);
+    proto_tree_add_item(tree, hf_s7comm_szl_0132_0006_res, tvb, offset, 25, FALSE);
     offset += 25;
 
     return offset;
