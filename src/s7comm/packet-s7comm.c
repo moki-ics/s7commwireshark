@@ -643,10 +643,12 @@ static gint hf_s7comm_header_errcls = -1;           /* Header Byte 10, only avai
 static gint hf_s7comm_header_errcod = -1;           /* Header Byte 11, only available at type 2 or 3 */
 /* Parameter Block */
 static gint hf_s7comm_param = -1;
+static gint hf_s7comm_param_errcod = -1;            /* Parameter part: Error code */
 static gint hf_s7comm_param_service = -1;           /* Parameter part: service */
 static gint hf_s7comm_param_itemcount = -1;         /* Parameter part: item count */
 static gint hf_s7comm_param_data = -1;              /* Parameter part: data */
 static gint hf_s7comm_param_neg_pdu_length = -1;    /* Parameter part: Negotiate PDU length */
+static gint hf_s7comm_param_setup_reserved1 = -1;   /* Parameter part: Reserved byte in communication setup pdu*/
 
 static gint hf_s7comm_param_maxamq_calling = -1;    /* Parameter part: Max AmQ calling */
 static gint hf_s7comm_param_maxamq_called = -1;     /* Parameter part: Max AmQ called */
@@ -669,16 +671,16 @@ static gint hf_s7comm_item_dbread_db = -1;          /* DB number, 2 Bytes*/
 static gint hf_s7comm_item_dbread_startadr = -1;    /* Start address, 2 Bytes*/
 
 static gint hf_s7comm_data = -1;
-static gint hf_s7comm_data_transport_size = -1;     /* unknown part, kind of "transport size"? constant 0x09, 1 byte */
+static gint hf_s7comm_data_returncode = -1;         /* return code, 1 byte */
+static gint hf_s7comm_data_transport_size = -1;     /* transport size 1 byte */
+static gint hf_s7comm_data_length = -1;             /* Length of data, 2 Bytes */
+
 static gint hf_s7comm_data_item = -1;
 
 static gint hf_s7comm_readresponse_data = -1;
-static gint hf_s7comm_item_return_value = -1;
 
 /* userdata, block services */
 static gint hf_s7comm_userdata_data = -1;
-static gint hf_s7comm_userdata_data_return_value = -1;      /* Return value in userdata header, 1 byte */
-static gint hf_s7comm_userdata_data_length = -1;            /* Length of user data, 2 Bytes */
 
 static gint hf_s7comm_userdata_param_head = -1;
 static gint hf_s7comm_userdata_param_len = -1;
@@ -770,6 +772,9 @@ proto_register_s7comm (void)
         { &hf_s7comm_param,
         { "Parameter", "s7comm.param", FT_NONE, BASE_NONE, NULL, 0x0,
           "This is the parameter part of S7 communication", HFILL }},
+        { &hf_s7comm_param_errcod,
+        { "Error code", "s7comm.param.errcod", FT_UINT16, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
         { &hf_s7comm_param_service,
         { "Function", "s7comm.param.func", FT_UINT8, BASE_HEX, VALS(param_functionnames), 0x0,
           "Indicates the function of parameter/data", HFILL }},
@@ -778,6 +783,9 @@ proto_register_s7comm (void)
           NULL, HFILL }},
         { &hf_s7comm_param_maxamq_called,
         { "Max AmQ (parallel jobs with ack) called", "s7comm.param.maxamq_called", FT_UINT16, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_param_setup_reserved1,
+        { "Reserved", "s7comm.param.setup_reserved1", FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
         { &hf_s7comm_param_neg_pdu_length,
         { "PDU length", "s7comm.param.pdu_length", FT_UINT16, BASE_DEC, NULL, 0x0,
@@ -790,7 +798,7 @@ proto_register_s7comm (void)
           NULL, HFILL }},
         { &hf_s7comm_param_item,
         { "Item", "s7comm.param.item", FT_NONE, BASE_NONE, NULL, 0x0,
-          NULL, HFILL }},	
+          NULL, HFILL }},
         { &hf_s7comm_param_subitem,
         { "Subitem", "s7comm.param.subitem", FT_NONE, BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
@@ -835,15 +843,20 @@ proto_register_s7comm (void)
         { &hf_s7comm_data,
         { "Data", "s7comm.data", FT_NONE, BASE_NONE, NULL, 0x0,
           "This is the data part of S7 communication", HFILL }},
+        { &hf_s7comm_data_returncode,
+        { "Return code", "s7comm.data.returncode", FT_UINT8, BASE_HEX, VALS(item_return_valuenames), 0x0,
+          NULL, HFILL }},
         { &hf_s7comm_data_transport_size,
-        { "Transport size", "s7comm.data.userdata.transportsize", FT_UINT8,	BASE_HEX, VALS(data_transportsizenames), 0x0,
-          "Data type / Transport size", HFILL }},
+        { "Transport size", "s7comm.data.transportsize", FT_UINT8, BASE_HEX, VALS(data_transportsizenames), 0x0,
+          "Data type / Transport size. If 3, 4 or 5 the following length gives the number of bits, otherwise the number of bytes.", HFILL }},
+        { &hf_s7comm_data_length,
+        { "Length", "s7comm.data.length", FT_UINT16, BASE_DEC, NULL, 0x0,
+          "Length of data", HFILL }},        
+          
         { &hf_s7comm_data_item,
         { "Item", "s7comm.data.item", FT_NONE, BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_item_return_value,
-        { "Return code", "s7comm.data.ret_code", FT_UINT8, BASE_HEX, VALS(item_return_valuenames), 0x0,
-          NULL, HFILL }},
+        
         { &hf_s7comm_readresponse_data,
         { "Data", "s7comm.resp.data", FT_BYTES,	BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
@@ -851,12 +864,7 @@ proto_register_s7comm (void)
         { &hf_s7comm_userdata_data,
         { "Data", "s7comm.data.userdata", FT_BYTES, BASE_NONE, NULL, 0x0,
           "Userdata data", HFILL }},
-        { &hf_s7comm_userdata_data_return_value,
-        { "Return value", "s7comm.data.userdata.ret_code", FT_UINT8, BASE_HEX, VALS(item_return_valuenames), 0x0,
-          "Userdata return value", HFILL }}, 
-        { &hf_s7comm_userdata_data_length,
-        { "Length", "s7comm.data.userdata.length", FT_UINT16, BASE_DEC, NULL, 0x0,
-          "Length of userdata", HFILL }},
+        
     /* Userdata parameter 8/12 Bytes len*/
         { &hf_s7comm_userdata_param_head,
         { "Parameter head", "s7comm.param.userdata.head", FT_UINT24, BASE_HEX, NULL, 0x0,
@@ -1054,7 +1062,7 @@ dissect_s7comm(tvbuff_t *tvb,
         offset += 2;
         /* Data length */
         dlength = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(s7comm_header_tree, hf_s7comm_header_datlg, tvb, offset, 2, dlength);		
+        proto_tree_add_uint(s7comm_header_tree, hf_s7comm_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
         /* when type is 2 or 3 there are 2 bytes with errorclass and errorcode */
         if (hlength == 12) {
@@ -1437,7 +1445,7 @@ s7comm_decode_pdu_setup_communication(tvbuff_t *tvb,
                                      proto_tree *tree,
                                      guint32 offset )
 {
-    proto_tree_add_text(tree, tvb, offset, 1, "Reserved: 0x%02x", tvb_get_guint8( tvb, offset ));
+    proto_tree_add_item(tree, hf_s7comm_param_setup_reserved1, tvb, offset, 1, FALSE);    
     offset += 1;
     proto_tree_add_item(tree, hf_s7comm_param_maxamq_calling, tvb, offset, 2, FALSE);
     offset += 2;
@@ -1470,7 +1478,7 @@ s7comm_decode_response_write_data(tvbuff_t *tvb,
         item = proto_tree_add_item( tree, hf_s7comm_data_item, tvb, offset, 1, FALSE );
         item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
         proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
-        proto_tree_add_uint(item_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
+        proto_tree_add_uint(item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
         offset += 1;
     }
     return offset;
@@ -1505,7 +1513,10 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
             tsize = tvb_get_guint8( tvb, offset + 1 );
             len = tvb_get_ntohs(tvb, offset + 2);
             /* calculate length in bytes */
-            if (tsize >= 3 && tsize <= 5) {	/* given length is in number of bits */
+            if (tsize == S7COMM_DATA_TRANSPORT_SIZE_BBIT || 
+                tsize == S7COMM_DATA_TRANSPORT_SIZE_BBYTE ||
+                tsize == S7COMM_DATA_TRANSPORT_SIZE_BINT
+                ) {     /* given length is in number of bits */
                 if (len % 8) { /* len is not a multiple of 8, then round up to next number */
                     len /= 8;
                     len = len + 1;
@@ -1526,7 +1537,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
         item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
         proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
 
-        proto_tree_add_uint(item_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
+        proto_tree_add_uint(item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
         proto_tree_add_uint(item_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);
         proto_tree_add_text(item_tree, tvb, offset + 2, 2 , "Data length: %d Bytes", len);
 
@@ -1869,8 +1880,8 @@ s7comm_decode_ud(tvbuff_t *tvb,
         /* 1 Byte fragmented flag, if this is not the last data unit (telegram is fragmented) this is != 0 */
         last_data_unit = tvb_get_guint8( tvb, offset_temp );
         proto_tree_add_item(param_tree, hf_s7comm_userdata_param_dataunit, tvb, offset_temp, 1, FALSE);
-        offset_temp += 1;
-        proto_tree_add_text(param_tree, tvb, offset_temp, 2, "Error code: 0x%04x", tvb_get_ntohs(tvb, offset_temp));
+        offset_temp += 1;        
+        proto_tree_add_item(param_tree, hf_s7comm_param_errcod, tvb, offset_temp, 2, FALSE);
         offset_temp += 2;
     }
 
@@ -1885,7 +1896,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
     if (dlength >= 4) {
         ret_val = tvb_get_guint8( tvb, offset );
 
-        proto_tree_add_uint(data_tree, hf_s7comm_userdata_data_return_value, tvb, offset, 1, ret_val);
+        proto_tree_add_uint(data_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
         offset += 1;
         /* Not definitely known part, kind of "transport size"? constant 0x09, 1 byte 
          * The position is the same as in a data response/write telegram,
@@ -1894,7 +1905,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
         proto_tree_add_uint(data_tree, hf_s7comm_data_transport_size, tvb, offset, 1, tsize);
         offset += 1;
         len = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(data_tree, hf_s7comm_userdata_data_length, tvb, offset, 2, len);
+        proto_tree_add_uint(data_tree, hf_s7comm_data_length, tvb, offset, 2, len);
         offset += 2;
 
         /* Call function to decode the rest of the data part 
@@ -2265,7 +2276,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
         tsize = tvb_get_guint8( tvb, offset + 1 );
         len = tvb_get_ntohs(tvb, offset + 2);
 
-        if (tsize >= 4 && tsize <= 5) {
+        if (tsize == S7COMM_DATA_TRANSPORT_SIZE_BBYTE || tsize == S7COMM_DATA_TRANSPORT_SIZE_BINT) {
             len /= 8;
         }
         /* the PLC places extra bytes at the end if length is not a multiple of 2 */
@@ -2280,7 +2291,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
     sub_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
 
     proto_item_append_text(item, " [%d]: (%s)", item_no + 1, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
-    proto_tree_add_uint(sub_tree, hf_s7comm_item_return_value, tvb, offset, 1, ret_val);
+    proto_tree_add_uint(sub_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
 
     proto_tree_add_uint(sub_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);
 
