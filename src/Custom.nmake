@@ -5,9 +5,13 @@
 include ..\config.nmake
 
 all: s7comm
+	s7comm_plus
 
 echo::
 	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+	cd s7comm_plus
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
 	cd ..
 
@@ -15,9 +19,15 @@ clean:
 	cd s7comm
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
 	cd ..
+	cd s7comm_plus
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ..
 
 distclean: clean
 	cd s7comm
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ..
+	cd s7comm_plus
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
 	cd ..
 
@@ -25,8 +35,12 @@ maintainer-clean: distclean
 	cd s7comm
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
 	cd ..
+	cd s7comm_plus
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ..
 
 install-plugins:
 !IFDEF ENABLE_LIBWIRESHARK
 	xcopy s7comm\*.dll ..\$(INSTALL_DIR)\plugins\$(VERSION) /d
+	xcopy s7comm_plus\*.dll ..\$(INSTALL_DIR)\plugins\$(VERSION) /d
 !ENDIF
