@@ -33,7 +33,7 @@ endif
 plugindir = @plugindir@
 
 plugin_LTLIBRARIES = s7comm_plus.la
-s7commp_la_SOURCES = \
+s7comm_plus_la_SOURCES = \
 	plugin.c \
 	moduleinfo.h \
 	$(DISSECTOR_SRC) \

@@ -3,7 +3,7 @@
 #     a) common to both files and
 #     b) portable between both files
 #
-# $Id: Makefile.common 8 2012-10-25 20:24:02Z thomas_v2 $
+# $Id$
 #
 # Wireshark - Network traffic analyzer
 # By Gerald Combs <gerald@wireshark.org>
@@ -32,11 +32,11 @@ DISSECTOR_SRC = \
 
 
 # corresponding headers
-DISSECTOR_INCLUDES = \
+DISSECTOR_INCLUDES =
 
 
 # Dissector helpers.  They're included in the source files in this
 # directory, but they're not dissectors themselves, i.e. they're not
 # used to generate "register.c").
-DISSECTOR_SUPPORT_SRC =	\
+DISSECTOR_SUPPORT_SRC =
 
