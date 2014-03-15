@@ -55,7 +55,7 @@ static int proto_s7comm = -1;
 static gboolean dissect_s7comm(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);
 
 /**************************************************************************
- * Function tree of the dissect process
+ * Function call tree of the dissect process
 
 dissect_s7comm()
     +
@@ -78,17 +78,24 @@ dissect_s7comm()
     +
     +-------s7comm_decode_ud()
              +
-             +------	s7comm_decode_ud_prog_subfunc()
+             +------ s7comm_decode_ud_prog_subfunc()
              +                  +
              +                  +------- s7comm_decode_ud_prog_vartab_req_item()
              +                  +------- s7comm_decode_ud_prog_vartab_res_item()
              +                  +------- s7comm_decode_ud_prog_reqdiagdata()
              +
-             +------	s7comm_decode_ud_cyclic_subfunc()
-             +------	s7comm_decode_ud_block_subfunc()
-             +------	s7comm_decode_ud_szl_subfunc()
-             +------	s7comm_decode_ud_security_subfunc()
-             +------	s7comm_decode_ud_time_subfunc()
+             +------ s7comm_decode_ud_cyclic_subfunc()
+             +                  +
+             +                  +------- s7comm_decode_param_item()
+             +                  +------- s7comm_decode_response_read_data()
+             +
+             +------ s7comm_decode_ud_block_subfunc()
+             +------ s7comm_decode_ud_szl_subfunc()
+             +                  +
+             +                  +------- s7comm_decode_szl_id_XXXX_idx_XXXX()
+             +
+             +------ s7comm_decode_ud_security_subfunc()
+             +------ s7comm_decode_ud_time_subfunc()
 
  **************************************************************************/
 
