@@ -137,6 +137,59 @@ static const value_string errcls_names[] = {
     { S7COMM_ERRCLS_ACCESS,                 "Access error" },
     { 0,                                    NULL }
 };
+
+/**************************************************************************
+ * Error code in parameter part
+ */
+#define S7COMM_PERRCOD_NO_ERROR                     0x0000
+#define S7COMM_PERRCOD_INVALID_BLOCK_TYPE_NUM       0x0110
+#define S7COMM_PERRCOD_INVALID_PARAM                0x0112
+#define S7COMM_PERRCOD_PG_RESOURCE_ERROR            0x011A
+#define S7COMM_PERRCOD_PLC_RESOURCE_ERROR           0x011B
+#define S7COMM_PERRCOD_PROTOCOL_ERROR               0x011C
+#define S7COMM_PERRCOD_USER_BUFFER_TOO_SHORT        0x011F
+#define S7COMM_PERRCOD_REQ_INI_ERR                  0x0141
+#define S7COMM_PERRCOD_VERSION_MISMATCH             0x01C0
+#define S7COMM_PERRCOD_NOT_IMPLEMENTED              0x01F0
+#define S7COMM_PERRCOD_L7_INVALID_CPU_STATE         0x8001
+#define S7COMM_PERRCOD_L7_PDU_SIZE_ERR              0x8500
+#define S7COMM_PERRCOD_L7_INVALID_SZL_ID            0xD401
+#define S7COMM_PERRCOD_L7_INVALID_INDEX             0xD402
+#define S7COMM_PERRCOD_L7_DGS_CONN_ALREADY_ANNOU    0xD403
+#define S7COMM_PERRCOD_L7_MAX_USER_NB               0xD404
+#define S7COMM_PERRCOD_L7_DGS_FKT_PAR_SYNTAX_ERR    0xD405
+#define S7COMM_PERRCOD_L7_NO_INFO                   0xD406
+#define S7COMM_PERRCOD_L7_PRT_FKT_PAR_SYNTAX_ERR    0xD601
+#define S7COMM_PERRCOD_L7_INVALID_VAR_ADDR          0xD801
+#define S7COMM_PERRCOD_L7_UNKNOWN_REQ               0xD802
+#define S7COMM_PERRCOD_L7_INVALID_REQ_STATUS        0xD803
+
+static const value_string param_errcode_names[] = {
+    { S7COMM_PERRCOD_NO_ERROR,                      "No error" },
+    { S7COMM_PERRCOD_INVALID_BLOCK_TYPE_NUM,        "Invalid block type number" },
+    { S7COMM_PERRCOD_INVALID_PARAM,                 "Invalid parameter" },
+    { S7COMM_PERRCOD_PG_RESOURCE_ERROR,             "PG ressource error" },
+    { S7COMM_PERRCOD_PLC_RESOURCE_ERROR,            "PLC ressource error" },
+    { S7COMM_PERRCOD_PROTOCOL_ERROR,                "Protocol error" },
+    { S7COMM_PERRCOD_USER_BUFFER_TOO_SHORT,         "User buffer too short" },
+    { S7COMM_PERRCOD_REQ_INI_ERR,                   "Request error" },
+    { S7COMM_PERRCOD_VERSION_MISMATCH,              "Version mismatch" },
+    { S7COMM_PERRCOD_NOT_IMPLEMENTED,               "Not implemented" },
+    { S7COMM_PERRCOD_L7_INVALID_CPU_STATE,          "L7 invalid CPU state" },
+    { S7COMM_PERRCOD_L7_PDU_SIZE_ERR,               "L7 PDU size error" },
+    { S7COMM_PERRCOD_L7_INVALID_SZL_ID,             "L7 invalid SZL ID" },
+    { S7COMM_PERRCOD_L7_INVALID_INDEX,              "L7 invalid index" },
+    { S7COMM_PERRCOD_L7_DGS_CONN_ALREADY_ANNOU,     "L7 DGS Connection already announced" },
+    { S7COMM_PERRCOD_L7_MAX_USER_NB,                "L7 Max user NB" },
+    { S7COMM_PERRCOD_L7_DGS_FKT_PAR_SYNTAX_ERR,     "L7 DGS function parameter syntax error" },
+    { S7COMM_PERRCOD_L7_NO_INFO,                    "L7 no info" },
+    { S7COMM_PERRCOD_L7_PRT_FKT_PAR_SYNTAX_ERR,     "L7 PRT function parameter syntax error" },
+    { S7COMM_PERRCOD_L7_INVALID_VAR_ADDR,           "L7 invalid variable address" },
+    { S7COMM_PERRCOD_L7_UNKNOWN_REQ,                "L7 unknown request" },
+    { S7COMM_PERRCOD_L7_INVALID_REQ_STATUS,         "L7 invalid request status" },
+    { 0,                                    NULL }
+};
+
 /**************************************************************************
  * Function codes in parameter part
  */
@@ -796,7 +849,7 @@ proto_register_s7comm (void)
         { "Parameter", "s7comm.param", FT_NONE, BASE_NONE, NULL, 0x0,
           "This is the parameter part of S7 communication", HFILL }},
         { &hf_s7comm_param_errcod,
-        { "Error code", "s7comm.param.errcod", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { "Error code", "s7comm.param.errcod", FT_UINT16, BASE_HEX, VALS(param_errcode_names), 0x0,
           NULL, HFILL }},
         { &hf_s7comm_param_service,
         { "Function", "s7comm.param.func", FT_UINT8, BASE_HEX, VALS(param_functionnames), 0x0,
