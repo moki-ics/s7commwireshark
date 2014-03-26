@@ -313,23 +313,14 @@ dissect_s7commp(tvbuff_t *tvb,
     }        
     /*----------------- Heuristic Checks - End */
 
-    if (check_col(pinfo->cinfo, COL_PROTOCOL)) {
-        col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM_PLUS);
-    }
-    /* Clear out stuff in the info column */
-    if(check_col(pinfo->cinfo, COL_INFO)) {
-        col_clear(pinfo->cinfo, COL_INFO);
-    }
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM_PLUS);
+    col_clear(pinfo->cinfo, COL_INFO);
 
     pdutype = tvb_get_guint8( tvb, 1 );                     /* Get the type byte */
     hlength = 4;                                            /* Header 4 Bytes */
 
     /* display some infos in info-column of wireshark */
-    if (check_col(pinfo->cinfo, COL_INFO)) {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "PDU-Type: [%s]",
-            val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x")
-        );
-    }
+    col_add_fstr(pinfo->cinfo, COL_INFO, "PDU-Type: [%s]", val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x"));
     
     if (tree) {
         s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
@@ -358,9 +349,7 @@ dissect_s7commp(tvbuff_t *tvb,
         if (pdutype == S7COMMP_PDUTYPE_FF) {
             seqnum = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(s7commp_header_tree, hf_s7commp_data_seqnum, tvb, offset, 1, seqnum);
-            if (check_col(pinfo->cinfo, COL_INFO)) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Seq.num: [%d]", seqnum);
-            }
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Seq.num: [%d]", seqnum);
             offset += 1;
             /* dann noch ein Byte, noch nicht klar wozu */
             proto_tree_add_text(s7commp_header_tree, tvb, offset , 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
@@ -410,9 +399,7 @@ dissect_s7commp(tvbuff_t *tvb,
             /* 1: Kennung*? */
             proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_datatype, tvb, offset, 1, datatype);
             /* add type to info column */
-            if (check_col(pinfo->cinfo, COL_INFO)) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type of data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
-            }
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Type of data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
             offset += 1;
             dlength -= 1;
         
@@ -427,21 +414,15 @@ dissect_s7commp(tvbuff_t *tvb,
             /* Funktionsbezeichnung in Abhängigkeit vom PDU Typ */
             if (pdutype == S7COMMP_PDUTYPE_1) {
                 proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_pdu1function, tvb, offset, 2, function);
-                if (check_col(pinfo->cinfo, COL_INFO)) {
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", function, 
-                        val_to_str(function, pdu1_datafunc_names, "?"));
-                }
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", function, 
+                    val_to_str(function, pdu1_datafunc_names, "?"));
             } else if (pdutype == S7COMMP_PDUTYPE_2) {
                 proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_pdu2function, tvb, offset, 2, function);
-                if (check_col(pinfo->cinfo, COL_INFO)) {
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", function, 
-                        val_to_str(function, pdu2_datafunc_names, "?"));
-                }
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", function, 
+                    val_to_str(function, pdu2_datafunc_names, "?"));
             } else {
                 proto_tree_add_text(s7commp_data_tree, tvb, offset , 2, "Function? : 0x%04x", function);
-                if (check_col(pinfo->cinfo, COL_INFO)) {
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x]", function);
-                }
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x]", function);
             }
             offset += 2;
             dlength -= 2;
@@ -455,9 +436,7 @@ dissect_s7commp(tvbuff_t *tvb,
             seqnum = tvb_get_ntohs(tvb, offset);
             proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
             /*if (datatype != S7COMMP_DATATYPE_CYC) { */
-                if (check_col(pinfo->cinfo, COL_INFO)) {
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Seq.num: [%d]", seqnum);
-                }
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Seq.num: [%d]", seqnum);
             /*}*/
             offset += 2;
             dlength -= 2;
