@@ -55,29 +55,25 @@ static const value_string weekdaynames[] = {
 void
 s7comm_info_append_uint32(packet_info *pinfo, const char *abbrev, guint32 val)
 {
-    if (check_col(pinfo->cinfo, COL_INFO))
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
 }
 
 void
 s7comm_info_append_uint16(packet_info *pinfo, const char *abbrev, guint16 val)
 {
-    if (check_col(pinfo->cinfo, COL_INFO))
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
 }
 
 void
 s7comm_info_append_str(packet_info *pinfo, const char *abbrev, const char *val)
 {
-    if (check_col(pinfo->cinfo, COL_INFO))
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s:[%s]", abbrev, val);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s:[%s]", abbrev, val);
 }
 
 void
 s7comm_info_append_uint16hex(packet_info *pinfo, const char *abbrev, guint16 val)
 {
-    if (check_col(pinfo->cinfo, COL_INFO))
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s=0x%04x", abbrev, val);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=0x%04x", abbrev, val);
 }
 
 /*******************************************************************************************************

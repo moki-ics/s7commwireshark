@@ -1106,21 +1106,14 @@ dissect_s7comm(tvbuff_t *tvb,
         return 0;
     /*----------------- Heuristic Checks - End */
 
-    if (check_col(pinfo->cinfo, COL_PROTOCOL))
-        col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM);
-    /* Clear out stuff in the info column */
-    if(check_col(pinfo->cinfo, COL_INFO)){
-        col_clear(pinfo->cinfo, COL_INFO);
-    }
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM);
+    col_clear(pinfo->cinfo, COL_INFO);
 
     rosctr = tvb_get_guint8( tvb, 1 );                          /* Get the type byte */
     if (rosctr == 2 || rosctr == 3) hlength = 12;               /* Header 10 Bytes, when type 2 or 3 (response) -> 12 Bytes */
 
     /* display some infos in info-column of wireshark */
-    if (check_col(pinfo->cinfo, COL_INFO)) {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "ROSCTR:[%-8s]",
-                val_to_str(rosctr, rosctr_names, "Unknown: 0x%02x"));
-    }
+    col_add_fstr(pinfo->cinfo, COL_INFO, "ROSCTR:[%-8s]", val_to_str(rosctr, rosctr_names, "Unknown: 0x%02x"));
     
     if (tree) { /* we are being asked for details */
         s7comm_item = proto_tree_add_item(tree, proto_s7comm, tvb, 0, -1, FALSE);
@@ -1210,9 +1203,7 @@ s7comm_decode_req_resp(tvbuff_t *tvb,
         /* Analyze function */
         function = tvb_get_guint8( tvb, offset );
         /* add param.function to info column */
-        if (check_col(pinfo->cinfo, COL_INFO)) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Function:[%s]", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
-        }
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Function:[%s]", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));
         proto_tree_add_uint(param_tree, hf_s7comm_param_service, tvb, offset, 1, function);
         /* show param.function code at the tree */
         proto_item_append_text(param_tree, ": (%s)", val_to_str(function, param_functionnames, "Unknown function: 0x%02x"));

@@ -1174,8 +1174,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                         proto_tree_add_bytes(szl_item_tree, hf_s7comm_userdata_szl_data, tvb, offset, len,
                             tvb_get_ptr (tvb, offset, len));
                         offset += len;
-                        if (check_col(pinfo->cinfo, COL_INFO))
-                            col_append_fstr(pinfo->cinfo, COL_INFO, " SZL data fragment");
+                        col_append_fstr(pinfo->cinfo, COL_INFO, " SZL data fragment");
                         szl_decoded = TRUE;
                     } else {
                         id = tvb_get_ntohs(tvb, offset);
