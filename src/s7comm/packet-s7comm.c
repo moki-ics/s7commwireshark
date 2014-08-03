@@ -1,7 +1,7 @@
 /* packet-s7comm.c
  *
  * Author:      Thomas Wiens, 2011 (th.wiens@gmx.de)
- * Version:     0.0.3
+ * Version:     0.0.5
  * Description:	Wireshark dissector for S7-Communication
  *
  * $Id$
@@ -1657,6 +1657,7 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
     guint16 len;
     guint8 count;
     guint8 i;
+    guint8 *str;
     /* not needed here any more, should be always 0x28
      * guint8 function;
      * function = tvb_get_guint8( tvb, offset );
@@ -1695,15 +1696,16 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
             s7comm_info_append_str(pinfo, "Type", 
                 val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
             offset += 2;
-            proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", tvb_get_ephemeral_string(tvb, offset, 5));
-            s7comm_info_append_str(pinfo, "No.", tvb_get_ephemeral_string(tvb, offset, 5));
+            str = tvb_get_string(wmem_packet_scope(), tvb, offset, 5);
+            proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", str);
+            s7comm_info_append_str(pinfo, "No.", str);
             offset += 5;
             /* 'P', 'B' or 'A' is following 
              Destination filesystem?
                 P = passive filesystem
                 A = active filesystem?
              */
-            proto_tree_add_text(tree, tvb, offset,1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
+            proto_tree_add_text(tree, tvb, offset, 1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
             offset += 1;
         }
     }
@@ -1718,7 +1720,7 @@ s7comm_decode_plc_controls_param_hex28(tvbuff_t *tvb,
      *   _PROGRAM = Start/Stop the PLC
      *   _PLC_MEMORYRESET = Reset the PLC memory
      */
-    proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_ephemeral_string(tvb, offset, len));
+    proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_string(wmem_packet_scope(), tvb, offset, len));
     offset += len;
 
     return offset;
@@ -1754,7 +1756,7 @@ s7comm_decode_plc_controls_param_hex29(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 1, "Length part 2: %d bytes", len);
     offset += 1;
     /* Function as string */
-    proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_ephemeral_string(tvb, offset, len));
+    proto_tree_add_text(tree, tvb, offset , len, "PI (program invocation) Service: %s", tvb_get_string(wmem_packet_scope(), tvb, offset, len));
     offset += len;
 
     return offset;
@@ -1774,6 +1776,7 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
 {
     guint8 len;
     guint8 function;
+    guint8 *str;
 
     function = tvb_get_guint8( tvb, offset );
     offset += 1;
@@ -1814,8 +1817,9 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
         val_to_str(tvb_get_guint8(tvb, offset+1), blocktype_names, "Unknown Block type: 0x%02x"));
     offset += 2;
 
-    proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", tvb_get_ephemeral_string(tvb, offset, 5));
-    s7comm_info_append_str(pinfo, "No.", tvb_get_ephemeral_string(tvb, offset, 5));
+    str = tvb_get_string(wmem_packet_scope(), tvb, offset, 5);
+    proto_tree_add_text(tree, tvb, offset , 5, "Block number: %s", str);
+    s7comm_info_append_str(pinfo, "No.", str);
     offset += 5;
     /* 'P', 'B' or 'A' is following */
     proto_tree_add_text(tree, tvb, offset,1, "Destination filesystem: %c", tvb_get_guint8(tvb, offset));
@@ -1829,9 +1833,9 @@ s7comm_decode_plc_controls_param_hex1x(tvbuff_t *tvb,
         /* first byte unknown '1' */
         proto_tree_add_text(tree, tvb, offset, 1, "Unknown: %c", tvb_get_guint8(tvb, offset));
         offset += 1;
-        proto_tree_add_text(tree, tvb, offset, 6, "Length load memory: %s bytes", tvb_get_ephemeral_string(tvb, offset, 6));
+        proto_tree_add_text(tree, tvb, offset, 6, "Length load memory: %s bytes", tvb_get_string(wmem_packet_scope(), tvb, offset, 6));
         offset += 6;
-        proto_tree_add_text(tree, tvb, offset, 6, "Length MC7 code   : %s bytes", tvb_get_ephemeral_string(tvb, offset, 6));
+        proto_tree_add_text(tree, tvb, offset, 6, "Length MC7 code   : %s bytes", tvb_get_string(wmem_packet_scope(), tvb, offset, 6));
         offset += 6;
     }
     return offset;
@@ -2559,7 +2563,7 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
                     s7comm_info_append_str(pinfo, "Type", 
                         val_to_str(tvb_get_guint8(tvb, offset + 1), blocktype_names, "Unknown Block type: 0x%02x"));
                     offset += 2;
-                    pBlocknumber = tvb_get_ephemeral_string(tvb, offset, 5);
+                    pBlocknumber = tvb_get_string(wmem_packet_scope(), tvb, offset, 5);
                     proto_tree_add_text(data_tree, tvb, offset , 5, "Block number: %s", pBlocknumber);
                     s7comm_info_append_str(pinfo, "No.", pBlocknumber);
                     proto_item_append_text(data_tree, ", Number: %s)", pBlocknumber);
@@ -2639,11 +2643,11 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
                     offset += 2;
                     proto_tree_add_text(data_tree, tvb, offset , 2,   "Length MC7 code : %d bytes", tvb_get_ntohs(tvb, offset));
                     offset += 2;
-                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Author          : %s", tvb_get_ephemeral_string(tvb, offset, 8));
+                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Author          : %s", tvb_get_string(wmem_packet_scope(), tvb, offset, 8));
                     offset += 8;
-                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Family          : %s", tvb_get_ephemeral_string(tvb, offset, 8));
+                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Family          : %s", tvb_get_string(wmem_packet_scope(), tvb, offset, 8));
                     offset += 8;
-                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Name (Header)   : %s", tvb_get_ephemeral_string(tvb, offset, 8));
+                    proto_tree_add_text(data_tree, tvb, offset , 8,   "Name (Header)   : %s", tvb_get_string(wmem_packet_scope(), tvb, offset, 8));
                     offset += 8;
                     proto_tree_add_text(data_tree, tvb, offset , 1,   "Version (Header): %d.%d", 
                         ((tvb_get_guint8(tvb, offset) & 0xf0) >> 4), tvb_get_guint8(tvb, offset) & 0x0f);

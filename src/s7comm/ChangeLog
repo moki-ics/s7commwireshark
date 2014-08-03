@@ -13,3 +13,8 @@ Overview of changes in Wireshark s7comm Plugin 0.0.4
 * show SZL ID 0x0111 in the same way as ID 0x0011
 * extended filter of variable services
 * added SZL ID 0xxy74
+
+Overview of changes in Wireshark s7comm Plugin 0.0.5
+* compatibility with Wireshark 1.12
+  Since they changed the wireshark-api, this plugin
+  won't work with older versions of Wireshark.
