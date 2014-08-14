@@ -436,6 +436,7 @@ static const value_string blocklanguage_names[] = {
     { 0x08,                                 "CPU-DB" },                     /* DB was created from Plc programm (CREAT_DB) */
     { 0x11,                                 "SDB (after overall reset)" },  /* another SDB, don't know what it means, in SDB 1 and SDB 2, uncertain*/
     { 0x12,                                 "SDB (Routing)" },              /* another SDB, in SDB 999 and SDB 1000 (routing information), uncertain */
+    { 0x29,                                 "ENCRYPT" },                    /* block is encrypted with S7-Block-Privacy */
     { 0,                                    NULL }
 };
 
