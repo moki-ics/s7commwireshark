@@ -36,7 +36,7 @@
 #include <time.h>
 
 #include "packet-s7comm.h"
-#include "s7comm_szl_ids.h"
+#include "packet-s7comm_szl_ids.h"
 
 #define PROTO_TAG_S7COMM                    "S7COMM"
 
