@@ -37,7 +37,6 @@
 
 #include "packet-s7comm.h"
 #include "s7comm_szl_ids.h"
-#include "s7comm_helper.h"
 
 #define PROTO_TAG_S7COMM                    "S7COMM"
 
@@ -626,6 +625,22 @@ static const value_string userdata_time_subfunc_names[] = {
 static const true_false_string fragment_descriptions = {
     "Yes",
     "No"
+};
+
+
+/*******************************************************************************************************
+ * Weekday names in DATE_AND_TIME
+ */
+static const value_string weekdaynames[] = {
+    { 0,                                    "Undefined" },
+    { 1,                                    "Sunday" },
+    { 2,                                    "Monday" },
+    { 3,                                    "Tuesday" },
+    { 4,                                    "Wednesday" },
+    { 5,                                    "Thursday" },
+    { 6,                                    "Friday" },
+    { 7,                                    "Saturday" },
+    { 0,                                    NULL }
 };
 
 /**************************************************************************
@@ -2617,10 +2632,10 @@ s7comm_decode_ud_block_subfunc(tvbuff_t *tvb,
                     proto_tree_add_text(data_tree, tvb, offset , 4,   "Block Security  : %s",
                         val_to_str(tvb_get_ntohl(tvb, offset), blocksecurity_names, "Unknown block security: %ld"));
                     offset += 4;
-                    get_timestring_from_s7time(tvb, offset, str_timestamp, sizeof(str_timestamp));
+                    s7comm_get_timestring_from_s7time(tvb, offset, str_timestamp, sizeof(str_timestamp));
                     proto_tree_add_text(data_tree, tvb, offset , 6,   "Code timestamp  : %s", str_timestamp);
                     offset += 6;
-                    get_timestring_from_s7time(tvb, offset, str_timestamp, sizeof(str_timestamp));
+                    s7comm_get_timestring_from_s7time(tvb, offset, str_timestamp, sizeof(str_timestamp));
                     proto_tree_add_text(data_tree, tvb, offset , 6,   "Inteface timest.: %s", str_timestamp);
                     offset += 6;
                     proto_tree_add_text(data_tree, tvb, offset , 2,   "SSB length      : %d", tvb_get_ntohs(tvb, offset));
@@ -2730,6 +2745,124 @@ s7comm_decode_ud_time_subfunc(tvbuff_t *tvb,
         proto_tree_add_bytes(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength - 4,
             tvb_get_ptr (tvb, offset, dlength - 4));
         offset += dlength;
+    }
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Helper functions to append info text 
+ *
+ *******************************************************************************************************/
+static void
+s7comm_info_append_uint32(packet_info *pinfo, const char *abbrev, guint32 val)
+{
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
+}
+
+static void
+s7comm_info_append_uint16(packet_info *pinfo, const char *abbrev, guint16 val)
+{
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=%u", abbrev, val);
+}
+
+static void
+s7comm_info_append_str(packet_info *pinfo, const char *abbrev, const char *val)
+{
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s:[%s]", abbrev, val);
+}
+
+static void
+s7comm_info_append_uint16hex(packet_info *pinfo, const char *abbrev, guint16 val)
+{
+    col_append_fstr(pinfo->cinfo, COL_INFO, " %s=0x%04x", abbrev, val);
+}
+
+/*******************************************************************************************************
+ *
+ * Converts a siemens special timestamp to a string of 24+1 bytes length (e.g. "15.04.2009 12:49:30.520").
+ * The timestamp is 6 bytes long, one word is the number of days since 1.1.1984, and 4 bytes millisecods of the day
+ *
+ *******************************************************************************************************/
+static void 
+s7comm_get_timestring_from_s7time(tvbuff_t *tvb, guint offset, char *str, gint max)
+{
+    guint16 days;
+    guint32 day_msec;
+    struct tm *mt;
+    time_t t;
+
+    day_msec = tvb_get_ntohl(tvb, offset);
+    days = tvb_get_ntohs(tvb, offset + 4);
+
+    t = 441763200L;             /* 1.1.1984 00:00:00 */
+    t += days * (24*60*60);
+    t += day_msec / 1000;
+    mt = gmtime(&t);
+    g_snprintf(str, max, "%02d.%02d.%04d %02d:%02d:%02d.%03d",  mt->tm_mday, 
+                                                                mt->tm_mon + 1,
+                                                                mt->tm_year + 1900,
+                                                                mt->tm_hour,
+                                                                mt->tm_min,
+                                                                mt->tm_sec,
+                                                                day_msec % 1000);
+}
+
+/*******************************************************************************************************
+ *
+ * Helper for time functions
+ * Get int from bcd
+ *
+ *******************************************************************************************************/
+static guint8
+s7comm_guint8_from_bcd(guint8 i)
+{
+    return 10 * (i /16) + (i % 16);
+}
+
+/*******************************************************************************************************
+ *
+ * Helper for time functions
+ * Add a BCD coded timestamp (10 Bytes length) to tree
+ *
+ *******************************************************************************************************/
+static guint32
+s7comm_add_timestamp_to_tree(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset,
+                             gboolean append_text)
+{
+    guint8 time[10];
+    guint8 i;
+    guint8 weekday;
+    guint8 tmp;
+    
+    /* The low nibble of byte 10 is weekday, the high nibble the LSD of msec */
+    tmp = tvb_get_guint8(tvb, offset + 9) & 0x0f;
+    weekday = s7comm_guint8_from_bcd( tmp );
+
+    for (i = 0;i < 9; i++) {
+        time[i] = s7comm_guint8_from_bcd(tvb_get_guint8(tvb, offset + i));
+    }
+    tmp = tvb_get_guint8(tvb, offset + 9) >> 4;
+    time[9] = s7comm_guint8_from_bcd( tmp );
+
+    proto_tree_add_text(tree, tvb, offset + 0, 1, "Reserved: %d", time[0]);
+    proto_tree_add_text(tree, tvb, offset + 1, 2, "Year    : %02d%02d", time[1], time[2]);
+    proto_tree_add_text(tree, tvb, offset + 3, 1, "Month   : %d", time[3]);
+    proto_tree_add_text(tree, tvb, offset + 4, 1, "Day     : %d", time[4]);
+    proto_tree_add_text(tree, tvb, offset + 5, 1, "Hour    : %d", time[5]);
+    proto_tree_add_text(tree, tvb, offset + 6, 1, "Minute  : %d", time[6]);
+    proto_tree_add_text(tree, tvb, offset + 7, 1, "Second  : %d", time[7]);
+
+    proto_tree_add_text(tree, tvb, offset + 8, 2, "Msec    : %02d%d", time[8],time[9]);
+    proto_tree_add_text(tree, tvb, offset + 9, 1, "Weekday : %s (%d)",  
+        val_to_str(weekday, weekdaynames, "Unknown weekday:%d"), weekday);
+    offset += 10;
+    if (append_text == TRUE) {
+        /* mm/dd/yyyy hh:mm:ss.SSSS */
+        proto_item_append_text(tree, "(Timestamp: %02d/%02d/%02d%02d %02d:%02d:%02d.%02d%d)", time[3], time[4], time[1], time[2],
+                                        time[5],time[6], time[7], time[8], time[9]);
     }
     return offset;
 }

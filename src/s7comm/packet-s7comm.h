@@ -80,4 +80,14 @@ static guint32 s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb, guint32 offs
 static guint32 s7comm_decode_ud_prog_reqdiagdata    (tvbuff_t *tvb, proto_tree *data_tree, guint8 subfunc, guint32 offset);
 
 static void make_registerflag_string(gchar *str, guint8 flags, gint max);
+/* helper functions **/
+static void s7comm_info_append_uint32(packet_info *pinfo, const char *abbrev, guint32 val);
+static void s7comm_info_append_uint16(packet_info *pinfo, const char *abbrev, guint16 val);
+static void s7comm_info_append_uint16hex(packet_info *pinfo, const char *abbrev, guint16 val);
+static void s7comm_info_append_str(packet_info *pinfo, const char *abbrev, const char *val);
+
+static void s7comm_get_timestring_from_s7time(tvbuff_t *tvb, guint offset, char *str, gint max);
+static guint8 s7comm_guint8_from_bcd(guint8 i);
+static guint32 s7comm_add_timestamp_to_tree(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean append_text);
+
 #endif
