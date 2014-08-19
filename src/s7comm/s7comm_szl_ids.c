@@ -33,7 +33,6 @@
 
 #include "packet-s7comm.h"
 #include "s7comm_szl_ids.h"
-#include "s7comm_helper.h"
 
 extern const value_string s7comm_item_return_valuenames[];
 
@@ -1109,8 +1108,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                     proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
                 }
                 proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
-                s7comm_info_append_uint16hex(pinfo, "ID", id);
-                s7comm_info_append_uint16hex(pinfo, "Index", index);
+				col_append_fstr(pinfo->cinfo, COL_INFO, " ID=0x%04x Index=0x$04x" , id, index);
                 know_data = TRUE;
 
             } else if (type == S7COMM_UD_TYPE_RES) {            /*** Response ***/
@@ -1147,8 +1145,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                             proto_item_append_text(szl_item_entry, " [%s]", szl_index_description);
                         }
                         proto_item_append_text(data_tree, " (SZL-ID: 0x%04x, Index: 0x%04x)", id, index);
-                        s7comm_info_append_uint16hex(pinfo, "ID", id);
-                        s7comm_info_append_uint16hex(pinfo, "Index", index);
+						col_append_fstr(pinfo->cinfo, COL_INFO, " ID=0x%04x Index=0x$04x" , id, index);
                         
                         /* SZL-Data, 4 Bytes header, 4 bytes id/index = 8 bytes */
                         list_len = tvb_get_ntohs(tvb, offset); /* Length of an list set in bytes */
@@ -1264,8 +1261,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                         }
                     }
                 } else {
-                    s7comm_info_append_str(pinfo, "Return value", 
-                        val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown return value:0x%02x"));
+					col_append_fstr(pinfo->cinfo, COL_INFO, " Return value:[%s]", val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown return value:0x%02x"));
                 }
                 know_data = TRUE;
             }
