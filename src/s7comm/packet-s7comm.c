@@ -36,7 +36,6 @@
 #include <time.h>
 
 #include "packet-s7comm.h"
-
 #include "s7comm_szl_ids.h"
 #include "s7comm_helper.h"
 
@@ -347,15 +346,8 @@ static const value_string data_transportsizenames[] = {
 /**************************************************************************
  * Returnvalues of an item response
  */
-#define S7COMM_ITEM_RETVAL_RESERVED             0x00
-#define S7COMM_ITEM_RETVAL_DATA_HW_FAULT        0x01
-#define S7COMM_ITEM_RETVAL_DATA_ACCESS_FAULT    0x03
-#define S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE      0x05        /* the desired address is beyond limit for this PLC */
-#define S7COMM_ITEM_RETVAL_DATA_NOT_SUP         0x06        /* Type is not supported */
-#define S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH    0x07        /* Data type inconsistent */
-#define S7COMM_ITEM_RETVAL_DATA_ERR             0x0a        /* the desired item is not available in the PLC, e.g. when trying to read a non existing DB*/
-#define S7COMM_ITEM_RETVAL_DATA_OK              0xff
-static const value_string item_return_valuenames[] = {
+
+const value_string s7comm_item_return_valuenames[] = {
     { S7COMM_ITEM_RETVAL_RESERVED,              "Reserved" },
     { S7COMM_ITEM_RETVAL_DATA_HW_FAULT,         "Hardware error" },
     { S7COMM_ITEM_RETVAL_DATA_ACCESS_FAULT,     "Accessing the object not allowed" },
@@ -443,9 +435,6 @@ static const value_string blocklanguage_names[] = {
 /**************************************************************************
  * Names of types in userdata parameter part
  */
-#define S7COMM_UD_TYPE_FOLLOW               0x0
-#define S7COMM_UD_TYPE_REQ                  0x4
-#define S7COMM_UD_TYPE_RES                  0x8
 
 static const value_string userdata_type_names[] = {
     { S7COMM_UD_TYPE_FOLLOW,                "Follow" },         /* this type occurs when 2 telegrams follow after another from the same partner, or initiated from PLC */
@@ -600,8 +589,6 @@ static const value_string userdata_block_subfunc_names[] = {
 /**************************************************************************
  * Names of userdata subfunctions in group 4 (SZL functions)
  */
-#define S7COMM_UD_SUBF_SZL_READ             0x01
-#define S7COMM_UD_SUBF_SZL_ASMESS           0x02
 
 static const value_string userdata_szl_subfunc_names[] = {
     { S7COMM_UD_SUBF_SZL_READ,              "Read SZL" },
@@ -921,7 +908,7 @@ proto_register_s7comm (void)
         { "Data", "s7comm.data", FT_NONE, BASE_NONE, NULL, 0x0,
           "This is the data part of S7 communication", HFILL }},
         { &hf_s7comm_data_returncode,
-        { "Return code", "s7comm.data.returncode", FT_UINT8, BASE_HEX, VALS(item_return_valuenames), 0x0,
+        { "Return code", "s7comm.data.returncode", FT_UINT8, BASE_HEX, VALS(s7comm_item_return_valuenames), 0x0,
           NULL, HFILL }},
         { &hf_s7comm_data_transport_size,
         { "Transport size", "s7comm.data.transportsize", FT_UINT8, BASE_HEX, VALS(data_transportsizenames), 0x0,
@@ -1565,7 +1552,7 @@ s7comm_decode_response_write_data(tvbuff_t *tvb,
         /* Insert a new tree for every item */
         item = proto_tree_add_item( tree, hf_s7comm_data_item, tvb, offset, 1, FALSE );
         item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
-        proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
+        proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown code: 0x%02x"));
         proto_tree_add_uint(item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
         offset += 1;
     }
@@ -1623,7 +1610,7 @@ s7comm_decode_response_read_data(tvbuff_t *tvb,
         /* Insert a new tree for every item */
         item = proto_tree_add_item( tree, hf_s7comm_data_item, tvb, offset, len + head_len, FALSE );
         item_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
-        proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
+        proto_item_append_text(item, " [%d]: (%s)", i, val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown code: 0x%02x"));
 
         proto_tree_add_uint(item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
         proto_tree_add_uint(item_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);
@@ -2382,7 +2369,7 @@ s7comm_decode_ud_prog_vartab_res_item(tvbuff_t *tvb,
     item = proto_tree_add_item( sub_tree, hf_s7comm_data_item, tvb, offset, len + head_len, FALSE );
     sub_tree = proto_item_add_subtree(item, ett_s7comm_data_item);
 
-    proto_item_append_text(item, " [%d]: (%s)", item_no + 1, val_to_str(ret_val, item_return_valuenames, "Unknown code: 0x%02x"));
+    proto_item_append_text(item, " [%d]: (%s)", item_no + 1, val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown code: 0x%02x"));
     proto_tree_add_uint(sub_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
 
     proto_tree_add_uint(sub_tree, hf_s7comm_data_transport_size, tvb, offset + 1, 1, tsize);

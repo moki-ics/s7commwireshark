@@ -24,6 +24,34 @@
 #ifndef __PACKET_S7COMM_H__
 #define __PACKET_S7COMM_H__
 
+
+/**************************************************************************
+ * Returnvalues of an item response
+ */
+#define S7COMM_ITEM_RETVAL_RESERVED             0x00
+#define S7COMM_ITEM_RETVAL_DATA_HW_FAULT        0x01
+#define S7COMM_ITEM_RETVAL_DATA_ACCESS_FAULT    0x03
+#define S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE      0x05        /* the desired address is beyond limit for this PLC */
+#define S7COMM_ITEM_RETVAL_DATA_NOT_SUP         0x06        /* Type is not supported */
+#define S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH    0x07        /* Data type inconsistent */
+#define S7COMM_ITEM_RETVAL_DATA_ERR             0x0a        /* the desired item is not available in the PLC, e.g. when trying to read a non existing DB*/
+#define S7COMM_ITEM_RETVAL_DATA_OK              0xff
+
+/**************************************************************************
+ * Names of userdata subfunctions in group 4 (SZL functions)
+ */
+#define S7COMM_UD_SUBF_SZL_READ             0x01
+#define S7COMM_UD_SUBF_SZL_ASMESS           0x02
+
+/**************************************************************************
+ * Names of types in userdata parameter part
+ */
+#define S7COMM_UD_TYPE_FOLLOW               0x0
+#define S7COMM_UD_TYPE_REQ                  0x4
+#define S7COMM_UD_TYPE_RES                  0x8
+
+
+
 void proto_reg_handoff_s7comm(void);
 void proto_register_s7comm (void);
 

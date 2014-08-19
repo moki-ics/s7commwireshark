@@ -31,56 +31,12 @@
 #include <epan/packet.h>
 #include <string.h>
 
+#include "packet-s7comm.h"
 #include "s7comm_szl_ids.h"
 #include "s7comm_helper.h"
 
+extern const value_string s7comm_item_return_valuenames[];
 
-/* TODO:
- * Redefines from main-file, has to be corrected! 
- */
-
-
-/**************************************************************************
- * Names of userdata subfunctions in group 4 (SZL functions)
- */
-#define S7COMM_UD_SUBF_SZL_READ             0x01
-#define S7COMM_UD_SUBF_SZL_ASMESS           0x02
-
-const value_string userdata_szl_subfunc_names[] = {
-    { S7COMM_UD_SUBF_SZL_READ,              "Read SZL" },
-    { S7COMM_UD_SUBF_SZL_ASMESS,            "System-state" },       /* Header constant is also different here */
-    { 0,                                    NULL }
-};
-/**************************************************************************
- * Names of types in userdata parameter part
- */
-#define S7COMM_UD_TYPE_FOLLOW               0x0
-#define S7COMM_UD_TYPE_REQ                  0x4
-#define S7COMM_UD_TYPE_RES                  0x8
-
-static const value_string userdata_type_names[] = {
-    { S7COMM_UD_TYPE_FOLLOW,                "Follow  " },           /* this type comes when 2 telegrams follow aftes another from the same partner, or initiated from PLC */
-    { S7COMM_UD_TYPE_REQ,                   "Request " },
-    { S7COMM_UD_TYPE_RES,                   "Response" },
-    { 0,                                    NULL }
-};
-/**************************************************************************
- * Returnvalues of an item response
- */
-#define S7COMM_ITEM_RETVAL_RESERVED             0x00
-#define S7COMM_ITEM_RETVAL_DATA_OK              0xff
-#define S7COMM_ITEM_RETVAL_DATA_ERR             0x0a                /* the desired item is not available in the PLC, e.g. when trying to read a non existing DB*/
-#define S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE      0x05                /* the desired address is beyond limit for this PLC */
-#define S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH    0x07                /* Write data size error */
-
-static const value_string item_return_valuenames[] = {
-    { S7COMM_ITEM_RETVAL_RESERVED,              "Reserved" },
-    { S7COMM_ITEM_RETVAL_DATA_OK,               "Item OK" },
-    { S7COMM_ITEM_RETVAL_DATA_ERR,              "Item not available" },
-    { S7COMM_ITEM_RETVAL_DATA_OUTOFRANGE,       "Adress out of range" },
-    { S7COMM_ITEM_RETVAL_DATA_SIZEMISMATCH,     "Write data size error" },
-    { 0,                                        NULL }
-};
 
 static gint ett_s7comm_szl = -1;
 
@@ -1309,7 +1265,7 @@ s7comm_decode_ud_szl_subfunc(tvbuff_t *tvb,
                     }
                 } else {
                     s7comm_info_append_str(pinfo, "Return value", 
-                        val_to_str(ret_val, item_return_valuenames, "Unknown return value:0x%02x"));
+                        val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown return value:0x%02x"));
                 }
                 know_data = TRUE;
             }
