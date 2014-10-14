@@ -173,6 +173,7 @@ static const value_string item_data_type_names[] = {
  */
 #define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
 #define S7COMMP_SESS_TYPEID_VARUINT32       0x04
+#define S7COMMP_SESS_TYPEID_BINARRAY        0x02 // guessed, because this is followed by one byte length
 #define S7COMMP_SESS_TYPEID_STRING          0x15
 /* Why two dwords, maybe one is integer? */
 #define S7COMMP_SESS_TYPEID_DWORD1          0xd3
@@ -181,6 +182,7 @@ static const value_string item_data_type_names[] = {
 static const value_string sess_typeid_names[] = {
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "Ending Byte" },
     { S7COMMP_SESS_TYPEID_VARUINT32,        "VarUInt32" },
+    { S7COMMP_SESS_TYPEID_BINARRAY,         "Byte array with length" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
@@ -611,6 +613,7 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                 offset += octet_count;              
                 
                 break;
+            case S7COMMP_SESS_TYPEID_BINARRAY: // 0x02
             case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
                 /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
                 str_length = tvb_get_guint8(tvb, offset);
