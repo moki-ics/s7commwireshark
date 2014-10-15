@@ -47,6 +47,9 @@
 /* Protocol identifier */
 #define S7COMM_PLUS_PROT_ID                 0x72
 
+/** Length of trailing block within read and write requests */
+#define RW_REQUEST_TRAILER_LEN 27
+
 /* Wireshark ID of the S7COMM_PLUS protocol */
 static int proto_s7commp = -1;
 
@@ -1082,8 +1085,10 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
 
         }
         /* 27 byte unbekannt */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 27, tvb_get_ptr(tvb, offset, 27));
-        offset += 27;
+        if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
+            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
+            offset += RW_REQUEST_TRAILER_LEN;
+        }
 
     } else {
         guint8 itemAddressCount;
@@ -1107,12 +1112,27 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
                                 ItemAddressRead, int32val, int32val);
             offset += octet_count;
         }
-        // the begin of remaining part could be decoded simliar to the start session stuff:
+        // the begin of the remaining part could be decoded similar to the start session stuff:
         for(ItemReadCount = 1;
             (ItemReadCount <= item_count) && (offset < offsetmax);
             ItemReadCount++)
         {
             offset = s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+        }
+        {
+            // Bei der S7-1500 folgt ein weiterer Block unbekannter Daten, da s7commp_decode_session_stuff()
+            // nicht alles decodieren kann.
+            int remainingDecodeSession = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
+            if(remainingDecodeSession > 0) {
+                proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, remainingDecodeSession,
+                                     tvb_get_ptr(tvb, offset, remainingDecodeSession));
+                offset += remainingDecodeSession;
+            }
+        }
+        // Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write
+        if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
+            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
+            offset += RW_REQUEST_TRAILER_LEN;
         }
     }
 
@@ -1154,9 +1174,9 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
             number_of_fields_in_complete_set -= number_of_fields;
         }
-        /* 27 byte unbekannt */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 27, tvb_get_ptr(tvb, offset, 27));
-        offset += 27;
+        /* RW_REQUEST_TRAILER_LEN byte unbekannt */
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
+        offset += RW_REQUEST_TRAILER_LEN;
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Read Request with first value != 0: 0x%08x. TODO", value);
     }
