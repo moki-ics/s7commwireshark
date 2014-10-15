@@ -181,6 +181,7 @@ static const value_string item_data_type_names[] = {
 
 static const value_string sess_typeid_names[] = {
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "Ending Byte" },
+    { S7COMMP_ITEM_DATA_TYPE_UINT,          "UINT" },
     { S7COMMP_SESS_TYPEID_VARUINT32,        "VarUInt32" },
     { S7COMMP_SESS_TYPEID_BINARRAY,         "Byte array with length" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
@@ -613,10 +614,9 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
             id_length = 3;
             break;
         
-        case 0x03:
-             proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%02x%02x", tvb_get_guint8(tvb, offset),
-                                tvb_get_guint8(tvb, offset+1));
-            proto_item_append_text(data_item_tree, " => 0x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
+        case S7COMMP_ITEM_DATA_TYPE_UINT:
+             proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%04x", tvb_get_ntohs(tvb, offset));
+            proto_item_append_text(data_item_tree, " => 0x%04x", tvb_get_ntohs(tvb, offset));
             offset += 2;
             break;
         
