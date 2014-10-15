@@ -518,7 +518,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     gint32 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 4+1; counter++) {        /* große Werte benötigen 5 Bytes */
+    for (counter = 1; counter <= 4+1; counter++) {        /* große Werte benötigen 5 Bytes: 4*7 bit + 4 bit */
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -530,6 +530,34 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
         }
     }
     *octet_count = counter;
+    return  val;
+}
+
+guint64
+tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
+{
+    int counter;
+    gint64 val = 0;
+    guint8 octet;
+    guint8 cont;
+    for (counter = 1; counter <= 8; counter++) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+        octet = tvb_get_guint8(tvb, offset);
+        offset += 1;
+        val <<= 7;
+        cont= (octet & 0x80);
+        octet &= 0x7f;
+        val += octet;
+        if (cont == 0) {
+            break;
+        }
+    }
+    *octet_count = counter;
+    if(cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+        octet = tvb_get_guint8(tvb, offset);
+        offset += 1;
+        val <<= 8;
+        val += octet;
+    }
     return  val;
 }
 
