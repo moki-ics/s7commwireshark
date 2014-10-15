@@ -169,7 +169,7 @@ static const value_string item_data_type_names[] = {
 
 /**************************************************************************
  * Datatype IDs in Connect -> Session telegrams
- * 
+ * appear in the start session request/response and within the write after start session
  */
 #define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
 #define S7COMMP_SESS_TYPEID_VARUINT32       0x04
@@ -547,10 +547,10 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
-                                        proto_tree *tree,
-                                        guint32 offset,
-                                        const guint32 offsetmax)
+s7commp_decode_session_stuff(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset,
+                             const guint32 offsetmax)
 {
     guint32 start_offset;
     guint32 uint32val = 0;
@@ -565,10 +565,6 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
     size_t id_length = 4;
-    
-    /* 16 Bytes unbekannt */
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 16, tvb_get_ptr(tvb, offset, 16));
-    offset += 16;
     
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset < offsetmax))
@@ -684,6 +680,24 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
     }
     
     return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Connect -> Request -> Start session
+ * pass auch für response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
+                                        proto_tree *tree,
+                                        guint32 offset,
+                                        const guint32 offsetmax)
+{
+    /* 16 Bytes unbekannt */
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 16, tvb_get_ptr(tvb, offset, 16));
+    offset += 16;
+    return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
 }
 
 /*******************************************************************************************************
