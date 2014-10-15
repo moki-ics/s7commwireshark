@@ -695,8 +695,13 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                                         const guint32 offsetmax)
 {
     /* 16 Bytes unbekannt */
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 16, tvb_get_ptr(tvb, offset, 16));
-    offset += 16;
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 7, tvb_get_ptr(tvb, offset, 7));
+    offset += 7;
+    // the first item id of the session request
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
+    offset += 4;
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 5, tvb_get_ptr(tvb, offset, 5));
+    offset += 5;
     return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
 }
 
