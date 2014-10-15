@@ -147,6 +147,16 @@ static const value_string pdu2_datafunc_names[] = {
 #define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
 
+/**************************************************************************
+ * Datatype IDs in Connect -> Session telegrams
+ * appear in the start session request/response and within the write after start session
+ */
+#define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
+#define S7COMMP_SESS_TYPEID_STRING          0x15
+/* Why two dwords, maybe one is integer? */
+#define S7COMMP_SESS_TYPEID_DWORD1          0xd3
+#define S7COMMP_SESS_TYPEID_DWORD2          0x12
+
 
 static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_BOOL,          "Bool" },
@@ -164,26 +174,8 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_LWORD,         "LWORD" },
     { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
-    { 0,                                    NULL }
-};
-
-/**************************************************************************
- * Datatype IDs in Connect -> Session telegrams
- * appear in the start session request/response and within the write after start session
- */
-#define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
-#define S7COMMP_SESS_TYPEID_VARUINT32       0x04
-#define S7COMMP_SESS_TYPEID_BINARRAY        0x02 // guessed, because this is followed by one byte length
-#define S7COMMP_SESS_TYPEID_STRING          0x15
-/* Why two dwords, maybe one is integer? */
-#define S7COMMP_SESS_TYPEID_DWORD1          0xd3
-#define S7COMMP_SESS_TYPEID_DWORD2          0x12
-
-static const value_string sess_typeid_names[] = {
-    { S7COMMP_SESS_TYPEID_ENDBYTE,          "Ending Byte" },
+    { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
     { S7COMMP_ITEM_DATA_TYPE_UINT,          "UINT" },
-    { S7COMMP_SESS_TYPEID_VARUINT32,        "VarUInt32" },
-    { S7COMMP_SESS_TYPEID_BINARRAY,         "Byte array with length" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
@@ -540,6 +532,196 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     *octet_count = counter;
     return  val;
 }
+
+static guint32
+s7commp_decode_value(tvbuff_t *tvb,
+                     proto_tree *data_item_tree,
+                     guint32 offset,
+                     const guint8 item_number,
+                     const int inSession)
+{
+    guint8 octet_count = 0;
+    guint8 datatype;
+    guint8 datatype_flags;
+
+    guint32 uint32val = 0;
+    guint16 uint16val = 0;
+    gint16 int16val = 0;
+    gint32 int32val = 0;
+    guint8 uint8val = 0;
+    gint8 int8val = 0;
+    gchar str_val[512];
+
+    /* Datatype string */
+    guint32 string_completelength = 0;
+    guint8 string_maxlength = 0;
+    guint8 string_actlength = 0;
+
+    guint32 offset_at_start = offset;
+    guint32 length_of_value = 0;
+
+    memset(str_val,0,sizeof(str_val));
+
+    datatype_flags = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Datatype Flags: 0x%02x", datatype_flags);
+    offset += 1;
+
+    datatype = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(data_item_tree, hf_s7commp_data_item_type, tvb, offset, 1, datatype);
+    offset += 1;
+
+    switch (datatype) {
+        /************************** Binärzahlen **************************/
+        case S7COMMP_ITEM_DATA_TYPE_BOOL:
+            /* 0x00 oder 0x01 */
+            length_of_value = 1;
+            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            break;
+            /************************** Ganzzahlen ohne Vorzeichen **************************/
+        case S7COMMP_ITEM_DATA_TYPE_USINT:
+            /* Dieser Typ wird auch zur Übertragung von Strings verwendet. Dann steht in den
+             * Flags der Wert 0x10, andernfalls 0x00.
+             * Bei Strings folgt:
+             * - ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header
+             * - Ein Byte Maximallänge
+             * - Ein Byte Aktuallänge
+             * Dann die Bytes, Anzahl aus Maximallänge
+             */
+            if (datatype_flags == 0x10)
+            {
+                length_of_value = 0;
+                /* Ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header */
+                string_completelength = tvb_get_varuint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value += octet_count;
+                if(inSession)
+                {
+                    g_snprintf(str_val, sizeof(str_val), "Byte array size %d, values: %s",
+                               string_completelength,tvb_format_text(tvb, offset, string_completelength));
+                    offset += string_completelength;
+                    length_of_value += string_completelength;
+                }
+                else
+                {
+                    /* 1 Byte Maximallänge */
+                    string_maxlength = tvb_get_guint8(tvb, offset);
+                    offset += 1;
+                    length_of_value += 1;
+                    /* 1 Byte Aktuallänge */
+                    string_actlength =  tvb_get_guint8(tvb, offset);
+                    offset += 1;
+                    length_of_value += 1;
+                    /* Und der eigentliche string */
+                    g_snprintf(str_val, sizeof(str_val), "STRING Complete Length: %u, MaxLen: %d, ActLen: %d, Text: %s",
+                               string_completelength, string_maxlength, string_actlength,
+                               tvb_get_string(wmem_packet_scope(), tvb, offset, string_maxlength));
+
+                    offset += string_maxlength;
+                    length_of_value += string_maxlength;
+                }
+
+            } else {
+                length_of_value = 1;
+                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
+                offset += 1;
+            }
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_UINT:
+            length_of_value = 2;
+            g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
+            offset += 2;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_UDINT:
+            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+            offset += octet_count;
+            length_of_value = octet_count;
+            g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
+            break;
+/* TODO ULINT */
+
+        /************************** Ganzzahlen mit Vorzeichen **************************/
+        case S7COMMP_ITEM_DATA_TYPE_SINT:
+            uint8val = tvb_get_guint8(tvb, offset);
+            memcpy(&int8val, &uint8val, sizeof(int8val));
+            length_of_value = 1;
+            g_snprintf(str_val, sizeof(str_val), "%d", int8val);
+            offset += 1;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_INT:
+            uint16val = tvb_get_ntohs(tvb, offset);
+            memcpy(&int16val, &uint16val, sizeof(int16val));
+            length_of_value = 2;
+            g_snprintf(str_val, sizeof(str_val), "%d", int16val);
+            offset += 2;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_DINT:
+            int32val = tvb_get_varint32(tvb, &octet_count, offset);
+            offset += octet_count;
+            length_of_value = octet_count;
+            g_snprintf(str_val, sizeof(str_val), "%d", int32val);
+            break;
+/* TODO LINT */
+        /************************** Bitfolgen **************************/
+        case S7COMMP_ITEM_DATA_TYPE_BYTE:
+            length_of_value = 1;
+            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_WORD:
+            length_of_value = 2;
+            g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
+            offset += 2;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_DWORD:
+        case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
+        case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
+        case 0x17:
+            length_of_value = 4;
+            g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
+            offset += 4;
+            break;
+/* TODO LWORD */
+        /************************** Gleitpunktzahlen **************************/
+        case S7COMMP_ITEM_DATA_TYPE_REAL:
+            length_of_value = 4;
+            g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
+            offset += 4;
+            break;
+        case S7COMMP_ITEM_DATA_TYPE_LREAL:
+            length_of_value = 4;
+            g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
+            offset += 8;
+            break;
+        /************************** Types used in Session request/response  ***************************/
+        case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
+            /* Leeres byte als Ende-Kennung? oder NOP zum fuellen? */
+            length_of_value = 0;
+            break;
+        case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
+            /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
+            string_actlength = tvb_get_guint8(tvb, offset);
+            offset++;
+            length_of_value = 1 /* length byte */ + string_actlength;
+            g_snprintf(str_val, sizeof(str_val), "STRING: Len: %d, Text: %s",
+                       string_actlength,
+                       tvb_get_string(wmem_packet_scope(), tvb, offset, string_actlength));
+            offset += string_actlength;
+            break;
+        /**************************  ***************************/
+        default:
+            /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
+            g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
+            break;
+    }
+
+    proto_tree_add_text(data_item_tree, tvb, offset_at_start + 2, length_of_value, "Value: %s", str_val);
+    proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+
+    return offset;
+}
+
+
 /*******************************************************************************************************
  *
  * Connect -> Request -> Start session
@@ -553,121 +735,36 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
                              const guint32 offsetmax)
 {
     guint32 start_offset;
-    guint32 uint32val = 0;
-    guint8 str_length = 0;
-    guint8 octet_count = 0;
     int item_nr = 1;
 
     guint32 id_number = 0;
-    guint8 type_of_id_value = 0;
     gboolean unknown_type_occured = FALSE;
 
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    size_t id_length = 4;
 
     /* Einlesen bis offset == maxoffset */
-    while ((unknown_type_occured == FALSE) && (offset + id_length + 1 < offsetmax))
+    while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
     {
+        guint8 octet_count = 2;
+
         start_offset = offset;
 
         data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
         data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-        /* 4 Bytes ID?? */
-        if(id_length == 4)
-        {
-            id_number = tvb_get_ntohl(tvb, offset);
-        }
-        else if(id_length == 3)
-        {
-            id_number = tvb_get_ntoh24(tvb, offset);
-        }
-        else if(id_length == 2)
-        {
-            id_number = tvb_get_ntohs(tvb, offset);
-        }
-        else if(id_length == 1)
-        {
-            id_number = tvb_get_guint8(tvb, offset+2);
-        }
-        proto_tree_add_text(data_item_tree, tvb, offset, id_length, "ID Number: 0x%x", id_number);
-        offset += id_length;
+        /* the size of the id seems also variable */
+        id_number = tvb_get_varint32(tvb, &octet_count, offset);
+
+        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "ID Number: 0x%x", id_number);
+        offset += octet_count;
 
         proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x", item_nr, id_number);
 
-        /* 1 Byte Typkennung */
-        type_of_id_value = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(data_item_tree, tvb, offset, 1, "Type ID: %s (0x%02x)",
-                            val_to_str(type_of_id_value, sess_typeid_names, "Unknown Type ID: 0x%02x"), type_of_id_value);
-        offset += 1;
-
-        switch (type_of_id_value) {
-            /***************** TEST ****************************/
-        case 0x17:
-            /* 4 byte Werte? test */
-            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
-            proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
-            offset += 4;
-            // it seems that the length of the id decreases after this one
-            id_length = 3;
-            break;
-
-        case S7COMMP_ITEM_DATA_TYPE_UINT:
-             proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%04x", tvb_get_ntohs(tvb, offset));
-            proto_item_append_text(data_item_tree, " => 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            break;
-
-
-        case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
-            /* Leeres byte als Ende-Kennung? */
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Value: 0x%02x", tvb_get_guint8(tvb, offset));
-            proto_item_append_text(data_item_tree, " => 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            break;
-        case S7COMMP_SESS_TYPEID_VARUINT32:          /* 0x04 */
-            /* Es folgt ein var uint */
-            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Value: 0x%08x", uint32val);
-            proto_item_append_text(data_item_tree, " => 0x%08x", uint32val);
-            offset += octet_count;
-            break;
-        case S7COMMP_SESS_TYPEID_BINARRAY: // 0x02
-            /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
-            str_length = tvb_get_guint8(tvb, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_format_text(tvb, offset, str_length));
-            proto_item_append_text(data_item_tree, " => %s", tvb_format_text(tvb, offset, str_length));
-            offset += str_length;
-            break;
-        case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
-            /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
-            str_length = tvb_get_guint8(tvb, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
-            proto_item_append_text(data_item_tree, " => %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
-            offset += str_length;
-            break;
-        case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
-            /* Es folgen vier Bytes */
-            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
-            proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
-            offset += 4;
-            break;
-        case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
-            /* Es folgen vier Bytes */
-            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
-            proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
-            offset += 4;
-            break;
-        default:
-            /* Unbekannt Typen, erstmal abbrechen */
-            proto_item_append_text(data_item_tree, " => TODO! CANT DECODE THIS, BREAK DISSECTION.");
-            unknown_type_occured = TRUE;
-            break;
+        if(id_number) // assuming that item id = 0 is invalid
+        {
+            // the type and value assigned to the id is coded in the same way as the read response values
+            offset = s7commp_decode_value(tvb,data_item_tree,offset,item_nr,TRUE);
         }
         item_nr++;
 
@@ -690,19 +787,14 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                                         guint32 offset,
                                         const guint32 offsetmax)
 {
-    /* 16 Bytes unbekannt */
+    /* einige Bytes unbekannt */
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
     offset += 4;
     // the following byte becomes part of the session id by adding 0x0380
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
     offset += 1;
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 2, tvb_get_ptr(tvb, offset, 2));
-    offset += 2;
-    // the first item id of the session request +1
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
-    offset += 4;
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 5, tvb_get_ptr(tvb, offset, 5));
-    offset += 5;
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 12, tvb_get_ptr(tvb, offset, 12));
+    offset += 12;
     return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
 }
 
@@ -811,164 +903,6 @@ s7commp_decode_item_address(tvbuff_t *tvb,
  *******************************************************************************************************/
 
 static guint32
-s7commp_decode_value(tvbuff_t *tvb,
-                     proto_tree *data_item_tree,
-                     guint32 offset,
-                     const guint8 item_number)
-{
-    guint8 octet_count = 0;
-    guint8 datatype;
-    guint8 datatype_flags;
-
-    guint32 uint32val = 0;
-    guint16 uint16val = 0;
-    gint16 int16val = 0;
-    gint32 int32val = 0;
-    guint8 uint8val = 0;
-    gint8 int8val = 0;
-    gchar str_val[512];
-
-    /* Datatype string */
-    guint32 string_completelength = 0;
-    guint8 string_maxlength = 0;
-    guint8 string_actlength = 0;
-
-    guint32 offset_at_start = offset;
-    guint32 length_of_value = 0;
-
-    datatype_flags = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Datatype Flags: 0x%02x", datatype_flags);
-    offset += 1;
-
-    datatype = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(data_item_tree, hf_s7commp_data_item_type, tvb, offset, 1, datatype);
-    offset += 1;
-
-    switch (datatype) {
-        /************************** Binärzahlen **************************/
-        case S7COMMP_ITEM_DATA_TYPE_BOOL:
-            /* 0x00 oder 0x01 */
-            length_of_value = 1;
-            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            break;
-            /************************** Ganzzahlen ohne Vorzeichen **************************/
-        case S7COMMP_ITEM_DATA_TYPE_USINT:
-            /* Dieser Typ wird auch zur Übertragung von Strings verwendet. Dann steht in den
-             * Flags der Wert 0x10, andernfalls 0x00.
-             * Bei Strings folgt:
-             * - ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header
-             * - Ein Byte Maximallänge
-             * - Ein Byte Aktuallänge
-             * Dann die Bytes, Anzahl aus Maximallänge
-             */
-            if (datatype_flags == 0x10)
-            {
-                length_of_value = 0;
-                /* Ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header */
-                string_completelength = tvb_get_varuint32(tvb, &octet_count, offset);
-                offset += octet_count;
-                length_of_value += octet_count;
-                /* 1 Byte Maximallänge */
-                string_maxlength = tvb_get_guint8(tvb, offset);
-                offset += 1;
-                length_of_value += 1;
-                /* 1 Byte Aktuallänge */
-                string_actlength =  tvb_get_guint8(tvb, offset);
-                offset += 1;
-                length_of_value += 1;
-                /* Und der eigentliche string */
-                g_snprintf(str_val, sizeof(str_val), "STRING Complete Length: %u, MaxLen: %d, ActLen: %d, Text: %s",
-                    string_completelength, string_maxlength, string_actlength,
-                    tvb_get_string(wmem_packet_scope(), tvb, offset, string_maxlength));
-
-                offset += string_maxlength;
-                length_of_value += string_maxlength;
-
-            } else {
-                length_of_value = 1;
-                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
-                offset += 1;
-            }
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_UINT:
-            length_of_value = 2;
-            g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_UDINT:
-            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-            offset += octet_count;
-            length_of_value = octet_count;
-            g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
-            break;
-/* TODO ULINT */
-
-        /************************** Ganzzahlen mit Vorzeichen **************************/
-        case S7COMMP_ITEM_DATA_TYPE_SINT:
-            uint8val = tvb_get_guint8(tvb, offset);
-            memcpy(&int8val, &uint8val, sizeof(int8val));
-            length_of_value = 1;
-            g_snprintf(str_val, sizeof(str_val), "%d", int8val);
-            offset += 1;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_INT:
-            uint16val = tvb_get_ntohs(tvb, offset);
-            memcpy(&int16val, &uint16val, sizeof(int16val));
-            length_of_value = 2;
-            g_snprintf(str_val, sizeof(str_val), "%d", int16val);
-            offset += 2;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_DINT:
-            int32val = tvb_get_varint32(tvb, &octet_count, offset);
-            offset += octet_count;
-            length_of_value = octet_count;
-            g_snprintf(str_val, sizeof(str_val), "%d", int32val);
-            break;
-/* TODO LINT */
-        /************************** Bitfolgen **************************/
-        case S7COMMP_ITEM_DATA_TYPE_BYTE:
-            length_of_value = 1;
-            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_WORD:
-            length_of_value = 2;
-            g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_DWORD:
-            length_of_value = 4;
-            g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
-            offset += 4;
-            break;
-/* TODO LWORD */
-        /************************** Gleitpunktzahlen **************************/
-        case S7COMMP_ITEM_DATA_TYPE_REAL:
-            length_of_value = 4;
-            g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
-            offset += 4;
-            break;
-        case S7COMMP_ITEM_DATA_TYPE_LREAL:
-            length_of_value = 4;
-            g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
-            offset += 8;
-            break;
-        /**************************  ***************************/
-        default:
-            /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
-            g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
-            break;
-    }
-    proto_item_set_len(data_item_tree, length_of_value + 3);
-
-    proto_tree_add_text(data_item_tree, tvb, offset_at_start + 2, length_of_value, "Value: %s", str_val);
-    proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
-
-    return offset;
-}
-
-static guint32
 s7commp_decode_item_value(tvbuff_t *tvb,
                                   proto_tree *tree,
                                   guint32 offset)
@@ -976,6 +910,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
     guint8 item_number;
+    guint8 start_offset = offset;
 
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
@@ -984,7 +919,9 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
     offset += 1;
 
-    return s7commp_decode_value(tvb,data_item_tree,offset,item_number);
+    offset = s7commp_decode_value(tvb,data_item_tree,offset,item_number,FALSE);
+    proto_item_set_len(data_item_tree, offset - start_offset);
+    return offset;
 }
 
 /*******************************************************************************************************
