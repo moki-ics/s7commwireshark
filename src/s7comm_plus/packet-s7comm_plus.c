@@ -664,16 +664,16 @@ s7commp_decode_value(tvbuff_t *tvb,
     case S7COMMP_ITEM_DATA_TYPE_UINT:
         if (datatype_flags == 0x00)
         {
-        length_of_value = 2;
-        g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
-        offset += 2;
+            length_of_value = 2;
+            g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
+            offset += 2;
         }
         else
         {
             // it seems there is some additional byte with unkown meaning
-        length_of_value = 3;
-        g_snprintf(str_val, sizeof(str_val), "%x (flaged?)", tvb_get_ntoh24(tvb, offset));
-        offset += 3;
+            length_of_value = 3;
+            g_snprintf(str_val, sizeof(str_val), "%x (flaged?)", tvb_get_ntoh24(tvb, offset));
+            offset += 3;
         }
         break;
     case S7COMMP_ITEM_DATA_TYPE_UDINT:
@@ -713,9 +713,16 @@ s7commp_decode_value(tvbuff_t *tvb,
 /* TODO LINT */
         /************************** Bitfolgen **************************/
     case S7COMMP_ITEM_DATA_TYPE_BYTE:
-        length_of_value = 1;
-        g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
+        if(datatype_flags & 0x80) { // see sequence 64 of S7-1511-opc-request-all-types.pcap
+            length_of_value = tvb_get_guint8(tvb, offset);
+            g_snprintf(str_val, sizeof(str_val), " array len %d",length_of_value);
+            offset += 1 + length_of_value;
+            length_of_value += 1;
+        } else {
+            length_of_value = 1;
+            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+        }
         break;
     case S7COMMP_ITEM_DATA_TYPE_WORD:
         length_of_value = 2;
