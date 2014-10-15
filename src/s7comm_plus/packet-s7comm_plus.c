@@ -1083,8 +1083,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         guint8 ItemAddressRead;
         guint8 ItemReadCount;
 
-        proto_tree_add_text(tree, tvb, offset-4, 4, "Different Write Request with first value !=0 : 0x%08x. TODO", value);
-        /* n Bytes unbekannt, im ersten davon steht vermutlich n/2 */
+        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of session settings for session ID : 0x%08x. ", value);
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item count: %u", item_count);
         offset +=1;
