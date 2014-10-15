@@ -844,18 +844,25 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                                         const guint32 offsetmax)
 {
     /* einige Bytes unbekannt */
+    guint32 unkownBytes = 0;
+
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
     offset += 4;
     // the following byte becomes part of the session id by adding 0x0380
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
     offset += 1;
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 12, tvb_get_ptr(tvb, offset, 12));
-    offset += 12;
-    while((offset + 1) < offsetmax) // as long as we don't know how to findthe first position for the following decode, we use this wile as workaround
+    while((offset + unkownBytes) < offsetmax) // as long as we don't know how to find the first position for the following decode, we use this wile as workaround
     {
-        offset = s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+        guint8 scanedByte = tvb_get_guint8(tvb, offset + unkownBytes);
+        if(scanedByte == 0xa3)
+        {
+            break; // found some known good ID
+        }
+        else unkownBytes++;
     }
-    return offset;
+    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkownBytes, tvb_get_ptr(tvb, offset, unkownBytes));
+    offset += unkownBytes;
+    return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
 }
 
 /*******************************************************************************************************
