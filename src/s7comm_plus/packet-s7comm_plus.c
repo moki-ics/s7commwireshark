@@ -175,7 +175,6 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
-    { S7COMMP_ITEM_DATA_TYPE_UINT,          "UINT" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
@@ -657,9 +656,19 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
         break;
     case S7COMMP_ITEM_DATA_TYPE_UINT:
+        if (datatype_flags == 0x00)
+        {
         length_of_value = 2;
         g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
         offset += 2;
+        }
+        else
+        {
+            // it seems there is some additional byte with unkown meaning
+        length_of_value = 3;
+        g_snprintf(str_val, sizeof(str_val), "%x (flaged?)", tvb_get_ntoh24(tvb, offset));
+        offset += 3;
+        }
         break;
     case S7COMMP_ITEM_DATA_TYPE_UDINT:
         uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
