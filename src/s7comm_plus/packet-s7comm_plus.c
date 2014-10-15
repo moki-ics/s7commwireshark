@@ -548,8 +548,9 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
  *******************************************************************************************************/
 static guint32
 s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  guint32 offset)
+                                        proto_tree *tree,
+                                        guint32 offset,
+                                        const guint32 offsetmax)
 {
     guint32 start_offset;
     guint32 uint32val = 0;
@@ -569,8 +570,9 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 16, tvb_get_ptr(tvb, offset, 16));
     offset += 16;
     
-    /* Einlesen bis ID 0xa2a200 */
-    do {
+    /* Einlesen bis offset == maxoffset */
+    while ((unknown_type_occured == FALSE) && (offset < offsetmax))
+    {
         start_offset = offset;
         
         data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
@@ -601,85 +603,85 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
         /* 1 Byte Typkennung */
         type_of_id_value = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(data_item_tree, tvb, offset, 1, "Type ID: %s (0x%02x)", 
-            val_to_str(type_of_id_value, sess_typeid_names, "Unknown Type ID: 0x%02x"), type_of_id_value);
+                            val_to_str(type_of_id_value, sess_typeid_names, "Unknown Type ID: 0x%02x"), type_of_id_value);
         offset += 1;
 
         switch (type_of_id_value) {
             /***************** TEST ****************************/
-            case 0x17:
-                /* 4 byte Werte? test */
-                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
-                proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
-                offset += 4;
-                // it seems that the length of the id decreases after this one
-                id_length = 3;
-                break;
+        case 0x17:
+            /* 4 byte Werte? test */
+            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
+            proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
+            offset += 4;
+            // it seems that the length of the id decreases after this one
+            id_length = 3;
+            break;
         
-            case 0x03:
-                // the size of the id seems to become 4 again, 2 byte value length
-                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%02x%02x", tvb_get_guint8(tvb, offset),
-                                    tvb_get_guint8(tvb, offset+1));
-                proto_item_append_text(data_item_tree, " => 0x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
-                offset += 2;
-                // it seems that the length of the id decreases after this one
-                id_length = 4;
-                break;
+        case 0x03:
+            // the size of the id seems to become 4 again, 2 byte value length
+            proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%02x%02x", tvb_get_guint8(tvb, offset),
+                                tvb_get_guint8(tvb, offset+1));
+            proto_item_append_text(data_item_tree, " => 0x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
+            offset += 2;
+            // it seems that the length of the id decreases after this one
+            id_length = 4;
+            break;
         
         
-            case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
-                /* Leeres byte als Ende-Kennung? */
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Value: 0x%02x", tvb_get_guint8(tvb, offset));
-                proto_item_append_text(data_item_tree, " => 0x%02x", tvb_get_guint8(tvb, offset));
-                offset += 1;
-                break;
-            case S7COMMP_SESS_TYPEID_VARUINT32:          /* 0x04 */
-                /* Es folgt ein var uint */
-                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Value: 0x%08x", uint32val);
-                proto_item_append_text(data_item_tree, " => 0x%08x", uint32val);
-                offset += octet_count;
-                break;
-            case S7COMMP_SESS_TYPEID_BINARRAY: // 0x02
-                /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
-                str_length = tvb_get_guint8(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
-                offset += 1;
-                proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_format_text(tvb, offset, str_length));
-                proto_item_append_text(data_item_tree, " => %s", tvb_format_text(tvb, offset, str_length));
-                offset += str_length;
-                break;
-            case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
-                /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
-                str_length = tvb_get_guint8(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
-                offset += 1;
-                proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
-                proto_item_append_text(data_item_tree, " => %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
-                offset += str_length;
-                break;
-            case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
-                /* Es folgen vier Bytes */
-                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
-                proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
-                offset += 4;
-                break; 
-            case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
-                /* Es folgen vier Bytes */
-                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
-                proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
-                offset += 4;
-                break;
-            default:
-                /* Unbekannt Typen, erstmal abbrechen */
-                proto_item_append_text(data_item_tree, " => TODO! CANT DECODE THIS, BREAK DISSECTION.");
-                unknown_type_occured = TRUE;
-                break;
+        case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
+            /* Leeres byte als Ende-Kennung? */
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Value: 0x%02x", tvb_get_guint8(tvb, offset));
+            proto_item_append_text(data_item_tree, " => 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            break;
+        case S7COMMP_SESS_TYPEID_VARUINT32:          /* 0x04 */
+            /* Es folgt ein var uint */
+            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Value: 0x%08x", uint32val);
+            proto_item_append_text(data_item_tree, " => 0x%08x", uint32val);
+            offset += octet_count;
+            break;
+        case S7COMMP_SESS_TYPEID_BINARRAY: // 0x02
+            /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
+            str_length = tvb_get_guint8(tvb, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_format_text(tvb, offset, str_length));
+            proto_item_append_text(data_item_tree, " => %s", tvb_format_text(tvb, offset, str_length));
+            offset += str_length;
+            break;
+        case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
+            /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
+            str_length = tvb_get_guint8(tvb, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
+            proto_item_append_text(data_item_tree, " => %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, str_length, ENC_ASCII));
+            offset += str_length;
+            break;
+        case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
+            /* Es folgen vier Bytes */
+            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
+            proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
+            offset += 4;
+            break; 
+        case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
+            /* Es folgen vier Bytes */
+            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%08x", tvb_get_ntohl(tvb, offset));
+            proto_item_append_text(data_item_tree, " => 0x%08x", tvb_get_ntohl(tvb, offset));
+            offset += 4;
+            break;
+        default:
+            /* Unbekannt Typen, erstmal abbrechen */
+            proto_item_append_text(data_item_tree, " => TODO! CANT DECODE THIS, BREAK DISSECTION.");
+            unknown_type_occured = TRUE;
+            break;
         }
         item_nr++;
         
         proto_item_set_len(data_item_tree, offset - start_offset);
         
-    } while ((unknown_type_occured == FALSE) && (id_number != 0xa2a20000) && (id_number != 0x00a20000));
+    }
     
     return offset;
 }
@@ -1395,7 +1397,7 @@ dissect_s7commp(tvbuff_t *tvb,
             if (((datatype == S7COMMP_DATATYPE_REQ) || (datatype == S7COMMP_DATATYPE_RES)) && (function == S7COMMP_PDU1_DATAFUNC_STARTSESSION)) {
 
                 offset_save = offset;
-                offset = s7commp_decode_connect_req_startsession(tvb, s7commp_data_tree, offset);
+                offset = s7commp_decode_connect_req_startsession(tvb, s7commp_data_tree, offset, offset + dlength);
                 dlength = dlength - (offset - offset_save);
             }        
         
