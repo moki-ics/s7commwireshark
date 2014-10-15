@@ -610,10 +610,17 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Value: 0x%08x", uint32val);
                 proto_item_append_text(data_item_tree, " => 0x%08x", uint32val);
-                offset += octet_count;              
-                
+                offset += octet_count;
                 break;
             case S7COMMP_SESS_TYPEID_BINARRAY: // 0x02
+                /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
+                str_length = tvb_get_guint8(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "String length: %d", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                proto_tree_add_text(data_item_tree, tvb, offset, str_length, "Value: %s", tvb_format_text(tvb, offset, str_length));
+                proto_item_append_text(data_item_tree, " => %s", tvb_format_text(tvb, offset, str_length));
+                offset += str_length;
+                break;
             case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
                 /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
                 str_length = tvb_get_guint8(tvb, offset);
