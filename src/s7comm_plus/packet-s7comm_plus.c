@@ -153,6 +153,7 @@ static const value_string pdu2_datafunc_names[] = {
  */
 #define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
 #define S7COMMP_SESS_TYPEID_STRING          0x15
+#define S7COMMP_TYPEID_STRUCT               0x17
 /* Why two dwords, maybe one is integer? */
 #define S7COMMP_SESS_TYPEID_DWORD1          0xd3
 #define S7COMMP_SESS_TYPEID_DWORD2          0x12
@@ -176,6 +177,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
+    { S7COMMP_TYPEID_STRUCT,                "Struct" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
     { 0,                                    NULL }
