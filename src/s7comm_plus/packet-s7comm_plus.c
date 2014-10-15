@@ -1056,9 +1056,14 @@ s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
                                      const guint32 offsetmax)
 {
     if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN,
-                             tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
-        offset += RW_REQUEST_TRAILER_LEN;
+        // the first 23 bytes do not change
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN-4,
+                             tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN-4));
+        offset += RW_REQUEST_TRAILER_LEN-4;
+        // the last 4 bytes change for the S7-1500
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4,
+                             tvb_get_ptr(tvb, offset, 4));
+        offset += 4;
     }
     return offset;
 }
