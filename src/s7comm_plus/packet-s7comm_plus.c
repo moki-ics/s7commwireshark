@@ -566,7 +566,7 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     size_t id_length = 4;
     
-    /* Einlesen bis offset == maxoffset oder end byte erkannt */
+    /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset < offsetmax))
     {
         start_offset = offset;
@@ -629,7 +629,6 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
             proto_tree_add_text(data_item_tree, tvb, offset, 1, "Value: 0x%02x", tvb_get_guint8(tvb, offset));
             proto_item_append_text(data_item_tree, " => 0x%02x", tvb_get_guint8(tvb, offset));
             offset += 1;
-            unknown_type_occured = TRUE; // assuming this marks the end
             break;
         case S7COMMP_SESS_TYPEID_VARUINT32:          /* 0x04 */
             /* Es folgt ein var uint */
