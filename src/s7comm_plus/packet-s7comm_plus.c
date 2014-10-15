@@ -568,7 +568,7 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
     size_t id_length = 4;
     
     /* Einlesen bis offset == maxoffset */
-    while ((unknown_type_occured == FALSE) && (offset < offsetmax))
+    while ((unknown_type_occured == FALSE) && (offset + id_length + 1 < offsetmax))
     {
         start_offset = offset;
         
