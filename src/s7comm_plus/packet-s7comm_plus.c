@@ -1038,6 +1038,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     guint8 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
+    guint32 offsetmax = offset + dlength;
     
     /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl
      * Es kann sein dass hier die Session-ID steht, dann ist der Aufbau anders
@@ -1068,6 +1069,10 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Write Request with first value !=0 : 0x%08x. TODO", value);
+        /* 6 Bytes unbekannt, manchmal aber auch nur 4 */
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 6, tvb_get_ptr(tvb, offset, 6));
+        offset += 6;
+        return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
     }
     
     return offset;
