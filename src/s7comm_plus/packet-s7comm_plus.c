@@ -811,16 +811,14 @@ s7commp_decode_item_address(tvbuff_t *tvb,
  * Ein einzelner Variablen-Wert einer 1200er
  *
  *******************************************************************************************************/
+
 static guint32
-s7commp_decode_item_value(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  guint32 offset)
+s7commp_decode_value(tvbuff_t *tvb,
+                     proto_tree *data_item_tree,
+                     guint32 offset,
+                     const guint8 item_number)
 {
-    proto_item *data_item = NULL;
-    proto_tree *data_item_tree = NULL;
-    
     guint8 octet_count = 0;
-    guint8 item_number;
     guint8 datatype;
     guint8 datatype_flags;
     
@@ -838,17 +836,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     guint8 string_actlength = 0;
         
     guint32 offset_at_start = offset;
-    guint32 item_start_offset = 0;
     guint32 length_of_value = 0;
-    
-    item_start_offset = offset;    
-    
-    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, item_start_offset, -1, FALSE);
-    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-
-    item_number = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
-    offset += 1;
 
     datatype_flags = tvb_get_guint8(tvb, offset);
     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Datatype Flags: 0x%02x", datatype_flags);
@@ -976,11 +964,31 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     }
     proto_item_set_len(data_item_tree, length_of_value + 3);
     
-    proto_tree_add_text(data_item_tree, tvb, item_start_offset + 3, length_of_value, "Value: %s", str_val);    
+    proto_tree_add_text(data_item_tree, tvb, offset_at_start + 2, length_of_value, "Value: %s", str_val);    
     proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
 
     return offset;
 }
+
+static guint32
+s7commp_decode_item_value(tvbuff_t *tvb,
+                                  proto_tree *tree,
+                                  guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint8 item_number;
+            
+    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+
+    item_number = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
+    offset += 1;
+
+    return s7commp_decode_value(tvb,data_item_tree,offset,item_number);
+}
+
 /*******************************************************************************************************
  *
  * Ein Fehler-Variablenwert einer 1200
