@@ -1063,26 +1063,25 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         offset += 27;
 
     } else {
-        guint8 unknownValues1;
-        guint8 unknownValues2;
-        guint8 unknownValuesRead;
+        guint8 itemAddressCount;
+        guint8 ItemAddressRead;
 
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Write Request with first value !=0 : 0x%08x. TODO", value);
         /* n Bytes unbekannt, im ersten davon steht vermutlich n/2 */
-        unknownValues1 = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "unknown values count 1: %u", unknownValues1);
+        item_count = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Item count: %u", item_count);
         offset +=1;
-        unknownValues2 = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "unknown values count 2: %u", unknownValues2);
+        itemAddressCount = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %u", itemAddressCount);
         offset +=1;
-        for(unknownValuesRead=0;
-            (unknownValuesRead < unknownValues1) && (offset < offsetmax);
-            unknownValuesRead++)
+        for(ItemAddressRead=1;
+            (ItemAddressRead <= itemAddressCount) && (offset < offsetmax);
+            ItemAddressRead++)
         {
             guint8 octet_count = 0;
             gint32 int32val = tvb_get_varint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tree, tvb, offset, octet_count, "unknown value[%d]: 0x%08x : %d",
-                                unknownValuesRead, int32val, int32val);
+            proto_tree_add_text(tree, tvb, offset, octet_count, "Item-Address[%d]: 0x%08x : %d",
+                                ItemAddressRead, int32val, int32val);
             offset += octet_count;
         }
         // the begin of remaining part could be decoded simliar to the start session stuff:
