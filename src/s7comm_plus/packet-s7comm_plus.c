@@ -1078,15 +1078,15 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         offset += 27;
     
     } else {
+        guint8 bytesToSkip;
+
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Write Request with first value !=0 : 0x%08x. TODO", value);
-        /* 6 Bytes unbekannt, manchmal aber auch nur 4 */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
-        offset += 4;
-        if( tvb_get_guint8(tvb, offset) != 0x8e)
-        {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 2, tvb_get_ptr(tvb, offset, 2));
-            offset += 2;
-        }
+        /* n Bytes unbekannt, im ersten davon steht vermutlich n */
+        bytesToSkip = tvb_get_guint8(tvb, offset);
+        bytesToSkip++; // count this byte itself
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, bytesToSkip, tvb_get_ptr(tvb, offset, bytesToSkip));
+        offset += bytesToSkip;
+        // the begin of remaining part could be decoded simliar to the start session stuff:
         return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
     }
     
