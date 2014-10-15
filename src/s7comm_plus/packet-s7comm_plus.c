@@ -566,6 +566,7 @@ static guint32
 s7commp_decode_value(tvbuff_t *tvb,
                      proto_tree *data_item_tree,
                      guint32 offset,
+                     int* structLevel,
                      const guint8 item_number,
                      const int inSession)
 {
@@ -718,10 +719,12 @@ s7commp_decode_value(tvbuff_t *tvb,
         g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
         offset += 2;
         break;
+    case S7COMMP_TYPEID_STRUCT:
+        if(structLevel) *structLevel += 1; // entering a new structure level
+        // fall through
     case S7COMMP_ITEM_DATA_TYPE_DWORD:
     case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
     case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
-    case 0x17:
         length_of_value = 4;
         g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
         offset += 4;
@@ -770,7 +773,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 /*******************************************************************************************************
  *
  * Connect -> Request -> Start session
- * pass auch für response
+ * passt auch fuer response
  *
  *******************************************************************************************************/
 static guint32
@@ -787,6 +790,7 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
 
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
+    int structLevel = 0;
 
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
@@ -804,17 +808,24 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
         proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "ID Number: 0x%x", id_number);
         offset += octet_count;
 
-        proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x", item_nr, id_number);
+        proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x, Level %d", item_nr, id_number,structLevel);
 
-        if(id_number) // assuming that item id = 0 is invalid
+        if(id_number) // assuming that item id = 0 marks end of structure
         {
             // the type and value assigned to the id is coded in the same way as the read response values
-            offset = s7commp_decode_value(tvb,data_item_tree,offset,item_nr,TRUE);
+            offset = s7commp_decode_value(tvb,data_item_tree,offset,&structLevel,item_nr,TRUE);
         }
         item_nr++;
 
         proto_item_set_len(data_item_tree, offset - start_offset);
-
+        if(!id_number) // assuming that item id = 0 marks end of structure
+        {
+            structLevel--;
+            if(structLevel < 0)
+            {
+                break; // highest structure terminated -> leave
+            }
+        }
     }
 
     return offset;
@@ -840,7 +851,11 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
     offset += 1;
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 12, tvb_get_ptr(tvb, offset, 12));
     offset += 12;
-    return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+    while((offset + 1) < offsetmax) // as long as we don't know how to findthe first position for the following decode, we use this wile as workaround
+    {
+        offset = s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+    }
+    return offset;
 }
 
 /*******************************************************************************************************
@@ -956,6 +971,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint8 item_number;
     guint8 start_offset = offset;
+    int structLevel = 0;
 
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
@@ -964,7 +980,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
     offset += 1;
 
-    offset = s7commp_decode_value(tvb,data_item_tree,offset,item_number,FALSE);
+    offset = s7commp_decode_value(tvb,data_item_tree,offset,&structLevel,item_number,FALSE);
     proto_item_set_len(data_item_tree, offset - start_offset);
     return offset;
 }
@@ -1065,6 +1081,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     } else {
         guint8 itemAddressCount;
         guint8 ItemAddressRead;
+        guint8 ItemReadCount;
 
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Write Request with first value !=0 : 0x%08x. TODO", value);
         /* n Bytes unbekannt, im ersten davon steht vermutlich n/2 */
@@ -1085,7 +1102,12 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             offset += octet_count;
         }
         // the begin of remaining part could be decoded simliar to the start session stuff:
-        return s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+        for(ItemReadCount = 1;
+            (ItemReadCount <= item_count) && (offset < offsetmax);
+            ItemReadCount++)
+        {
+            offset = s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
+        }
     }
 
     return offset;
