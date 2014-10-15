@@ -1043,6 +1043,25 @@ s7commp_decode_item_errorvalue(tvbuff_t *tvb,
 
     return offset;
 }
+
+/**
+ * s7commp_decode_data_rw_request_trail()
+ * Read and write requsts contain a 27 byte long part. For the S7-1200 these content is always the same.
+ * But for the S7-1500 the last 4 byte are changing within a session.
+ */
+static guint32
+s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     guint32 offset,
+                                     const guint32 offsetmax)
+{
+    if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN,
+                             tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
+        offset += RW_REQUEST_TRAILER_LEN;
+    }
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Write-Request zu einer Variablen-Anfrage bei einer 1200er
@@ -1085,11 +1104,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
 
         }
         /* 27 byte unbekannt */
-        if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
-            offset += RW_REQUEST_TRAILER_LEN;
-        }
-
+        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
         guint8 itemAddressCount;
         guint8 ItemAddressRead;
@@ -1130,10 +1145,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             }
         }
         // Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write
-        if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
-            offset += RW_REQUEST_TRAILER_LEN;
-        }
+        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     }
 
     return offset;
@@ -1154,6 +1166,7 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     guint8 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
+    guint32 offsetmax = offset + dlength;
 
     /* für Variablen-Lesen müssen die ersten 4 Bytes 0 sein
      * Bei einer Variablentabelle steht dort z.b. 0x00000020
@@ -1174,9 +1187,8 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
             number_of_fields_in_complete_set -= number_of_fields;
         }
-        /* RW_REQUEST_TRAILER_LEN byte unbekannt */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN, tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN));
-        offset += RW_REQUEST_TRAILER_LEN;
+        /* 27 byte unbekannt */
+        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Read Request with first value != 0: 0x%08x. TODO", value);
     }
