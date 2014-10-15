@@ -769,6 +769,14 @@ s7commp_decode_value(tvbuff_t *tvb,
             offset += 8;
         }
         break;
+    case 0x11:
+        g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
+        if(datatype_flags == 0x80) {
+             // unknown type but length is known as 1 bytes
+            length_of_value = 1;
+            offset += 1;
+        }
+        break;
     default:
         /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
         g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
