@@ -622,40 +622,43 @@ s7commp_decode_value(tvbuff_t *tvb,
          * - Ein Byte Aktuallänge
          * Dann die Bytes, Anzahl aus Maximallänge
          */
-        if (datatype_flags == 0x10)
-        {
+        if (datatype_flags) {
             length_of_value = 0;
             /* Ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header */
             string_completelength = tvb_get_varuint32(tvb, &octet_count, offset);
             offset += octet_count;
             length_of_value += octet_count;
-            if(inSession)
-            {
+
+            if (datatype_flags == 0x10) {
+                if(inSession) {
+                    g_snprintf(str_val, sizeof(str_val), "Byte array size %d, values: %s",
+                               string_completelength,tvb_format_text(tvb, offset, string_completelength));
+                    offset += string_completelength;
+                    length_of_value += string_completelength;
+                } else {
+                    /* 1 Byte Maximallänge */
+                    string_maxlength = tvb_get_guint8(tvb, offset);
+                    offset += 1;
+                    length_of_value += 1;
+                    /* 1 Byte Aktuallänge */
+                    string_actlength =  tvb_get_guint8(tvb, offset);
+                    offset += 1;
+                    length_of_value += 1;
+                    /* Und der eigentliche string */
+                    g_snprintf(str_val, sizeof(str_val), "STRING Complete Length: %u, MaxLen: %d, ActLen: %d, Text: %s",
+                               string_completelength, string_maxlength, string_actlength,
+                               tvb_get_string(wmem_packet_scope(), tvb, offset, string_maxlength));
+
+                    offset += string_maxlength;
+                    length_of_value += string_maxlength;
+                }
+            } else if (datatype_flags == 0x90) {
                 g_snprintf(str_val, sizeof(str_val), "Byte array size %d, values: %s",
                            string_completelength,tvb_format_text(tvb, offset, string_completelength));
                 offset += string_completelength;
                 length_of_value += string_completelength;
             }
-            else
-            {
-                /* 1 Byte Maximallänge */
-                string_maxlength = tvb_get_guint8(tvb, offset);
-                offset += 1;
-                length_of_value += 1;
-                /* 1 Byte Aktuallänge */
-                string_actlength =  tvb_get_guint8(tvb, offset);
-                offset += 1;
-                length_of_value += 1;
-                /* Und der eigentliche string */
-                g_snprintf(str_val, sizeof(str_val), "STRING Complete Length: %u, MaxLen: %d, ActLen: %d, Text: %s",
-                           string_completelength, string_maxlength, string_actlength,
-                           tvb_get_string(wmem_packet_scope(), tvb, offset, string_maxlength));
-
-                offset += string_maxlength;
-                length_of_value += string_maxlength;
-            }
-
-        } else {
+        } else { // datatype_flags == 0
             length_of_value = 1;
             g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
             offset += 1;
