@@ -676,6 +676,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
         break;
     case S7COMMP_ITEM_DATA_TYPE_ULINT:
+    case S7COMMP_ITEM_DATA_TYPE_LINT:
         uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
         offset += octet_count;
         length_of_value = octet_count;
