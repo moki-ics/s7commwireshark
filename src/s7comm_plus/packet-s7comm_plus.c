@@ -563,6 +563,7 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
     
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
+    size_t id_length = 4;
     
     /* 16 Bytes unbekannt */
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 16, tvb_get_ptr(tvb, offset, 16));
@@ -576,9 +577,24 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
         data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     
         /* 4 Bytes ID?? */
-        id_number = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_text(data_item_tree, tvb, offset, 4, "ID Number: 0x%08x", id_number);
-        offset += 4;
+        if(id_length == 4)
+        {
+            id_number = tvb_get_ntohl(tvb, offset);
+        }
+        else if(id_length == 3)
+        {
+            id_number = tvb_get_ntoh24(tvb, offset);
+        }
+        else if(id_length == 2)
+        {
+            id_number = tvb_get_ntohs(tvb, offset);
+        }
+        else if(id_length == 1)
+        {
+            id_number = tvb_get_guint8(tvb, offset+2);
+        }
+        proto_tree_add_text(data_item_tree, tvb, offset, id_length, "ID Number: 0x%08x", id_number);
+        offset += id_length;
         
         proto_item_append_text(data_item_tree, " [%d]: ID: 0x%08x", item_nr, id_number);
         
@@ -595,6 +611,8 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                 proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
                 proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
                 offset += 4;
+                // it seems that the length of the id decreases after this one
+                id_length = 3;
                 break;
         
         
