@@ -134,18 +134,18 @@ static const value_string pdu2_datafunc_names[] = {
 #define S7COMMP_ITEM_DATA_TYPE_USINT        0x02        /* USINT oder CHAR, Wert in 1 Byte */
 #define S7COMMP_ITEM_DATA_TYPE_UINT         0x03        /* UINT, oder auch DATE, Wert in 2 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_UDINT        0x04        /* UDint, TIME_OF_DAY, Wert in 4 Bytes, bzw. abhängig vom Wert da kann es aber noch ein Byte mehr sein*/
-#define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt, bisher noch nicht gesehen TODO */
+#define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt, Wert in varuint64 */
 /* 0x05 = ULINT? */
 /*** Ganzzahlen mit Vorzeichen ***/
 #define S7COMMP_ITEM_DATA_TYPE_SINT         0x06        /* SINT, Wert in 1 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_INT          0x07        /* INT, Wert in 2 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_DINT         0x08        /* DINT, Wert in 4 Byte, kommt auch bei erster Antwort von der SPS, auch für TIME */
-#define S7COMMP_ITEM_DATA_TYPE_LINT         0x09        /* LInt, bisher noch nicht gesehen TODO */
+#define S7COMMP_ITEM_DATA_TYPE_LINT         0x09        /* LInt, Wert in varint64 */
 /*** Bitfolgen ***/
 #define S7COMMP_ITEM_DATA_TYPE_BYTE         0x0a        /* BYTE, Wert in 1 Byte */
 #define S7COMMP_ITEM_DATA_TYPE_WORD         0x0b        /* WORD, Wert in 2 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_DWORD        0x0c        /* DWORD, Wert in 4 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_LWORD        0x0d        /* LWORD, bisher noch nicht gesehen TODO */
+#define S7COMMP_ITEM_DATA_TYPE_LWORD        0x0d        /* LWORD, Wert in 8 Bytes */
 /*** Gleitpunktzahlen ***/
 #define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
@@ -733,7 +733,11 @@ s7commp_decode_value(tvbuff_t *tvb,
         g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
         offset += 4;
         break;
-/* TODO LWORD */
+    case S7COMMP_ITEM_DATA_TYPE_LWORD:
+        length_of_value = 8;
+        g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
+        offset += 8;
+        break;
         /************************** Gleitpunktzahlen **************************/
     case S7COMMP_ITEM_DATA_TYPE_REAL:
         length_of_value = 4;
