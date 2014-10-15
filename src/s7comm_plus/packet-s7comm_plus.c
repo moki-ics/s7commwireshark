@@ -615,6 +615,15 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
                 id_length = 3;
                 break;
         
+            case 0x03:
+                // the size of the id seems to become 4 again, 2 byte value length
+                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Value: 0x%02x%02x", tvb_get_guint8(tvb, offset),
+                                    tvb_get_guint8(tvb, offset+1));
+                proto_item_append_text(data_item_tree, " => 0x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1));
+                offset += 2;
+                // it seems that the length of the id decreases after this one
+                id_length = 4;
+                break;
         
         
             case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
