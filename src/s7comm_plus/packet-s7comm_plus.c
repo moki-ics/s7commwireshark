@@ -591,10 +591,10 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
         switch (type_of_id_value) {
             /***************** TEST ****************************/
             case 0x17:
-                /* 3 byte Werte? test */
-                proto_tree_add_text(data_item_tree, tvb, offset, 3, "Value: 0x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2));
-                proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2));
-                offset += 3;
+                /* 4 byte Werte? test */
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
+                proto_item_append_text(data_item_tree, " => 0x%02x%02x%02x%02x", tvb_get_guint8(tvb, offset), tvb_get_guint8(tvb, offset+1), tvb_get_guint8(tvb, offset+2),tvb_get_guint8(tvb, offset+3));
+                offset += 4;
                 break;
         
         
