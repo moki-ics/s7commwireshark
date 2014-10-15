@@ -572,6 +572,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 datatype;
     guint8 datatype_flags;
 
+    guint64 uint64val = 0;
     guint32 uint32val = 0;
     guint16 uint16val = 0;
     gint16 int16val = 0;
@@ -666,7 +667,12 @@ s7commp_decode_value(tvbuff_t *tvb,
         length_of_value = octet_count;
         g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
         break;
-/* TODO ULINT */
+    case S7COMMP_ITEM_DATA_TYPE_ULINT:
+        uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+        offset += octet_count;
+        length_of_value = octet_count;
+        g_snprintf(str_val, sizeof(str_val), "0X%016llX", uint64val);
+        break;
 
         /************************** Ganzzahlen mit Vorzeichen **************************/
     case S7COMMP_ITEM_DATA_TYPE_SINT:
