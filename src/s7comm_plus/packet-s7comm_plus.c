@@ -591,10 +591,10 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
         {
             id_number = tvb_get_guint8(tvb, offset+2);
         }
-        proto_tree_add_text(data_item_tree, tvb, offset, id_length, "ID Number: 0x%08x", id_number);
+        proto_tree_add_text(data_item_tree, tvb, offset, id_length, "ID Number: 0x%x", id_number);
         offset += id_length;
         
-        proto_item_append_text(data_item_tree, " [%d]: ID: 0x%08x", item_nr, id_number);
+        proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x", item_nr, id_number);
         
         /* 1 Byte Typkennung */
         type_of_id_value = tvb_get_guint8(tvb, offset);
