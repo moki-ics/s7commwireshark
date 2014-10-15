@@ -1079,7 +1079,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
                                   guint32 offset)
 {
     guint8 item_count = 0;
-    guint8 number_of_fields_in_complete_set = 0;
+    guint32 number_of_fields_in_complete_set = 0;
     guint8 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
@@ -1093,13 +1093,16 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     offset += 4;
 
     if (value == 0x00) {
+        guint8 octet_count = 0;
+
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item Count: %u", item_count);
         offset += 1;
 
-        number_of_fields_in_complete_set = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Number of Fields in complete Item-Dataset: %u", number_of_fields_in_complete_set);
-        offset += 1;
+        number_of_fields_in_complete_set = tvb_get_varint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Number of Fields in complete Item-Dataset: %u",
+                            number_of_fields_in_complete_set);
+        offset += octet_count;
 
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
@@ -1167,7 +1170,7 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
                                  guint32 offset)
 {
     guint8 item_count = 0;
-    guint8 number_of_fields_in_complete_set = 0;
+    guint32 number_of_fields_in_complete_set = 0;
     guint8 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
@@ -1180,13 +1183,19 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown: 0x%08x", value);
     offset += 4;
     if (value == 0x0) {
+        guint8 octet_count = 0;
+
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item Count: %u", item_count);
         offset += 1;
 
-        number_of_fields_in_complete_set = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Number of Fields in complete Item-Dataset: %u", number_of_fields_in_complete_set);
-        offset += 1;
+        /* as sequence 62 of S7-1511-opc-request-all-types.pcap, shows
+         * number_of_fields_in_complete_set is a varuint
+         */
+        number_of_fields_in_complete_set = tvb_get_varint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Number of Fields in complete Item-Dataset: %u",
+                            number_of_fields_in_complete_set);
+        offset += octet_count;
 
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
