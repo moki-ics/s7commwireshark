@@ -149,6 +149,7 @@ static const value_string pdu2_datafunc_names[] = {
 /*** Gleitpunktzahlen ***/
 #define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER  0x10
 
 /**************************************************************************
  * Datatype IDs in Connect -> Session telegrams
@@ -178,6 +179,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_LWORD,         "LWORD" },
     { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
+    { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_TYPEID_STRUCT,                "Struct" },
@@ -765,10 +767,9 @@ s7commp_decode_value(tvbuff_t *tvb,
         offset += string_actlength;
         break;
         /**************************  ***************************/
-    case 0x10:
-        g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
+    case S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER:
         if(datatype_flags == 0x80) {
-             // unknown type but length is known as 8 bytes
+             // length is known as 8 bytes with flags 0x80
             length_of_value = 8;
             offset += 8;
         }
