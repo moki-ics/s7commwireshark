@@ -150,6 +150,7 @@ static const value_string pdu2_datafunc_names[] = {
 #define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER  0x10
+#define S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER   0x11
 
 /**************************************************************************
  * Datatype IDs in Connect -> Session telegrams
@@ -180,6 +181,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
+    { S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER,    "IEC LTimer" },
     { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_TYPEID_STRUCT,                "Struct" },
@@ -678,7 +680,8 @@ s7commp_decode_value(tvbuff_t *tvb,
         g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
         break;
     case S7COMMP_ITEM_DATA_TYPE_ULINT:
-    case S7COMMP_ITEM_DATA_TYPE_LINT:
+    case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: // this one has a variable length, guessed to 64 bits
+    case S7COMMP_ITEM_DATA_TYPE_LINT: // maybe we have to add some kind of sign bit handling
         uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
         offset += octet_count;
         length_of_value = octet_count;
@@ -772,14 +775,6 @@ s7commp_decode_value(tvbuff_t *tvb,
              // length is known as 8 bytes with flags 0x80
             length_of_value = 8;
             offset += 8;
-        }
-        break;
-    case 0x11:
-        g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
-        if(datatype_flags == 0x80) {
-             // unknown type but length is known as 1 bytes
-            length_of_value = 1;
-            offset += 1;
         }
         break;
     default:
