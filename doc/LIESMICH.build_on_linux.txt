@@ -16,24 +16,22 @@ https://www.wireshark.org
 $ apt-get build-dep wireshark
 
 3.) Benötigte Debian packages installieren
-$ apt-get install build-essential checkinstall libcurl4-openssl-dev
+$ apt-get install build-essential checkinstall libcurl4-openssl-dev libgtk-3-dev
 
 4.) Wireshark Quellen entpacken (* ist die aktuelle Versionsnummer, z.B. wireshark-1.10.3)
 $ tar xvf wireshark-*.tar.bz2
-
-5.) Wireshark bauen (* ist die aktuelle Versionsnummer, z.B. wireshark-1.10.3)
-$ cd wireshark-*
-$ ./configure --with-ssl --enable-setcap-install --with-dumpcap-group=wireshark
-$ make -j4
 
 6.) s7comm sourcen ins plugin-Verzeichnis laden 
 (Achtung: Custom.m4, Custom.make, Custom.nmake können schon vorhanden sein, wenn schon ein eigenes Plugin erstellt wurde)
 
 $ svn checkout svn://svn.code.sf.net/p/s7commwireshark/code/trunk/src plugins
+oder entsprechend kopieren. Automake scheitert, falls nur symbloische Linke im plugins Verzeichnis gelegt werden!
 
-7.) Plugin bauen. Im übergeordneten Verzeichnis (z.B. wireshark-1.10.3):
+5.) Wireshark bauen (* ist die aktuelle Versionsnummer, z.B. wireshark-1.10.3)
+$ cd wireshark-*
 $ ./autogen.sh
-$ make -C plugins
+$ ./configure --with-ssl --enable-setcap-install --with-dumpcap-group=wireshark
+$ make -j4
 
 8.) Wireshark starten mit
 $ ./wireshark
