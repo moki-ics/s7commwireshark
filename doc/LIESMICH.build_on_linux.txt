@@ -1,0 +1,41 @@
+ Wireshark Plugin unter Linux bauen
+====================================
+Getestet mit:
+* Debian Wheezy 7.3 i386 
+* Wireshark Quellen 1.10.3
+
+Anleitung basierend auf:
+https://scottlinux.com/2013/06/07/how-to-install-the-latest-wireshark-from-source-on-debian-or-ubuntu-linux/
+http://www.protomatics.com/wireshark_dissector.html
+------------------------------------
+
+1.) Sourcecode von Wireshark laden 
+https://www.wireshark.org
+
+2.) Abhängigkeiten für Wireshark installieren
+$ apt-get build-dep wireshark
+
+3.) Benötigte Debian packages installieren
+$ apt-get install build-essential checkinstall libcurl4-openssl-dev
+
+4.) Wireshark Quellen entpacken (* ist die aktuelle Versionsnummer, z.B. wireshark-1.10.3)
+$ tar xvf wireshark-*.tar.bz2
+
+5.) Wireshark bauen (* ist die aktuelle Versionsnummer, z.B. wireshark-1.10.3)
+$ cd wireshark-*
+$ ./configure --with-ssl --enable-setcap-install --with-dumpcap-group=wireshark
+$ make -j4
+
+6.) s7comm sourcen ins plugin-Verzeichnis laden 
+(Achtung: Custom.m4, Custom.make, Custom.nmake können schon vorhanden sein, wenn schon ein eigenes Plugin erstellt wurde)
+
+$ svn checkout svn://svn.code.sf.net/p/s7commwireshark/code/trunk/src plugins
+
+7.) Plugin bauen. Im übergeordneten Verzeichnis (z.B. wireshark-1.10.3):
+$ ./autogen.sh
+$ make -C plugins
+
+8.) Wireshark starten mit
+$ ./wireshark
+
+------------------------------------
