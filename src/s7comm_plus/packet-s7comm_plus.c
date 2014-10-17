@@ -784,7 +784,11 @@ s7commp_decode_value(tvbuff_t *tvb,
     }
 
     proto_tree_add_text(data_item_tree, tvb, offset_at_start + 2, length_of_value, "Value: %s", str_val);
-    proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+    if (!inSession) {   /* when "in session", the item number is added outside to additional information */
+        proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+    } else {
+        proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+    }
 
     return offset;
 }
@@ -828,12 +832,16 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
         proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "ID Number: 0x%x", id_number);
         offset += octet_count;
 
-        proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x, Level %d", item_nr, id_number,structLevel);
+        if (structLevel > 0) {
+            proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x (Struct-Level %d)", item_nr, id_number, structLevel);
+        } else {
+            proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x", item_nr, id_number);
+        }
 
         if(id_number) // assuming that item id = 0 marks end of structure
         {
             // the type and value assigned to the id is coded in the same way as the read response values
-            offset = s7commp_decode_value(tvb,data_item_tree,offset,&structLevel,item_nr,TRUE);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_nr, TRUE);
         }
         item_nr++;
 
