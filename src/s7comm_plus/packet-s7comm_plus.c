@@ -709,7 +709,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 /* TODO LINT */
         /************************** Bitfolgen **************************/
     case S7COMMP_ITEM_DATA_TYPE_BYTE:
-        if(datatype_flags & 0x80) { // see sequence 64 of S7-1511-opc-request-all-types.pcap
+        if(datatype_flags & 0x80) {     /* see sequence 64 of S7-1511-opc-request-all-types.pcap */
             length_of_value = tvb_get_guint8(tvb, offset);
             g_snprintf(str_val, sizeof(str_val), " array len %d",length_of_value);
             offset += 1 + length_of_value;
@@ -726,8 +726,11 @@ s7commp_decode_value(tvbuff_t *tvb,
         offset += 2;
         break;
     case S7COMMP_TYPEID_STRUCT:
-        if(structLevel) *structLevel += 1; // entering a new structure level
-        // fall through
+        if(structLevel) *structLevel += 1; /* entering a new structure level */
+        length_of_value = 4;
+        g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
+        offset += 4;
+        break;
     case S7COMMP_ITEM_DATA_TYPE_DWORD:
     case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
     case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
@@ -824,15 +827,15 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
         data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
         /* the size of the id seems also variable */
-        id_number = tvb_get_varint32(tvb, &octet_count, offset);
+        id_number = tvb_get_varuint32(tvb, &octet_count, offset);
 
-        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "ID Number: 0x%x", id_number);
+        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "ID Number: %u", id_number);
         offset += octet_count;
 
         if (structLevel > 0) {
-            proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x (Struct-Level %d)", item_nr, id_number, structLevel);
+            proto_item_append_text(data_item_tree, " [%d]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
         } else {
-            proto_item_append_text(data_item_tree, " [%d]: ID: 0x%x", item_nr, id_number);
+            proto_item_append_text(data_item_tree, " [%d]: ID: %u", item_nr, id_number);
         }
 
         if(id_number) // assuming that item id = 0 marks end of structure
