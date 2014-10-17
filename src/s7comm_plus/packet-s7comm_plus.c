@@ -1009,7 +1009,6 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-    //##item_number = tvb_get_guint8(tvb, offset);
     item_number = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Item Number: %d", item_number);
     offset += octet_count;
@@ -1282,14 +1281,12 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
     }
 
     /********** Items die OK sind ********/
-    //##item_number = tvb_get_guint8(tvb, offset);
     item_number = tvb_get_varuint32(tvb, &octet_count, offset);
     /* Den einzelnen Items folgen auf jeden Fall immer noch 6 Null-Bytes
      * Bzw. nur 5 Null-Bytes, wenn vorher ein 0x00 als Trenner zum Fehlerdatensatz eingefügt wurde.
      * Evtl. lässt sich dieses vereinheitlichen.
      */
     do {
-        //##item_number = tvb_get_guint8(tvb, offset);
         item_number = tvb_get_varuint32(tvb, &octet_count, offset);
         /* Dieses ist die nächste Item Nummer
          * ACHTUNG!
@@ -1300,7 +1297,6 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
             proto_tree_add_text(tree, tvb, offset, 1, "End marker for good values (bad values with error code may follow): 0x%02x", item_number);
             in_error_set = 1;
             offset += 1;
-            //##item_number = tvb_get_guint8(tvb, offset);
             item_number = tvb_get_varuint32(tvb, &octet_count, offset);
         }
         /* Wenn jetzt trotzdem noch ein 0x00 folgt, dann ist Ende */
