@@ -571,7 +571,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                      proto_tree *data_item_tree,
                      guint32 offset,
                      int* structLevel,
-                     const guint8 item_number,
+                     const guint32 item_number,
                      const int inSession)
 {
     guint8 octet_count = 0;
@@ -804,7 +804,7 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
                              const guint32 offsetmax)
 {
     guint32 start_offset;
-    int item_nr = 1;
+    guint32 item_nr = 1;
 
     guint32 id_number = 0;
     gboolean unknown_type_occured = FALSE;
@@ -1001,18 +1001,20 @@ s7commp_decode_item_value(tvbuff_t *tvb,
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    guint8 item_number;
+    guint32 item_number;
     guint8 start_offset = offset;
+    guint8 octet_count = 0;
     int structLevel = 0;
 
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-    item_number = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
-    offset += 1;
+    //##item_number = tvb_get_guint8(tvb, offset);
+    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Item Number: %d", item_number);
+    offset += octet_count;
 
-    offset = s7commp_decode_value(tvb,data_item_tree,offset,&structLevel,item_number,FALSE);
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_number, FALSE);
     proto_item_set_len(data_item_tree, offset - start_offset);
     return offset;
 }
@@ -1243,7 +1245,7 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
                                   guint32 offset)
 {
     guint8 first_response_byte;
-    guint8 item_number;
+    guint32 item_number;
     guint8 octet_count = 0;
     guint8 in_error_set = 0;
 
@@ -1280,14 +1282,15 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
     }
 
     /********** Items die OK sind ********/
-    item_number = tvb_get_guint8(tvb, offset);
+    //##item_number = tvb_get_guint8(tvb, offset);
+    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
     /* Den einzelnen Items folgen auf jeden Fall immer noch 6 Null-Bytes
      * Bzw. nur 5 Null-Bytes, wenn vorher ein 0x00 als Trenner zum Fehlerdatensatz eingefügt wurde.
      * Evtl. lässt sich dieses vereinheitlichen.
      */
     do {
-        item_number = tvb_get_guint8(tvb, offset);
-
+        //##item_number = tvb_get_guint8(tvb, offset);
+        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
         /* Dieses ist die nächste Item Nummer
          * ACHTUNG!
          * Gibt es einen Fehlerdatensatz, so wird mit den Items begonnen, dann folgt
@@ -1297,7 +1300,8 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
             proto_tree_add_text(tree, tvb, offset, 1, "End marker for good values (bad values with error code may follow): 0x%02x", item_number);
             in_error_set = 1;
             offset += 1;
-            item_number = tvb_get_guint8(tvb, offset);
+            //##item_number = tvb_get_guint8(tvb, offset);
+            item_number = tvb_get_varuint32(tvb, &octet_count, offset);
         }
         /* Wenn jetzt trotzdem noch ein 0x00 folgt, dann ist Ende */
         if (item_number == 0) {
