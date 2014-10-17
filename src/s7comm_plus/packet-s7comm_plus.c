@@ -205,7 +205,7 @@ static const value_string var_lid_flag_names[] = {
     { S7COMMP_VAR_OBTAIN_IDX,        "Obtain by Index" },
     { S7COMMP_VAR_PART_START,        "Part Start Address" },
     { S7COMMP_VAR_PART_LEN,          "Part Length" },
-    { 0,                                    NULL }
+    { 0,                             NULL }
 };
 
 #define S7COMMP_VAR_ITEM_AREA1_DB    0x8a0e              /* Reading DB, 2 byte DB-Number following */
@@ -214,7 +214,7 @@ static const value_string var_lid_flag_names[] = {
 static const value_string var_item_area1_names[] = {
     { S7COMMP_VAR_ITEM_AREA1_DB,     "DB" },
     { S7COMMP_VAR_ITEM_AREA1_IQMCT,  "IQMCT" },
-    { 0,                                    NULL }
+    { 0,                             NULL }
 };
 
 #define S7COMMP_VAR_ITEM_AREA2_DB    0x8a0e
@@ -231,7 +231,7 @@ static const value_string var_item_area2_names[] = {
     { S7COMMP_VAR_ITEM_AREA2_C,      "Counter (C)" },
     { S7COMMP_VAR_ITEM_AREA2_T,      "Timer (T)" },
     { S7COMMP_VAR_ITEM_AREA2_DB,     "Datablock (DB)" },
-    { 0,                                    NULL }
+    { 0,                             NULL }
 };
 
 static const value_string var_item_area2_names_short[] = {
@@ -241,7 +241,7 @@ static const value_string var_item_area2_names_short[] = {
     { S7COMMP_VAR_ITEM_AREA2_C,      "C" },
     { S7COMMP_VAR_ITEM_AREA2_T,      "T" },
     { S7COMMP_VAR_ITEM_AREA2_DB,     "DB" },
-    { 0,                                    NULL }
+    { 0,                             NULL }
 };
 
 #define S7COMMP_VAR_ITEM_BASE_AREA_IQMCT    0x0e98
@@ -249,7 +249,7 @@ static const value_string var_item_area2_names_short[] = {
 static const value_string var_item_base_area_names[] = {
     { S7COMMP_VAR_ITEM_BASE_AREA_IQMCT, "IQMCT" },
     { S7COMMP_VAR_ITEM_BASE_AREA_DB,    "DB" },
-    { 0,                                    NULL }
+    { 0,                                NULL }
 };
 /**************************************************************************
  **************************************************************************/
@@ -659,7 +659,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += string_completelength;
                 length_of_value += string_completelength;
             }
-        } else { // datatype_flags == 0
+        } else { /* datatype_flags == 0 */
             length_of_value = 1;
             g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
             offset += 1;
@@ -677,8 +677,8 @@ s7commp_decode_value(tvbuff_t *tvb,
         g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
         break;
     case S7COMMP_ITEM_DATA_TYPE_ULINT:
-    case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: // this one has a variable length, guessed to 64 bits
-    case S7COMMP_ITEM_DATA_TYPE_LINT: // maybe we have to add some kind of sign bit handling
+    case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
+    case S7COMMP_ITEM_DATA_TYPE_LINT: /* maybe we have to add some kind of sign bit handling */
         uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
         offset += octet_count;
         length_of_value = octet_count;
@@ -772,7 +772,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         /**************************  ***************************/
     case S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER:
         if(datatype_flags == 0x80) {
-             // length is known as 8 bytes with flags 0x80
+             /* length is known as 8 bytes with flags 0x80 */
             length_of_value = 8;
             offset += 8;
         }
@@ -815,11 +815,12 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
     int structLevel = 0;
+    guint8 octet_count = 0;
 
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
     {
-        guint8 octet_count = 2;
+        octet_count = 2;
 
         start_offset = offset;
 
@@ -838,20 +839,20 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, " [%d]: ID: %u", item_nr, id_number);
         }
 
-        if(id_number) // assuming that item id = 0 marks end of structure
+        if(id_number) /* assuming that item id = 0 marks end of structure */
         {
-            // the type and value assigned to the id is coded in the same way as the read response values
+            /* the type and value assigned to the id is coded in the same way as the read response values */
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_nr, TRUE);
         }
         item_nr++;
 
         proto_item_set_len(data_item_tree, offset - start_offset);
-        if(!id_number) // assuming that item id = 0 marks end of structure
+        if(!id_number) /* assuming that item id = 0 marks end of structure */
         {
             structLevel--;
             if(structLevel < 0)
             {
-                break; // highest structure terminated -> leave
+                break; /* highest structure terminated -> leave */
             }
         }
     }
@@ -873,18 +874,19 @@ s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
 {
     /* einige Bytes unbekannt */
     guint32 unkownBytes = 0;
+    guint8 scanedByte = 0;
 
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
     offset += 4;
-    // the following byte becomes part of the session id by adding 0x0380
+    /* the following byte becomes part of the session id by adding 0x0380 */
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
     offset += 1;
-    while((offset + unkownBytes) < offsetmax) // as long as we don't know how to find the first position for the following decode, we use this wile as workaround
+    while((offset + unkownBytes) < offsetmax) /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
     {
-        guint8 scanedByte = tvb_get_guint8(tvb, offset + unkownBytes);
+        scanedByte = tvb_get_guint8(tvb, offset + unkownBytes);
         if(scanedByte == 0xa3)
         {
-            break; // found some known good ID
+            break; /* found some known good ID */
         }
         else unkownBytes++;
     }
@@ -1056,7 +1058,7 @@ s7commp_decode_item_errorvalue(tvbuff_t *tvb,
     datatype_flags = tvb_get_guint8(tvb, offset);
     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Datatype Flags: 0x%02x", datatype_flags);
     offset += 1;
-    ////////////////////////////////////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////////////////////////////////*/
     errorvalue1 = tvb_get_ntohl(tvb, offset);
     proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 1: 0x%08x dez %d", errorvalue1, errorvalue1);
     offset += 4;
@@ -1082,11 +1084,11 @@ s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
                                      const guint32 offsetmax)
 {
     if(offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
-        // the first 23 bytes do not change
+        /* the first 23 bytes do not change */
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN-4,
                              tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN-4));
         offset += RW_REQUEST_TRAILER_LEN-4;
-        // the last 4 bytes change for the S7-1500
+        /* the last 4 bytes change for the S7-1500 */
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4,
                              tvb_get_ptr(tvb, offset, 4));
         offset += 4;
@@ -1110,6 +1112,13 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     guint32 number_of_fields = 0;
     guint32 value;
     guint32 offsetmax = offset + dlength;
+    guint8 octet_count = 0;
+
+    guint8 itemAddressCount;
+    guint8 ItemAddressRead;
+    guint8 ItemReadCount;
+    gint32 int32val;
+    int remainingDecodeSession;
 
     /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl
      * Es kann sein dass hier die Session-ID steht, dann ist der Aufbau anders
@@ -1119,8 +1128,6 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     offset += 4;
 
     if (value == 0x00) {
-        guint8 octet_count = 0;
-
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item Count: %u", item_count);
         offset += 1;
@@ -1140,10 +1147,6 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         /* 27 byte unbekannt */
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
-        guint8 itemAddressCount;
-        guint8 ItemAddressRead;
-        guint8 ItemReadCount;
-
         proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of session settings for session ID : 0x%08x. ", value);
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item count: %u", item_count);
@@ -1155,13 +1158,12 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             (ItemAddressRead <= itemAddressCount) && (offset < offsetmax);
             ItemAddressRead++)
         {
-            guint8 octet_count = 0;
-            gint32 int32val = tvb_get_varint32(tvb, &octet_count, offset);
+            int32val = tvb_get_varint32(tvb, &octet_count, offset);
             proto_tree_add_text(tree, tvb, offset, octet_count, "Item-Address[%d]: 0x%08x : %d",
                                 ItemAddressRead, int32val, int32val);
             offset += octet_count;
         }
-        // the begin of the remaining part could be decoded similar to the start session stuff:
+        /* the begin of the remaining part could be decoded similar to the start session stuff: */
         for(ItemReadCount = 1;
             (ItemReadCount <= item_count) && (offset < offsetmax);
             ItemReadCount++)
@@ -1169,16 +1171,17 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             offset = s7commp_decode_session_stuff(tvb,tree,offset,offsetmax);
         }
         {
-            // Bei der S7-1500 folgt ein weiterer Block unbekannter Daten, da s7commp_decode_session_stuff()
-            // nicht alles decodieren kann.
-            int remainingDecodeSession = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
+            /* Bei der S7-1500 folgt ein weiterer Block unbekannter Daten, da s7commp_decode_session_stuff()
+             * nicht alles decodieren kann.
+             */
+            remainingDecodeSession = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
             if(remainingDecodeSession > 0) {
                 proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, remainingDecodeSession,
                                      tvb_get_ptr(tvb, offset, remainingDecodeSession));
                 offset += remainingDecodeSession;
             }
         }
-        // Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write
+        /* Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write */
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     }
 
@@ -1201,6 +1204,7 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     guint32 number_of_fields = 0;
     guint32 value;
     guint32 offsetmax = offset + dlength;
+    guint8 octet_count = 0;
 
     /* für Variablen-Lesen müssen die ersten 4 Bytes 0 sein
      * Bei einer Variablentabelle steht dort z.b. 0x00000020
@@ -1209,8 +1213,6 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown: 0x%08x", value);
     offset += 4;
     if (value == 0x0) {
-        guint8 octet_count = 0;
-
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item Count: %u", item_count);
         offset += 1;
@@ -1272,12 +1274,10 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
     offset += 1;
     if (first_response_byte != 0x00) {
         /******* Erste zwei Werte bei Fehler ******/
-        //uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
         int32val = tvb_get_varint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 1: 0x%08x : %d", int32val, int32val);
         offset += octet_count;
 
-        //uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
         int32val = tvb_get_varint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 2: 0x%08x : %d", int32val, int32val);
         offset += octet_count;
