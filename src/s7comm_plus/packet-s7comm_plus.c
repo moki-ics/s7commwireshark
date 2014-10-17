@@ -1,10 +1,7 @@
 /* packet-s7comm_plus.c
  *
  * Author:      Thomas Wiens, 2014 <th.wiens@gmx.de>
- * Version:     0.0.1
  * Description: Wireshark dissector for S7 Communication plus
- *
- * $Id$
  *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
