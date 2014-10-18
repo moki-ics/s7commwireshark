@@ -615,51 +615,26 @@ s7commp_decode_value(tvbuff_t *tvb,
         break;
         /************************** Ganzzahlen ohne Vorzeichen **************************/
     case S7COMMP_ITEM_DATA_TYPE_USINT:
-        /* Dieser Typ wird auch zur Übertragung von Strings verwendet. Dann steht in den
-         * Flags der Wert 0x10, andernfalls 0x00.
-         * Bei Strings folgt:
-         * - ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header
-         * - Ein Byte Maximallänge
-         * - Ein Byte Aktuallänge
-         * Dann die Bytes, Anzahl aus Maximallänge
+        /* Verwendungstypen:
+         * Telegrammtyp     Typ-Flag    Verwendung
+         *  Normal          0x10        Array mit vorab varuint als Array-Size (auch für Strings)
+         *  Normal          0x90        Array mit vorab varuint als Array-Size (auch für Strings)
+         *  Normal          0x80        1 Byte  -> nur bei S7-1500
+         *  Normal          0x00        1 Byte
+         *  Session         0x10        Array mit vorab varuint als Array-Size
+         *
+         * Vereinheitlichung, wenn man annimmt dass auch bei der 1200 ein String als Array übermittelt wird.
+         * Dann bedeutet das gesetzte Bit 0x10 immer ein Array.
          */
-        if (datatype_flags) {
-            length_of_value = 0;
-            /* Ein als varuint gepackter Wert, die Gesamtlänge des Satzes plus string-Header */
-            string_completelength = tvb_get_varuint32(tvb, &octet_count, offset);
+        if (datatype_flags & 0x10) {
+            /***** Array mit vorab ein varuint als Array-Size *****/
+            length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Array size: %d", length_of_value);
             offset += octet_count;
-            length_of_value += octet_count;
-
-            if (datatype_flags == 0x10) {
-                if(inSession) {
-                    g_snprintf(str_val, sizeof(str_val), "Byte array size %d, values: %s",
-                               string_completelength,tvb_format_text(tvb, offset, string_completelength));
-                    offset += string_completelength;
-                    length_of_value += string_completelength;
-                } else {
-                    /* 1 Byte Maximallänge */
-                    string_maxlength = tvb_get_guint8(tvb, offset);
-                    offset += 1;
-                    length_of_value += 1;
-                    /* 1 Byte Aktuallänge */
-                    string_actlength =  tvb_get_guint8(tvb, offset);
-                    offset += 1;
-                    length_of_value += 1;
-                    /* Und der eigentliche string */
-                    g_snprintf(str_val, sizeof(str_val), "STRING Complete Length: %u, MaxLen: %d, ActLen: %d, Text: %s",
-                               string_completelength, string_maxlength, string_actlength,
-                               tvb_get_string(wmem_packet_scope(), tvb, offset, string_maxlength));
-
-                    offset += string_maxlength;
-                    length_of_value += string_maxlength;
-                }
-            } else if (datatype_flags == 0x90) {
-                g_snprintf(str_val, sizeof(str_val), "Byte array size %d, values: %s",
-                           string_completelength,tvb_format_text(tvb, offset, string_completelength));
-                offset += string_completelength;
-                length_of_value += string_completelength;
-            }
-        } else { /* datatype_flags == 0 */
+            g_snprintf(str_val, sizeof(str_val), "USInt[%d]: %s", length_of_value, tvb_bytes_to_ep_str(tvb, offset, length_of_value));
+            offset += length_of_value;
+        } else {
+            /***** Standard, 1 Byte Wert ****/
             length_of_value = 1;
             g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
             offset += 1;
@@ -682,7 +657,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
         offset += octet_count;
         length_of_value = octet_count;
-        g_snprintf(str_val, sizeof(str_val), "0X%016llX", uint64val);
+        g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
         break;
 
         /************************** Ganzzahlen mit Vorzeichen **************************/
@@ -709,11 +684,12 @@ s7commp_decode_value(tvbuff_t *tvb,
 /* TODO LINT */
         /************************** Bitfolgen **************************/
     case S7COMMP_ITEM_DATA_TYPE_BYTE:
-        if(datatype_flags & 0x80) {     /* see sequence 64 of S7-1511-opc-request-all-types.pcap */
+        if (datatype_flags == 0x90) {     /* see sequence 64 of S7-1511-opc-request-all-types.pcap */
             length_of_value = tvb_get_guint8(tvb, offset);
-            g_snprintf(str_val, sizeof(str_val), " array len %d",length_of_value);
-            offset += 1 + length_of_value;
-            length_of_value += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Array size: %d", length_of_value);
+            offset += 1;
+            g_snprintf(str_val, sizeof(str_val), "Byte[%u]: %s", length_of_value, tvb_bytes_to_ep_str(tvb, offset, length_of_value));
+            offset += length_of_value;
         } else {
             length_of_value = 1;
             g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
@@ -762,9 +738,10 @@ s7commp_decode_value(tvbuff_t *tvb,
     case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
         /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
         string_actlength = tvb_get_guint8(tvb, offset);
-        offset++;
-        length_of_value = 1 /* length byte */ + string_actlength;
-        g_snprintf(str_val, sizeof(str_val), "STRING: Len: %d, Text: %s",
+        proto_tree_add_text(data_item_tree, tvb, offset, 1, "STRING Actual length: %d", string_actlength);
+        offset += 1;
+        length_of_value = string_actlength;
+        g_snprintf(str_val, sizeof(str_val), "STRING[%d]: %s",
                    string_actlength,
                    tvb_get_string(wmem_packet_scope(), tvb, offset, string_actlength));
         offset += string_actlength;
@@ -783,7 +760,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         break;
     }
 
-    proto_tree_add_text(data_item_tree, tvb, offset_at_start + 2, length_of_value, "Value: %s", str_val);
+    proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
     if (!inSession) {   /* when "in session", the item number is added outside to additional information */
         proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
     } else {
