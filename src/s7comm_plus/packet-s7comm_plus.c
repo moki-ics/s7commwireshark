@@ -44,8 +44,11 @@
 /* Protocol identifier */
 #define S7COMM_PLUS_PROT_ID                 0x72
 
-/** Length of trailing block within read and write requests */
+/* Length of trailing block within read and write requests */
 #define RW_REQUEST_TRAILER_LEN 27
+
+/* Max number of array values displays on Item-Value tree. */
+#define S7COMMP_ITEMVAL_ARR_MAX_DISPLAY     10
 
 /* Wireshark ID of the S7COMM_PLUS protocol */
 static int proto_s7commp = -1;
@@ -121,7 +124,7 @@ static const value_string pdu2_datafunc_names[] = {
     { 0,                                    NULL }
 };
 /**************************************************************************
- * Wert Datentypen in HMI Antworttelegrammen einer S7-1200
+ * Wert Datentypen in HMI Antworttelegrammen
  *
  */
 
@@ -132,7 +135,6 @@ static const value_string pdu2_datafunc_names[] = {
 #define S7COMMP_ITEM_DATA_TYPE_UINT         0x03        /* UINT, oder auch DATE, Wert in 2 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_UDINT        0x04        /* UDint, TIME_OF_DAY, Wert in 4 Bytes, bzw. abhängig vom Wert da kann es aber noch ein Byte mehr sein*/
 #define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt, Wert in varuint64 */
-/* 0x05 = ULINT? */
 /*** Ganzzahlen mit Vorzeichen ***/
 #define S7COMMP_ITEM_DATA_TYPE_SINT         0x06        /* SINT, Wert in 1 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_INT          0x07        /* INT, Wert in 2 Bytes */
@@ -146,6 +148,7 @@ static const value_string pdu2_datafunc_names[] = {
 /*** Gleitpunktzahlen ***/
 #define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
 #define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
+/*** Spezial ***/
 #define S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER  0x10
 #define S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER   0x11
 
@@ -186,6 +189,9 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
     { 0,                                    NULL }
 };
+
+/* Datatype flags */
+#define S7COMMP_DATATYPE_FLAG_ARRAY         0x10
 
 /**************************************************************************
  * Flags for LID access
@@ -273,8 +279,6 @@ static gint hf_s7commp_data_requnknown1 = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
 
-static gint hf_s7commp_data_item_type = -1;
-
 static gint hf_s7commp_trailer = -1;
 static gint hf_s7commp_trailer_protid = -1;
 static gint hf_s7commp_trailer_pdutype = -1;
@@ -302,6 +306,7 @@ static gint ett_s7commp_data_req_set = -1;              /* Subtree for data requ
 static gint ett_s7commp_data_res_set = -1;              /* Subtree for data response set*/
 
 static gint ett_s7commp_itemaddr_area = -1;             /* Subtree for item address area */
+static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value is an array */
 
 /* Item Address */
 static gint hf_s7commp_item_count = -1;
@@ -314,6 +319,21 @@ static gint hf_s7commp_itemaddr_dbnumber = -1;
 static gint hf_s7commp_itemaddr_lid_nesting_depth = -1;
 static gint hf_s7commp_itemaddr_base_area = -1;
 static gint hf_s7commp_itemaddr_lid_value = -1;
+
+/* Item Value */
+static gint hf_s7commp_itemval_itemnumber = -1;
+static gint hf_s7commp_itemval_datatype_flags = -1;
+static gint hf_s7commp_itemval_datatype_flags_array = -1;       /* 0x10 for array */
+static gint hf_s7commp_itemval_datatype_flags_0x90unkn = -1;    /* 0x90 unknown, seen in S7-1500 */
+static gint ett_s7commp_itemval_datatype_flags = -1;
+static const int *s7commp_itemval_datatype_flags_fields[] = {
+    &hf_s7commp_itemval_datatype_flags_array,
+    &hf_s7commp_itemval_datatype_flags_0x90unkn,
+    NULL
+};
+static gint hf_s7commp_itemval_datatype = -1;
+static gint hf_s7commp_itemval_arraysize = -1;
+static gint hf_s7commp_itemval_value = -1;
 
 /* Register this protocol */
 void
@@ -413,12 +433,6 @@ proto_register_s7commp (void)
           { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
 
-        /* Data */
-        { &hf_s7commp_data_item_type,
-          { "Datatype", "s7comm-plus.data.item.type", FT_UINT8, BASE_HEX, VALS(item_data_type_names), 0x0,
-            "Type of data following", HFILL }},
-
-
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a request telegram", HFILL }},
@@ -461,6 +475,32 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemaddr_lid_value,
           { "LID Value", "s7comm-plus.item.addr.lid_value", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: LID Value", HFILL }},
+
+        /*** Item value ***/
+        { &hf_s7commp_itemval_itemnumber,
+          { "Item Number", "s7comm-plus.item.val.item_number", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "varuint32: Item Number", HFILL }},
+        /* Datatype flags */
+        { &hf_s7commp_itemval_datatype_flags,
+        { "Datatype flags", "s7comm-plus.item.val.datatype_flags", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7commp_itemval_datatype_flags_array,
+        { "Array", "s7comm-plus.item.val.datatype_flags.array", FT_BOOLEAN, 8, NULL, 0x10,
+          "The data has to be interpretes as an array of values", HFILL }},
+        { &hf_s7commp_itemval_datatype_flags_0x90unkn,
+        { "Unknown-Flag1", "7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
+          "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
+
+        { &hf_s7commp_itemval_datatype,
+          { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_data_type_names), 0x0,
+            "Type of data following", HFILL }},
+        { &hf_s7commp_itemval_arraysize,
+          { "Array size", "s7comm-plus.item.val.arraysize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "varuint32: Number of values of the specified datatype following", HFILL }},
+        { &hf_s7commp_itemval_value,
+          { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
     };
 
     static gint *ett[] = {
@@ -474,7 +514,10 @@ proto_register_s7commp (void)
         &ett_s7commp_trailer_item,
         &ett_s7commp_data_req_set,
         &ett_s7commp_data_res_set,
-        &ett_s7commp_itemaddr_area
+        &ett_s7commp_itemaddr_area,
+
+        &ett_s7commp_itemval_datatype_flags,
+        &ett_s7commp_itemval_array,
     };
 
     proto_s7commp = proto_register_protocol (
@@ -587,6 +630,13 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint8 datatype;
     guint8 datatype_flags;
+    gboolean is_array = FALSE;
+    gboolean unknown_type_occured = FALSE;
+    guint32 array_size = 1;     /* use 1 as default, so non-arrays can dissected in the same manner as arrays */
+    guint32 array_index = 0;
+
+    proto_item *array_item = NULL;
+    proto_tree *array_item_tree = NULL;
 
     guint64 uint64val = 0;
     guint32 uint32val = 0;
@@ -595,191 +645,203 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint32 int32val = 0;
     guint8 uint8val = 0;
     gint8 int8val = 0;
-    gchar str_val[512];
+    gchar str_val[128];     /* Value of one single item */
+    gchar str_arrval[512];  /* Value of array values */
 
-    /* Datatype string */
-    guint32 string_completelength = 0;
-    guint8 string_maxlength = 0;
     guint8 string_actlength = 0;
 
     guint32 offset_at_start = offset;
     guint32 length_of_value = 0;
 
-    memset(str_val,0,sizeof(str_val));
+    memset(str_val, 0, sizeof(str_val));
+    memset(str_arrval, 0, sizeof(str_arrval));
 
     datatype_flags = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Datatype Flags: 0x%02x", datatype_flags);
+    proto_tree_add_bitmask(data_item_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
+        ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
+    is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY);
     offset += 1;
 
     datatype = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(data_item_tree, hf_s7commp_data_item_type, tvb, offset, 1, datatype);
+    proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
-    switch (datatype) {
-        /************************** Binärzahlen **************************/
-    case S7COMMP_ITEM_DATA_TYPE_BOOL:
-        /* 0x00 oder 0x01 */
-        length_of_value = 1;
-        g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-        break;
-        /************************** Ganzzahlen ohne Vorzeichen **************************/
-    case S7COMMP_ITEM_DATA_TYPE_USINT:
-        /* Verwendungstypen:
-         * Telegrammtyp     Typ-Flag    Verwendung
-         *  Normal          0x10        Array mit vorab varuint als Array-Size (auch für Strings)
-         *  Normal          0x90        Array mit vorab varuint als Array-Size (auch für Strings)
-         *  Normal          0x80        1 Byte  -> nur bei S7-1500
-         *  Normal          0x00        1 Byte
-         *  Session         0x10        Array mit vorab varuint als Array-Size
-         *
-         * Vereinheitlichung, wenn man annimmt dass auch bei der 1200 ein String als Array übermittelt wird.
-         * Dann bedeutet das gesetzte Bit 0x10 immer ein Array.
+    if (is_array) {
+        array_size = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, octet_count, array_size);
+        /* To Display an array value, build a separate tree for the complete array.
+         * Under the array tree the array values are displayed.
          */
-        if (datatype_flags & 0x10) {
-            /***** Array mit vorab ein varuint als Array-Size *****/
-            length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Array size: %d", length_of_value);
-            offset += octet_count;
-            g_snprintf(str_val, sizeof(str_val), "USInt[%d]: %s", length_of_value, tvb_bytes_to_ep_str(tvb, offset, length_of_value));
-            offset += length_of_value;
-        } else {
-            /***** Standard, 1 Byte Wert ****/
-            length_of_value = 1;
-            g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
-            offset += 1;
-        }
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_UINT:
-        length_of_value = 2;
-        g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_UDINT:
-        uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
         offset += octet_count;
-        length_of_value = octet_count;
-        g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_ULINT:
-    case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
-    case S7COMMP_ITEM_DATA_TYPE_LINT: /* maybe we have to add some kind of sign bit handling */
-        uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-        offset += octet_count;
-        length_of_value = octet_count;
-        g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
-        break;
-
-        /************************** Ganzzahlen mit Vorzeichen **************************/
-    case S7COMMP_ITEM_DATA_TYPE_SINT:
-        uint8val = tvb_get_guint8(tvb, offset);
-        memcpy(&int8val, &uint8val, sizeof(int8val));
-        length_of_value = 1;
-        g_snprintf(str_val, sizeof(str_val), "%d", int8val);
-        offset += 1;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_INT:
-        uint16val = tvb_get_ntohs(tvb, offset);
-        memcpy(&int16val, &uint16val, sizeof(int16val));
-        length_of_value = 2;
-        g_snprintf(str_val, sizeof(str_val), "%d", int16val);
-        offset += 2;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_DINT:
-        int32val = tvb_get_varint32(tvb, &octet_count, offset);
-        offset += octet_count;
-        length_of_value = octet_count;
-        g_snprintf(str_val, sizeof(str_val), "%d", int32val);
-        break;
-/* TODO LINT */
-        /************************** Bitfolgen **************************/
-    case S7COMMP_ITEM_DATA_TYPE_BYTE:
-        if (datatype_flags == 0x90) {     /* see sequence 64 of S7-1511-opc-request-all-types.pcap */
-            length_of_value = tvb_get_guint8(tvb, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Array size: %d", length_of_value);
-            offset += 1;
-            g_snprintf(str_val, sizeof(str_val), "Byte[%u]: %s", length_of_value, tvb_bytes_to_ep_str(tvb, offset, length_of_value));
-            offset += length_of_value;
-        } else {
-            length_of_value = 1;
-            g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-        }
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_WORD:
-        length_of_value = 2;
-        g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        break;
-    case S7COMMP_TYPEID_STRUCT:
-        if(structLevel) *structLevel += 1; /* entering a new structure level */
-        length_of_value = 4;
-        g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
-        offset += 4;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_DWORD:
-    case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
-    case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
-        length_of_value = 4;
-        g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
-        offset += 4;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_LWORD:
-        length_of_value = 8;
-        g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
-        offset += 8;
-        break;
-        /************************** Gleitpunktzahlen **************************/
-    case S7COMMP_ITEM_DATA_TYPE_REAL:
-        length_of_value = 4;
-        g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
-        offset += 4;
-        break;
-    case S7COMMP_ITEM_DATA_TYPE_LREAL:
-        length_of_value = 4;
-        g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
-        offset += 8;
-        break;
-        /************************** Types used in Session request/response  ***************************/
-    case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
-        /* Leeres byte als Ende-Kennung? oder NOP zum fuellen? */
-        length_of_value = 0;
-        break;
-    case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
-        /* Es folgt ein String mit vorab einem Byte für die Stringlänge */
-        string_actlength = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(data_item_tree, tvb, offset, 1, "STRING Actual length: %d", string_actlength);
-        offset += 1;
-        length_of_value = string_actlength;
-        g_snprintf(str_val, sizeof(str_val), "STRING[%d]: %s",
-                   string_actlength,
-                   tvb_get_string(wmem_packet_scope(), tvb, offset, string_actlength));
-        offset += string_actlength;
-        break;
-        /**************************  ***************************/
-    case S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER:
-        if(datatype_flags == 0x80) {
-             /* length is known as 8 bytes with flags 0x80 */
-            length_of_value = 8;
-            offset += 8;
-        }
-        break;
-    default:
-        /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
-        g_strlcpy(str_val, "Unknown Type", sizeof(str_val));
-        break;
+        array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, array_size, FALSE);
+        array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
     }
 
-    proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
-    if (!inSession) {   /* when "in session", the item number is added outside to additional information */
-        proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
-    } else {
-        proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
-    }
+    /* Use array loop also for non-arrays */
+    for (array_index = 1; array_index <= array_size; array_index++) {
+        switch (datatype) {
+            /************************** Binärzahlen **************************/
+            case S7COMMP_ITEM_DATA_TYPE_BOOL:
+                length_of_value = 1;
+                g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                break;
+            /************************** Ganzzahlen ohne Vorzeichen **************************/
+            case S7COMMP_ITEM_DATA_TYPE_USINT:
+                length_of_value = 1;
+                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_UINT:
+                length_of_value = 2;
+                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
+                offset += 2;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_UDINT:
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_ULINT:
+            case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
+            case S7COMMP_ITEM_DATA_TYPE_LINT: /* maybe we have to add some kind of sign bit handling */
+                uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
+                break;
+            /************************** Ganzzahlen mit Vorzeichen **************************/
+            case S7COMMP_ITEM_DATA_TYPE_SINT:
+                uint8val = tvb_get_guint8(tvb, offset);
+                memcpy(&int8val, &uint8val, sizeof(int8val));
+                length_of_value = 1;
+                g_snprintf(str_val, sizeof(str_val), "%d", int8val);
+                offset += 1;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_INT:
+                uint16val = tvb_get_ntohs(tvb, offset);
+                memcpy(&int16val, &uint16val, sizeof(int16val));
+                length_of_value = 2;
+                g_snprintf(str_val, sizeof(str_val), "%d", int16val);
+                offset += 2;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_DINT:
+                int32val = tvb_get_varint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%d", int32val);
+                break;
+            /************************** Bitfolgen **************************/
+            case S7COMMP_ITEM_DATA_TYPE_BYTE:
+                length_of_value = 1;
+                g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_WORD:
+                length_of_value = 2;
+                g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
+                offset += 2;
+                break;
+            case S7COMMP_TYPEID_STRUCT:
+                if(structLevel) *structLevel += 1; /* entering a new structure level */
+                length_of_value = 4;
+                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
+                offset += 4;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_DWORD:
+            case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
+            case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
+                length_of_value = 4;
+                g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
+                offset += 4;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_LWORD:
+                length_of_value = 8;
+                g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
+                offset += 8;
+                break;
+                /************************** Gleitpunktzahlen **************************/
+            case S7COMMP_ITEM_DATA_TYPE_REAL:
+                length_of_value = 4;
+                g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
+                offset += 4;
+                break;
+            case S7COMMP_ITEM_DATA_TYPE_LREAL:
+                length_of_value = 4;
+                g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
+                offset += 8;
+                break;
+            /************************** Types used in Session request/response  ***************************/
+            case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
+                /* Leeres byte als Ende-Kennung? oder NOP zum fuellen? */
+                length_of_value = 0;
+                break;
+            case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
+                /* Es folgt ein String mit vorab einem Byte für die Stringlänge
+                 * TODO: Falls das hier kein S7-String ist, sind auch längere Strings möglich.
+                 * Evtl. ist die Stringlänge ein varint?
+                 */
+                length_of_value = tvb_get_guint8(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "STRING Actual length: %d", length_of_value);
+                offset += 1;
+                g_snprintf(str_val, sizeof(str_val), "%s",
+                           tvb_get_string(wmem_packet_scope(), tvb, offset, length_of_value));
+                offset += length_of_value;
+                break;
+            /**************************  ***************************/
+            case S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER:
+                if(datatype_flags == 0x80) {
+                     /* length is known as 8 bytes with flags 0x80 */
+                    length_of_value = 8;
+                    g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
+                    offset += 8;
+                }
+                break;
+            default:
+                /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
+                unknown_type_occured = TRUE;
+                g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", sizeof(str_arrval));
+                break;
+        } /* switch */
 
+        if (unknown_type_occured) {
+            break;
+        }
+
+        if (is_array) {
+            /* Build a string of all array values. Maximum number of 10 values */
+            if (array_index < S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
+                g_strlcat(str_arrval, str_val, sizeof(str_arrval));
+                if (array_index < array_size) {
+                    g_strlcat(str_arrval, ", ", sizeof(str_arrval));
+                }
+            } else if (array_index == S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
+                /* truncate */
+                g_strlcat(str_arrval, "...", sizeof(str_arrval));
+            }
+        }
+        proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value[%u]: %s", array_index, str_val);
+    } /* for */
+
+    if (is_array) {
+        proto_item_append_text(array_item_tree, " Array[%u] = %s", array_size, str_arrval);
+        if (!inSession) {   /* when "in session", the item number is added outside to additional information */
+            proto_item_append_text(data_item_tree, " [%d]: (%s) Array[%u] = %s", item_number,
+                val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), array_size, str_arrval);
+        } else {
+            proto_item_append_text(data_item_tree, " (%s) Array[%u] = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), array_size, str_arrval);
+        }
+    } else { /* not an array */
+        proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
+        if (!inSession) {   /* when "in session", the item number is added outside to additional information */
+            proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+        } else {
+            proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+        }
+    }
     return offset;
 }
-
 
 /*******************************************************************************************************
  *
@@ -1005,7 +1067,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
     guint32 item_number;
-    guint8 start_offset = offset;
+    guint32 start_offset = offset;
     guint8 octet_count = 0;
     int structLevel = 0;
 
@@ -1013,7 +1075,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
     item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Item Number: %d", item_number);
+    proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
     offset += octet_count;
 
     offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_number, FALSE);
