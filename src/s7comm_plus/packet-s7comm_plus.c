@@ -113,14 +113,14 @@ static const value_string pdu1_datafunc_names[] = {
 
 #define S7COMMP_PDU2_DATAFUNC_BLOCK         0x04ca      /* kommt z.B. bei Block Upload, aber auch sonst für alles */
 #define S7COMMP_PDU2_DATAFUNC_ENDSESSION    0x04d4      /* kommt auch wenn zyklische Dienste an-/abgemeldet werden */
-#define S7COMMP_PDU2_DATAFUNC_WRITE1        0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
-#define S7COMMP_PDU2_DATAFUNC_READ1         0x054c      /* Allgemeines Read, für alles mögliche */
+#define S7COMMP_PDU2_DATAFUNC_WRITE         0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
+#define S7COMMP_PDU2_DATAFUNC_READ          0x054c      /* Allgemeines Read, für alles mögliche */
 
 static const value_string pdu2_datafunc_names[] = {
-    { S7COMMP_PDU2_DATAFUNC_BLOCK,          "Block1" },
+    { S7COMMP_PDU2_DATAFUNC_BLOCK,          "Block" },
     { S7COMMP_PDU2_DATAFUNC_ENDSESSION,     "End session" },
-    { S7COMMP_PDU2_DATAFUNC_WRITE1,         "Write1" },
-    { S7COMMP_PDU2_DATAFUNC_READ1,          "Read1" },
+    { S7COMMP_PDU2_DATAFUNC_WRITE,          "Write" },
+    { S7COMMP_PDU2_DATAFUNC_READ,           "Read" },
     { 0,                                    NULL }
 };
 /**************************************************************************
@@ -182,7 +182,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER,    "IEC LTimer" },
-    { S7COMMP_SESS_TYPEID_ENDBYTE,          "fill Byte" },
+    { S7COMMP_SESS_TYPEID_ENDBYTE,          "Fill Byte" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_TYPEID_STRUCT,                "Struct" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
@@ -393,7 +393,7 @@ proto_register_s7commp (void)
             "Unknown 1, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
 
         { &hf_s7commp_data_pdu1function,
-          { "Function? ", "s7comm-plus.data.pdu1function", FT_UINT16, BASE_HEX, VALS(pdu1_datafunc_names), 0x0,
+          { "Function", "s7comm-plus.data.pdu1function", FT_UINT16, BASE_HEX, VALS(pdu1_datafunc_names), 0x0,
             "Function for PDUs of type 1", HFILL }},
 
         { &hf_s7commp_data_unknown2,
@@ -401,7 +401,7 @@ proto_register_s7commp (void)
             "Unknown 2, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
 
         { &hf_s7commp_data_pdu2function,
-          { "Function? ", "s7comm-plus.data.pdu2function", FT_UINT16, BASE_HEX, VALS(pdu2_datafunc_names), 0x0,
+          { "Function", "s7comm-plus.data.pdu2function", FT_UINT16, BASE_HEX, VALS(pdu2_datafunc_names), 0x0,
             "Function for PDUs of type 2", HFILL }},
 
         { &hf_s7commp_data_sessionid,
@@ -911,29 +911,35 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Connect -> Request -> Start session
- * pass auch für response
+ * Connect -> Start session
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_connect_req_startsession(tvbuff_t *tvb,
-                                        proto_tree *tree,
-                                        guint32 offset,
-                                        const guint32 offsetmax)
+s7commp_decode_connect_startsession(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    const guint32 offsetmax,
+                                    gboolean is_response)
 {
     /* einige Bytes unbekannt */
     guint32 unkownBytes = 0;
-    guint8 scanedByte = 0;
+    guint8 scannedByte = 0;
 
     proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
     offset += 4;
-    /* the following byte becomes part of the session id by adding 0x0380 */
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
-    offset += 1;
+    if (is_response) {
+        /* the following byte becomes part of the session id by adding 0x0380 */
+        scannedByte = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "This byte becomes part of the Session Id by adding 0x0380, should be (0x%04x): 0x%02x", (scannedByte + 0x0380), scannedByte);
+        offset += 1;
+    } else {
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
+        offset += 1;
+    }
     while((offset + unkownBytes) < offsetmax) /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
     {
-        scanedByte = tvb_get_guint8(tvb, offset + unkownBytes);
-        if(scanedByte == 0xa3)
+        scannedByte = tvb_get_guint8(tvb, offset + unkownBytes);
+        if(scannedByte == 0xa3)
         {
             break; /* found some known good ID */
         }
@@ -1570,12 +1576,10 @@ dissect_s7commp(tvbuff_t *tvb,
 
             if (pdutype == S7COMMP_PDUTYPE_1) {        /* 1 - Connect */
                 if (((datatype == S7COMMP_DATATYPE_REQ) || (datatype == S7COMMP_DATATYPE_RES)) && (function == S7COMMP_PDU1_DATAFUNC_STARTSESSION)) {
-
                     offset_save = offset;
-                    offset = s7commp_decode_connect_req_startsession(tvb, s7commp_data_tree, offset, offset + dlength);
+                    offset = s7commp_decode_connect_startsession(tvb, s7commp_data_tree, offset, offset + dlength, (datatype == S7COMMP_DATATYPE_RES));
                     dlength = dlength - (offset - offset_save);
                 }
-
             } else if (pdutype == S7COMMP_PDUTYPE_2) {                     /* 2 - Data */
                 if (datatype == S7COMMP_DATATYPE_REQ) {             /* Request */
                     proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_requnknown1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
@@ -1587,16 +1591,14 @@ dissect_s7commp(tvbuff_t *tvb,
                     proto_tree_add_text(s7commp_data_tree, tvb, offset , 1,   "Req. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
                     offset += 1;
                     dlength -= 1;
-
-
-                    if (function == S7COMMP_PDU2_DATAFUNC_READ1) {
+                    if (function == S7COMMP_PDU2_DATAFUNC_READ) {
                         item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
                         item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
                         offset_save = offset;
                         offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
                         proto_item_set_len(item_tree, offset - offset_save);
                         dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU2_DATAFUNC_WRITE1) {
+                    } else if (function == S7COMMP_PDU2_DATAFUNC_WRITE) {
                         /* Ein HMI Write-Request hat in den 4 Bytes nach dem 0x34 normalerweise 0x0000.
                          * Beim ersten Write-Request nach dem Verbindungsaufbau, steht hier die Session-Id, und der
                          * Aufbau des Datensatzes ist anders.
@@ -1622,7 +1624,7 @@ dissect_s7commp(tvbuff_t *tvb,
                      * So wie es aussieht gibt es verschiedene Datenformate für den Austausch, was wohl am Anfang der
                      * Session ausgehandelt wird.
                      */
-                    if (function == S7COMMP_PDU2_DATAFUNC_READ1) {
+                    if (function == S7COMMP_PDU2_DATAFUNC_READ) {
                         item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
                         item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
 
