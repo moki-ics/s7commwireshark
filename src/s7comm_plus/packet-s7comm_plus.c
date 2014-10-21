@@ -163,6 +163,8 @@ static const value_string pdu2_datafunc_names[] = {
 #define S7COMMP_SESS_TYPEID_DWORD1          0xd3
 #define S7COMMP_SESS_TYPEID_DWORD2          0x12
 
+#define S7COMMP_ITEM_DATA_TYPE_3BYTE        0x14    /* unknown meaning, 3 bytes long */
+
 
 static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_BOOL,          "Bool" },
@@ -187,6 +189,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_TYPEID_STRUCT,                "Struct" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
     { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
+    { S7COMMP_ITEM_DATA_TYPE_3BYTE,         "3Byte" },
     { 0,                                    NULL }
 };
 
@@ -795,8 +798,18 @@ s7commp_decode_value(tvbuff_t *tvb,
                      /* length is known as 8 bytes with flags 0x80 */
                     length_of_value = 8;
                     g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
-                    offset += 8;
+                    offset += length_of_value;
                 }
+                break;
+            /******** Type Ids which meaning is unknown ***********/
+            case S7COMMP_ITEM_DATA_TYPE_3BYTE:
+                /* TODO:
+                 * See capture file S7-1200-Uploading-OB1-TIAV12.pcap #30, #33, #103, #116, #119
+                 * Value seems to be 3 bytes long.
+                 */
+                length_of_value = 3;
+                g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
+                offset += length_of_value;
                 break;
             default:
                 /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
