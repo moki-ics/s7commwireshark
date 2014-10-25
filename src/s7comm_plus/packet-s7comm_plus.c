@@ -84,6 +84,7 @@ static const value_string pdutype_names[] = {
 #define S7COMMP_DATATYPE_CYC                0x33
 #define S7COMMP_DATATYPE_x88                0x88
 #define S7COMMP_DATATYPE_xba                0xba
+#define S7COMMP_DATATYPE_RES2               0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
 
 static const value_string datatype_names[] = {
     { S7COMMP_DATATYPE_x05,                 "? 0x05 ?" },
@@ -92,6 +93,7 @@ static const value_string datatype_names[] = {
     { S7COMMP_DATATYPE_CYC,                 "Cyclic  " },
     { S7COMMP_DATATYPE_x88,                 "? 0x88 ?" },
     { S7COMMP_DATATYPE_xba,                 "? 0xba ?" },
+    { S7COMMP_DATATYPE_RES2,                "Response2" },
     { 0,                                    NULL }
 };
 
@@ -116,6 +118,8 @@ static const value_string pdu1_datafunc_names[] = {
 #define S7COMMP_PDU2_DATAFUNC_WRITE         0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
 #define S7COMMP_PDU2_DATAFUNC_READ          0x054c      /* Allgemeines Read, für alles mögliche */
 #define S7COMMP_PDU2_DATAFUNC_WATCHTABLE12  0x0071      /* Werteübertragung in einer Beobachtungstabelle bei einer 1200 */
+#define S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA1  0x0006      /* Datenübertragung bei Änderung (zyklisch) 1200 und V13 */
+#define S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA2  0x006a      /* Datenübertragung bei Änderung (zyklisch) 1200 und V13 */
 
 static const value_string pdu2_datafunc_names[] = {
     { S7COMMP_PDU2_DATAFUNC_BLOCK,          "Block" },
@@ -123,6 +127,8 @@ static const value_string pdu2_datafunc_names[] = {
     { S7COMMP_PDU2_DATAFUNC_WRITE,          "Write" },
     { S7COMMP_PDU2_DATAFUNC_READ,           "Read" },
     { S7COMMP_PDU2_DATAFUNC_WATCHTABLE12,   "Watch table data 1200" },
+    { S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA1,   "Change-Event Data Type 1" },
+    { S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA2,   "Change-Event Data Type 2" },
     { 0,                                    NULL }
 };
 /**************************************************************************
@@ -1404,7 +1410,7 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Write-Response zu eier Variablen-Anfrage bei einer 1200er
+ * Write-Response zu einer Variablen-Anfrage bei einer 1200er
  *
  *******************************************************************************************************/
 static guint32
@@ -1494,6 +1500,102 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
     return offset;
 }
 /*******************************************************************************************************
+ *
+ * Zyklische Daten
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_data_cyclic(tvbuff_t *tvb,
+                           packet_info *pinfo,
+                           proto_tree *tree,
+                           guint16 dlength,
+                           guint32 offset)
+{
+    guint16 unknown1;
+    guint16 unknown2;
+    guint16 ref_number;
+
+    guint16 seqnum;
+    guint8 data_indicator;
+
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint32 item_number;
+    guint32 start_offset;
+    int structLevel = 0;
+    gboolean add_data_info_column = FALSE;
+
+    /* Bei zyklischen Daten ist die Funktionsnummer nicht so wie bei anderen Telegrammen. Dieses ist eine
+     * Nummer die vorher über ein 0x04ca Telegramm von der SPS zurückkommt.
+     * Bei den Daten steht aber bei "unknown 1" ein 0x1000 und bei "unknown 2" ein 0x0400
+     */
+
+    /* 2/3: Unbekannt */
+    unknown1 = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
+    offset += 2;
+
+    /* 4/5: Reference number */
+    ref_number = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic reference number: %u", ref_number);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " CycRef=%u", ref_number);
+    offset += 2;
+
+    /* 6/7: Unbekannt */
+    unknown2 = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
+    offset += 2;
+
+    /* Sequenz-nummer, bei cyclic steht hier immer Null */
+    seqnum = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
+    offset += 2;
+
+    if (unknown1 == 0x1000 && unknown2 == 0x0400){
+        /* Bei V13 und einer 1200 werden hiermit Daten vom HMI zyklisch
+         * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
+         * Sonst gibt es ein verkürztes (Status?)-Telegramm.
+         */
+        proto_tree_add_text(tree, tvb, offset , 1, "Cyc Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+
+        seqnum = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset , 2, "Cyclic sequence number: %u", seqnum);
+        col_append_fstr(pinfo->cinfo, COL_INFO, ", CycSeq=%u", seqnum);
+        offset += 2;
+
+        proto_tree_add_text(tree, tvb, offset , 1, "Cyc Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+
+        data_indicator = tvb_get_guint8(tvb, offset);
+        while (data_indicator) {
+            add_data_info_column = TRUE;    /* set flag, to add information into Info-Column at the end*/
+            start_offset = offset;
+
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+
+            proto_tree_add_text(data_item_tree, tvb, offset , 1, "Data indicator (contains data when != 0): 0x%02x", data_indicator);
+            offset += 1;
+            /* Item Nummer negiert ffffffff */
+            item_number = tvb_get_ntohl(tvb, offset);
+            item_number = ~item_number;
+            proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item Number: %u", item_number);
+            offset += 4;
+
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_number, FALSE);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+
+            data_indicator = tvb_get_guint8(tvb, offset);
+        }
+        if (add_data_info_column) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
+        }
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
  *******************************************************************************************************
  *
  * S7-Protocol plus (main tree)
@@ -1525,6 +1627,8 @@ dissect_s7commp(tvbuff_t *tvb,
     guint16 dlength = 0;
     guint16 seqnum = 0;
     guint16 function = 0;
+    guint16 unknown1 = 0;
+    guint16 unknown2 = 0;
     gboolean has_trailer;
 
     guint16 packetlength;
@@ -1579,7 +1683,7 @@ dissect_s7commp(tvbuff_t *tvb,
         if (pdutype == S7COMMP_PDUTYPE_FF) {
             seqnum = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(s7commp_header_tree, hf_s7commp_data_seqnum, tvb, offset, 1, seqnum);
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Seq.num: [%d]", seqnum);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%d", seqnum);
             offset += 1;
             /* dann noch ein Byte, noch nicht klar wozu */
             proto_tree_add_text(s7commp_header_tree, tvb, offset , 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
@@ -1625,18 +1729,19 @@ dissect_s7commp(tvbuff_t *tvb,
             /* 1: Kennung*? */
             datatype = tvb_get_guint8(tvb, offset);
 
-            proto_item_append_text(s7commp_data_tree, ", Type of data: %s", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
+            proto_item_append_text(s7commp_data_tree, ", Data: %s", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
 
-            if ((datatype == S7COMMP_DATATYPE_REQ) || (datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_CYC)) {
+            if ((datatype == S7COMMP_DATATYPE_REQ) || (datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_RES2)) {
                 /* 1: Kennung*? */
                 proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_datatype, tvb, offset, 1, datatype);
                 /* add type to info column */
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type of data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
                 offset += 1;
                 dlength -= 1;
 
-                /* 2/3: Reserve? bisher immer null */
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
+                /* 2/3: Unbekannt */
+                unknown1 = tvb_get_ntohs(tvb, offset);
+                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
                 offset += 2;
                 dlength -= 2;
 
@@ -1659,17 +1764,16 @@ dissect_s7commp(tvbuff_t *tvb,
                 offset += 2;
                 dlength -= 2;
 
-                /* 6/7: Reserve? bisher immer null */
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown2, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
+                /* 6/7: Unbekannt */
+                unknown2 = tvb_get_ntohs(tvb, offset);
+                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
                 offset += 2;
                 dlength -= 2;
 
-                /* 8/9: Sequenz-Nummer für die Referenzierung Request/Response, bei zyklischen Daten steht hier immer Null */
+                /* 8/9: Sequenz-Nummer für die Referenzierung Request/Response */
                 seqnum = tvb_get_ntohs(tvb, offset);
                 proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
-                /*if (datatype != S7COMMP_DATATYPE_CYC) { */
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%d", seqnum);
-                /*}*/
                 offset += 2;
                 dlength -= 2;
             }
@@ -1719,12 +1823,10 @@ dissect_s7commp(tvbuff_t *tvb,
                         dlength = dlength - (offset - offset_save);
                     }
 
-                } else if (datatype == S7COMMP_DATATYPE_RES) {      /* Response */
+                } else if ((datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_RES2)){      /* Response */
                     proto_tree_add_text(s7commp_data_tree, tvb, offset , 1,   "Res. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
                     offset += 1;
                     dlength -= 1;
-
-
                     /* Testweise ein Antworttelegramm von der SPS einer HMI-Anfrage
                      * Passt aber nur bei einer 1200
                      * Die 1500 scheint schon wieder alles anders zu machen
@@ -1746,6 +1848,18 @@ dissect_s7commp(tvbuff_t *tvb,
                         proto_item_set_len(item_tree, offset - offset_save);
                         dlength = dlength - (offset - offset_save);
                     }
+
+                } else if (datatype == S7COMMP_DATATYPE_CYC) {
+                    /* 1: Kennung -> Standard */
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_datatype, tvb, offset, 1, datatype);
+                    /* add type to info column */
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
+                    offset += 1;
+                    dlength -= 1;
+
+                    offset_save = offset;
+                    offset = s7commp_decode_data_cyclic(tvb, pinfo, s7commp_data_tree, dlength, offset);
+                    dlength = dlength - (offset - offset_save);
                 }
             }
 
