@@ -118,8 +118,6 @@ static const value_string pdu1_datafunc_names[] = {
 #define S7COMMP_PDU2_DATAFUNC_WRITE         0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
 #define S7COMMP_PDU2_DATAFUNC_READ          0x054c      /* Allgemeines Read, für alles mögliche */
 #define S7COMMP_PDU2_DATAFUNC_WATCHTABLE12  0x0071      /* Werteübertragung in einer Beobachtungstabelle bei einer 1200 */
-#define S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA1  0x0006      /* Datenübertragung bei Änderung (zyklisch) 1200 und V13 */
-#define S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA2  0x006a      /* Datenübertragung bei Änderung (zyklisch) 1200 und V13 */
 
 static const value_string pdu2_datafunc_names[] = {
     { S7COMMP_PDU2_DATAFUNC_BLOCK,          "Block" },
@@ -127,8 +125,6 @@ static const value_string pdu2_datafunc_names[] = {
     { S7COMMP_PDU2_DATAFUNC_WRITE,          "Write" },
     { S7COMMP_PDU2_DATAFUNC_READ,           "Read" },
     { S7COMMP_PDU2_DATAFUNC_WATCHTABLE12,   "Watch table data 1200" },
-    { S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA1,   "Change-Event Data Type 1" },
-    { S7COMMP_PDU2_DATAFUNC_CYC_EVTDATA2,   "Change-Event Data Type 2" },
     { 0,                                    NULL }
 };
 /**************************************************************************
