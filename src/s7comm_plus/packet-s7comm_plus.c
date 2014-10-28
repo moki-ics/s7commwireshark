@@ -160,7 +160,7 @@ static const value_string pdu2_datafunc_names[] = {
  * Datatype IDs in Connect -> Session telegrams
  * appear in the start session request/response and within the write after start session
  */
-#define S7COMMP_SESS_TYPEID_ENDBYTE         0x00
+#define S7COMMP_ITEM_DATA_TYPE_NULL         0x00
 #define S7COMMP_SESS_TYPEID_STRING          0x15
 #define S7COMMP_TYPEID_STRUCT               0x17
 /* Why two dwords, maybe one is integer? */
@@ -188,7 +188,7 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER,    "IEC LTimer" },
-    { S7COMMP_SESS_TYPEID_ENDBYTE,          "Fill Byte" },
+    { S7COMMP_ITEM_DATA_TYPE_NULL,          "Null" },
     { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
     { S7COMMP_TYPEID_STRUCT,                "Struct" },
     { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
@@ -597,7 +597,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     *octet_count = counter;
     return  val;
 }
-
+/*******************************************************************************************************/
 guint64
 tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
@@ -626,6 +626,11 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return  val;
 }
 
+/*******************************************************************************************************
+ *
+ * Decoding of a single value with datatype flags, datatype specifier and the value data
+ *
+ *******************************************************************************************************/
 static guint32
 s7commp_decode_value(tvbuff_t *tvb,
                      proto_tree *data_item_tree,
@@ -779,9 +784,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
-            /************************** Types used in Session request/response  ***************************/
-            case S7COMMP_SESS_TYPEID_ENDBYTE:       /* 0x00 */
-                /* Leeres byte als Ende-Kennung? oder NOP zum fuellen? */
+            /************************** Special ***************************/
+            case S7COMMP_ITEM_DATA_TYPE_NULL:       /* 0x00 */
+                /* No value following */
+                g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
                 length_of_value = 0;
                 break;
             case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
@@ -850,7 +856,9 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, " (%s) Array[%u] = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), array_size, str_arrval);
         }
     } else { /* not an array */
-        proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
+        if (length_of_value > 0) {
+            proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
+        }
         if (!inSession) {   /* when "in session", the item number is added outside to additional information */
             proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
         } else {
@@ -1156,11 +1164,11 @@ s7commp_decode_item_errorvalue(tvbuff_t *tvb,
     return offset;
 }
 
-/**
+/*******************************************************************************************************
  * s7commp_decode_data_rw_request_trail()
  * Read and write requsts contain a 27 byte long part. For the S7-1200 these content is always the same.
  * But for the S7-1500 the last 4 byte are changing within a session.
- */
+ *******************************************************************************************************/
 static guint32
 s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
                                      proto_tree *tree,
@@ -1512,7 +1520,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
     guint16 ref_number;
 
     guint16 seqnum;
-    guint8 data_indicator;
+    guint8 item_return_value;
 
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -1542,9 +1550,8 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
     offset += 2;
 
-    /* Sequenz-nummer, bei cyclic steht hier immer Null */
-    seqnum = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
+    /* Sequenz-nummer bei "normalen", bei cyclic steht hier immer Null */
+    proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
     if (unknown1 == 0x1000 && unknown2 == 0x0400){
@@ -1552,7 +1559,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
          * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
          * Sonst gibt es ein verkürztes (Status?)-Telegramm.
          */
-        proto_tree_add_text(tree, tvb, offset , 1, "Cyc Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
 
         seqnum = tvb_get_ntohs(tvb, offset);
@@ -1560,18 +1567,28 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
         col_append_fstr(pinfo->cinfo, COL_INFO, ", CycSeq=%u", seqnum);
         offset += 2;
 
-        proto_tree_add_text(tree, tvb, offset , 1, "Cyc Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+        proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
 
-        data_indicator = tvb_get_guint8(tvb, offset);
-        while (data_indicator) {
+        item_return_value = tvb_get_guint8(tvb, offset);
+        /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
+         * Aufbau aus den anderen Telegrammen.
+         * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
+         * Folgende Rückgabewerte wurden gesichtet:
+         *  0x13 -> Fehler bei einer Adresse (S7-1200)
+         *  0x92 -> Erfolg (S7-1200)
+         *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
+         *
+         * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
+         */
+        while (item_return_value) {
             add_data_info_column = TRUE;    /* set flag, to add information into Info-Column at the end*/
             start_offset = offset;
 
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-            proto_tree_add_text(data_item_tree, tvb, offset , 1, "Data indicator (contains data when != 0): 0x%02x", data_indicator);
+            proto_tree_add_text(data_item_tree, tvb, offset , 1, "Return value: 0x%02x", item_return_value);
             offset += 1;
             /* Item Nummer negiert ffffffff */
             item_number = tvb_get_ntohl(tvb, offset);
@@ -1582,7 +1599,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel, item_number, FALSE);
             proto_item_set_len(data_item_tree, offset - start_offset);
 
-            data_indicator = tvb_get_guint8(tvb, offset);
+            item_return_value = tvb_get_guint8(tvb, offset);
         }
         if (add_data_info_column) {
             col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
@@ -1877,7 +1894,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 /* insert sub-items in data tree */
                 s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
 
-                /* 1: Protocol Identifier, constant 0x32 */
+                /* 1: Protocol Identifier, constant 0x72 */
                 proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, tvb, offset, 1, FALSE);
                 offset += 1;
 
