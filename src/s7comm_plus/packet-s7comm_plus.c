@@ -978,7 +978,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_append_text(array_item_tree, " = %s", str_val);
         proto_item_set_len(array_item_tree, offset - start_offset);
         if (!inSession) {   /* when "in session", the item number is added outside to additional information */
-            proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+            proto_item_append_text(data_item_tree, " [%u]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
         } else {
             proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
         }
@@ -987,7 +987,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         }
         if (!inSession) {   /* when "in session", the item number is added outside to additional information */
-            proto_item_append_text(data_item_tree, " [%d]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+            proto_item_append_text(data_item_tree, " [%u]: (%s) = %s", item_number, val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
         } else {
             proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
         }
@@ -1035,9 +1035,9 @@ s7commp_decode_session_stuff(tvbuff_t *tvb,
         offset += octet_count;
 
         if (structLevel > 0) {
-            proto_item_append_text(data_item_tree, " [%d]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
+            proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
         } else {
-            proto_item_append_text(data_item_tree, " [%d]: ID: %u", item_nr, id_number);
+            proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
         }
 
         if(id_number) /* assuming that item id = 0 marks end of structure */
@@ -1279,11 +1279,11 @@ s7commp_decode_item_errorvalue(tvbuff_t *tvb,
     offset += 1;
     /*///////////////////////////////////////////////////////////////////////////////////////////*/
     errorvalue1 = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 1: 0x%08x dez %d", errorvalue1, errorvalue1);
+    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 1: 0x%08x dez %u", errorvalue1, errorvalue1);
     offset += 4;
 
     errorvalue2 = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 2: 0x%08x dez %d", errorvalue2, errorvalue2);
+    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 2: 0x%08x dez %u", errorvalue2, errorvalue2);
     offset += 4;
 
     proto_item_append_text(data_item_tree, " [%d]: Error values: 0x%08x/0x%08x", item_number, errorvalue1, errorvalue2);
@@ -1367,10 +1367,10 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of session settings for session ID : 0x%08x. ", value);
         item_count = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Item count: %u", item_count);
+        proto_tree_add_text(tree, tvb, offset, 1, "Item count: %d", item_count);
         offset +=1;
         itemAddressCount = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %u", itemAddressCount);
+        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %d", itemAddressCount);
         offset +=1;
         for(ItemAddressRead=1;
             (ItemAddressRead <= itemAddressCount) && (offset < offsetmax);
@@ -1913,7 +1913,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 /* 8/9: Sequenz-Nummer für die Referenzierung Request/Response */
                 seqnum = tvb_get_ntohs(tvb, offset);
                 proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%d", seqnum);
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u", seqnum);
                 offset += 2;
                 dlength -= 2;
             }
