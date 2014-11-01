@@ -1931,7 +1931,7 @@ dissect_s7commp(tvbuff_t *tvb,
 
             if (pdutype == S7COMMP_PDUTYPE_CONNECT || pdutype == S7COMMP_PDUTYPE_DATA) {
                 if (datatype == S7COMMP_DATATYPE_REQ) {
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohs(tvb, offset));
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
                     offset += 4;
                     dlength -= 4;
                     proto_tree_add_text(s7commp_data_tree, tvb, offset , 1,   "Req. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
