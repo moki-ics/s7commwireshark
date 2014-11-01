@@ -277,7 +277,6 @@ static gint hf_s7commp_data_datatype = -1;
 static gint hf_s7commp_data_unknown1 = -1;
 static gint hf_s7commp_data_unknown2 = -1;
 static gint hf_s7commp_data_pdufunction = -1;
-static gint hf_s7commp_data_requnknown1 = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
 
@@ -405,16 +404,12 @@ proto_register_s7commp (void)
             "Function of PDUs", HFILL }},
 
         { &hf_s7commp_data_sessionid,
-          { "Session Id", "s7comm-plus.data.sessionid", FT_UINT16, BASE_HEX, NULL, 0x0,
+          { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
 
         { &hf_s7commp_data_seqnum,
           { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number (for reference)", HFILL }},
-
-        { &hf_s7commp_data_requnknown1,
-          { "Req. Unknown 1", "s7comm-plus.data.requnknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Request Unknown 1, don't know what this is", HFILL }},
 
         /*** Trailer fields ***/
         { &hf_s7commp_trailer,
@@ -1028,20 +1023,27 @@ s7commp_decode_startsession(tvbuff_t *tvb,
                             proto_tree *tree,
                             guint32 offset,
                             const guint32 offsetmax,
-                            gboolean is_response,
+                            guint8 datatype,
                             guint8 pdutype)
 {
     /* einige Bytes unbekannt */
     guint32 unkownBytes = 0;
     guint8 scannedByte = 0;
+    guint8 octet_count = 0;
+    guint32 value = 0;
 
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4, tvb_get_ptr(tvb, offset, 4));
-    offset += 4;
-    if (is_response && pdutype == S7COMMP_PDUTYPE_CONNECT) {
-        /* the following byte becomes part of the session id by adding 0x0380 */
-        scannedByte = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "This byte becomes part of the Session Id by adding 0x0380, should be (0x%04x): 0x%02x", (scannedByte + 0x0380), scannedByte);
-        offset += 1;
+    /* Eine Session-Aufbau wird z.B. für die folgenden Dinge verwendet:
+     * - Herstellung einer Verbindung zur SPS. Dann ist der PDU-Typ CONNECT.
+     * - Herstellung einer Verbindung zur Abfrage von zyklischen Daten, wie Variablendiensten oder Baugruppenzustand.
+     * - Aufbau einer Upload-Session, in deren Folge ein Baustein über mehrere PDUs in die SPS hochgeladen werden kann.
+     *
+     */
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    if (datatype == S7COMMP_DATATYPE_RES) {
+        value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Result Session Id: 0x%08x", value, value);
+        offset += octet_count;
     } else {
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
         offset += 1;
@@ -1057,7 +1059,27 @@ s7commp_decode_startsession(tvbuff_t *tvb,
     offset += unkownBytes;
     return s7commp_decode_id_value_pairs(tvb,tree,offset,offsetmax);
 }
+/*******************************************************************************************************
+ *
+ * End session
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_endsession(tvbuff_t *tvb,
+                            proto_tree *tree,
+                            guint32 offset,
+                            guint8 datatype,
+                            guint8 pdutype)
+{
+    if (datatype == S7COMMP_DATATYPE_RES) {
+        proto_tree_add_text(tree, tvb, offset, 1, "End Session Unknown (Result?): 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+    }
+    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
 
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Decodes a plc address
@@ -1591,9 +1613,8 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
                            guint16 dlength,
                            guint32 offset)
 {
-    guint16 unknown1;
     guint16 unknown2;
-    guint16 ref_number;
+    guint32 cyclic_session_id;
 
     guint16 seqnum;
     guint8 item_return_value;
@@ -1607,19 +1628,13 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
 
     /* Bei zyklischen Daten ist die Funktionsnummer nicht so wie bei anderen Telegrammen. Dieses ist eine
      * Nummer die vorher über ein 0x04ca Telegramm von der SPS zurückkommt.
-     * Bei den Daten steht aber bei "unknown 1" ein 0x1000 und bei "unknown 2" ein 0x0400
      */
 
-    /* 2/3: Unbekannt */
-    unknown1 = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
-    offset += 2;
-
-    /* 4/5: Reference number */
-    ref_number = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic reference number: %u", ref_number);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " CycRef=%u", ref_number);
-    offset += 2;
+    /* 4 Bytes Session Id */
+    cyclic_session_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x (dec: %u)", cyclic_session_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " CycId=0x%08x", cyclic_session_id);
+    offset += 4;
 
     /* 6/7: Unbekannt */
     unknown2 = tvb_get_ntohs(tvb, offset);
@@ -1627,10 +1642,10 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
     offset += 2;
 
     /* Sequenz-nummer bei "normalen", bei cyclic steht hier immer Null */
-    proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
-    if (unknown1 == 0x1000 && unknown2 == 0x0400) {
+    if (unknown2 == 0x0400) {
         /* Bei V13 und einer 1200 werden hiermit Daten vom HMI zyklisch
          * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
          * Sonst gibt es ein verkürztes (Status?)-Telegramm.
@@ -1696,19 +1711,15 @@ s7commp_decode_data_modify_cyclic(tvbuff_t *tvb,
                                   guint16 dlength _U_,
                                   guint32 offset)
 {
-    guint16 ref_number;
+    guint32 cyclic_session_id;
     guint16 seqnum;
     guint8 function;
 
-    /* 1/2: Unbekannt */
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic modify unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-
-    /* 3/4: Reference number */
-    ref_number = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic reference number: %u", ref_number);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " CycRef=%u", ref_number);
-    offset += 2;
+    /* 4 Bytes Session Id */
+    cyclic_session_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x (dec: %u)", cyclic_session_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " CycId=0x%08x", cyclic_session_id);
+    offset += 4;
 
     /* 2 Bytes unbekannt */
     proto_tree_add_text(tree, tvb, offset , 2, "Cyclic modify unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
@@ -1918,20 +1929,11 @@ dissect_s7commp(tvbuff_t *tvb,
                 dlength -= 2;
             }
 
-            if ((pdutype == S7COMMP_PDUTYPE_CONNECT || pdutype == S7COMMP_PDUTYPE_DATA) &&
-                (datatype == S7COMMP_DATATYPE_REQ || datatype == S7COMMP_DATATYPE_RES) &&
-                (function == S7COMMP_PDU_DATAFUNC_STARTSESSION)) {
-                    offset_save = offset;
-                    offset = s7commp_decode_startsession(tvb, s7commp_data_tree, offset, offset + dlength, (datatype == S7COMMP_DATATYPE_RES), pdutype);
-                    dlength = dlength - (offset - offset_save);
-            } else if (pdutype == S7COMMP_PDUTYPE_DATA) {
+            if (pdutype == S7COMMP_PDUTYPE_CONNECT || pdutype == S7COMMP_PDUTYPE_DATA) {
                 if (datatype == S7COMMP_DATATYPE_REQ) {
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_requnknown1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-                    offset += 2;
-                    dlength -= 2;
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-                    offset += 2;
-                    dlength -= 2;
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohs(tvb, offset));
+                    offset += 4;
+                    dlength -= 4;
                     proto_tree_add_text(s7commp_data_tree, tvb, offset , 1,   "Req. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
                     offset += 1;
                     dlength -= 1;
@@ -1958,6 +1960,14 @@ dissect_s7commp(tvbuff_t *tvb,
                         offset_save = offset;
                         offset = s7commp_decode_data_modify_cyclic(tvb, pinfo, s7commp_data_tree, dlength, offset);
                         dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_STARTSESSION) {
+                        offset_save = offset;
+                        offset = s7commp_decode_startsession(tvb, s7commp_data_tree, offset, offset + dlength, datatype, pdutype);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
+                        offset_save = offset;
+                        offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
+                        dlength = dlength - (offset - offset_save);
                     }
 
                 } else if ((datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_RES2)){      /* Response */
@@ -1977,6 +1987,14 @@ dissect_s7commp(tvbuff_t *tvb,
                         offset_save = offset;
                         offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
                         proto_item_set_len(item_tree, offset - offset_save);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_STARTSESSION) {
+                        offset_save = offset;
+                        offset = s7commp_decode_startsession(tvb, s7commp_data_tree, offset, offset + dlength, datatype, pdutype);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
+                        offset_save = offset;
+                        offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
                         dlength = dlength - (offset - offset_save);
                     }
 
