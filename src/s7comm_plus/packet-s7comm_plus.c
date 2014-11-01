@@ -481,7 +481,7 @@ proto_register_s7commp (void)
           NULL, HFILL }},
         { &hf_s7commp_itemval_datatype_flags_array,
         { "Array", "s7comm-plus.item.val.datatype_flags.array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ARRAY,
-          "The data has to be interpretes as an array of values", HFILL }},
+          "The data has to be interpreted as an array of values", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_address_array,
         { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
           "Array of values for Item Address via CRC and LID", HFILL }},
@@ -662,7 +662,7 @@ s7commp_decode_udint_address_array(tvbuff_t *tvb,
         array_size_act += 1;
 
         value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 2 (LID Nesting depth?): %u", i, value);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 2: %u", i, value);
         offset += octet_count;
         array_size_act += 1;
 
@@ -688,13 +688,22 @@ s7commp_decode_udint_address_array(tvbuff_t *tvb,
         offset += octet_count;
         array_size_act += 1;
 
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] LID-Value: %u", i, value);
-        offset += octet_count;
-        array_size_act += 1;
+        /* When accessing a variable inside a struct / array, the adress has one LID for each struct / array index.
+         * There is no header which says how many LIDs are following.
+         * When another address follows, the ID of this is always bigger than 2^31. If not, then another LID follows.
+         * If this is the last address, check if the number of fields in the array is reached.
+         */
+        do {
+            value = tvb_get_varuint32(tvb, &octet_count, offset);
+            if (value < 2147483648lu) {
+                proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] LID-Value: %u", i, value);
+                offset += octet_count;
+                array_size_act += 1;
+            }
+        } while ((value < 2147483648lu) && (array_size_act < array_size));
 
         /* break decoding if out of array-size range*/
-        if (array_size_act > array_size) {
+        if (array_size_act >= array_size) {
             break;
         }
     }
