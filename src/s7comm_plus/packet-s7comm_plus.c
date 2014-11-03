@@ -104,18 +104,20 @@ static const value_string datatype_names[] = {
 
 #define S7COMMP_PDU_DATAFUNC_STARTSESSION   0x04ca
 #define S7COMMP_PDU_DATAFUNC_ENDSESSION     0x04d4      /* kommt auch wenn zyklische Dienste an-/abgemeldet werden */
-#define S7COMMP_PDU_DATAFUNC_CYC_MODIFY     0x04f2      /* aktualisiert/bearbeitet eine zyklische Datenanfrage */
+#define S7COMMP_PDU_DATAFUNC_MODSESSION     0x04f2      /* aktualisiert/bearbeitet eine Session */
 #define S7COMMP_PDU_DATAFUNC_WRITE          0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
 #define S7COMMP_PDU_DATAFUNC_READ           0x054c      /* Allgemeines Read, für alles mögliche */
 #define S7COMMP_PDU_DATAFUNC_WATCHTABLE12   0x0071      /* Werteübertragung in einer Beobachtungstabelle bei einer 1200 */
+#define S7COMMP_PDU_DATAFUNC_0x0586         0x0586
 
 static const value_string pdu_datafunc_names[] = {
     { S7COMMP_PDU_DATAFUNC_STARTSESSION,    "Start session" },
     { S7COMMP_PDU_DATAFUNC_ENDSESSION,      "End session" },
-    { S7COMMP_PDU_DATAFUNC_CYC_MODIFY,      "Modify cyclic" },
+    { S7COMMP_PDU_DATAFUNC_MODSESSION,      "Modify session" },
     { S7COMMP_PDU_DATAFUNC_WRITE,           "Write" },
     { S7COMMP_PDU_DATAFUNC_READ,            "Read" },
     { S7COMMP_PDU_DATAFUNC_WATCHTABLE12,    "Watch table data 1200" },
+    { S7COMMP_PDU_DATAFUNC_0x0586,          "Unknown read/write?" },
     { 0,                                     NULL }
 };
 /**************************************************************************
@@ -251,12 +253,14 @@ static const value_string var_item_base_area_names[] = {
     { 0,                                NULL }
 };
 
-/* Modify cyclic telegram functions */
-#define S7COMMP_MOD_CYCLIC_FUNC_REFRESH         0x1d
-#define S7COMMP_MOD_CYCLIC_FUNC_UNSUBSCRIBE     0x1b
-static const value_string mod_cyclic_func_names[] = {
-    { S7COMMP_MOD_CYCLIC_FUNC_REFRESH,          "Refresh until cyclic sequence" },
-    { S7COMMP_MOD_CYCLIC_FUNC_UNSUBSCRIBE,      "Unsubscribe" },
+/* Modify session telegram functions */
+#define S7COMMP_MODSESSION_FUNC_REFRESH         0x1d
+#define S7COMMP_MODSESSION_FUNC_UNSUBSCRIBE     0x1b
+#define S7COMMP_MODSESSION_FUNC_VALUE           0x30
+static const value_string mod_session_func_names[] = {
+    { S7COMMP_MODSESSION_FUNC_REFRESH,          "Refresh until cyclic sequence" },
+    { S7COMMP_MODSESSION_FUNC_UNSUBSCRIBE,      "Unsubscribe" },
+    { S7COMMP_MODSESSION_FUNC_VALUE,            "Unknown, value follows" },
     { 0,                                        NULL }
 };
 
@@ -1641,7 +1645,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
 
     /* 4 Bytes Session Id */
     cyclic_session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x (dec: %u)", cyclic_session_id);
+    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x", cyclic_session_id);
     col_append_fstr(pinfo->cinfo, COL_INFO, " CycId=0x%08x", cyclic_session_id);
     offset += 4;
 
@@ -1710,11 +1714,11 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Modify request for cyclic data
+ * Modify session request
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_modify_cyclic(tvbuff_t *tvb,
+s7commp_decode_data_modify_session(tvbuff_t *tvb,
                                   packet_info *pinfo,
                                   proto_tree *tree,
                                   guint16 dlength _U_,
@@ -1724,42 +1728,88 @@ s7commp_decode_data_modify_cyclic(tvbuff_t *tvb,
     guint16 seqnum;
     guint8 function;
 
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    int struct_level = 0;
+    guint32 start_offset;
+
     /* 4 Bytes Session Id */
     cyclic_session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x (dec: %u)", cyclic_session_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " CycId=0x%08x", cyclic_session_id);
+    proto_tree_add_text(tree, tvb, offset , 4, "Session Id to modify: 0x%08x", cyclic_session_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ModSessId=0x%08x", cyclic_session_id);
     offset += 4;
 
-    /* 2 Bytes unbekannt */
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic modify unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
+    /* 2 Bytes unknown */
+    proto_tree_add_text(tree, tvb, offset , 2, "Session modify unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
-    /* 1 Byte: 0x1d = refresh, 0x1b = unsubscribe */
+    /* 1 Byte: 0x1d = refresh, 0x1b = unsubscribe, 0x30 value is following */
     function = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 1, "Cyclic modify function: %s (0x%02x)", val_to_str(function, mod_cyclic_func_names, "Unknown function: 0x%02x"), function);
+    proto_tree_add_text(tree, tvb, offset , 1, "Session modify function: %s (0x%02x)", val_to_str(function, mod_session_func_names, "Unknown function: 0x%02x"), function);
     offset += 1;
 
-    /* 2 Bytes unbekannt */
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic modify unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-
-    if (function == S7COMMP_MOD_CYCLIC_FUNC_REFRESH) {
+    if (function == S7COMMP_MODSESSION_FUNC_REFRESH) {
+        /* 2 Bytes unbekannt */
+        proto_tree_add_text(tree, tvb, offset , 2, "Session modify unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
         /* Sequenznummer, bis zu der automatisch die nächsten zyklischen Daten geschickt werden sollen */
         seqnum = tvb_get_ntohs(tvb, offset);
         proto_tree_add_text(tree, tvb, offset , 2, "Refresh automatic until cyclic sequence number: %u", seqnum);
         col_append_fstr(pinfo->cinfo, COL_INFO, "->UntilCycSeq=%u", seqnum);
         offset += 2;
-    } else if (function == S7COMMP_MOD_CYCLIC_FUNC_UNSUBSCRIBE) {
+    } else if (function == S7COMMP_MODSESSION_FUNC_UNSUBSCRIBE) {
+        /* 2 Bytes unbekannt */
+        proto_tree_add_text(tree, tvb, offset , 2, "Session modify unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
         col_append_fstr(pinfo->cinfo, COL_INFO, "->Unsubscribe");
         /* Unbekannte 2 bytes */
-        proto_tree_add_text(tree, tvb, offset , 2, "Cyclic modify unsubscribe unknown: 0x%04x", tvb_get_ntohs(tvb, offset));
+        proto_tree_add_text(tree, tvb, offset , 2, "Session modify unsubscribe unknown: 0x%04x", tvb_get_ntohs(tvb, offset));
         offset += 2;
+    } else if (function == S7COMMP_MODSESSION_FUNC_VALUE) {
+        /* standard enconding for a value is used (datatype, flags, value) */
+        while (tvb_get_guint8(tvb, offset) != 0x00) {       /* loop as long a valid datatype follows */
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            start_offset = offset;
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
     }
     /* Rest ist unbekannt */
 
     return offset;
 }
-
+/*******************************************************************************************************
+ *
+ * Decode telegram with function 0x0586, used for authentication any anything else (unknown yet)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_func0x0586_response(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    int struct_level = 0;
+    guint32 start_offset;
+    /* It seems that there is more than one valid data-structure.
+     * When the first two bytes are 0x0000, and then a value other than 0x00 is following, the data is coded
+     * in usual value format (datatype, flags, value).
+     */
+    if (tvb_get_ntohs(tvb, offset) == 0x0000) {
+        proto_tree_add_text(tree, tvb, offset , 2, "Response unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
+        while (tvb_get_guint8(tvb, offset) != 0x00) {       /* loop as long a valid datatype follows */
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            start_offset = offset;
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
+    }
+    return offset;
+}
 /*******************************************************************************************************
  *******************************************************************************************************
  *
@@ -1965,9 +2015,9 @@ dissect_s7commp(tvbuff_t *tvb,
                         offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
                         proto_item_set_len(item_tree, offset - offset_save);
                         dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_CYC_MODIFY) {
+                    } else if (function == S7COMMP_PDU_DATAFUNC_MODSESSION) {
                         offset_save = offset;
-                        offset = s7commp_decode_data_modify_cyclic(tvb, pinfo, s7commp_data_tree, dlength, offset);
+                        offset = s7commp_decode_data_modify_session(tvb, pinfo, s7commp_data_tree, dlength, offset);
                         dlength = dlength - (offset - offset_save);
                     } else if (function == S7COMMP_PDU_DATAFUNC_STARTSESSION) {
                         offset_save = offset;
@@ -2004,6 +2054,12 @@ dissect_s7commp(tvbuff_t *tvb,
                     } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
                         offset_save = offset;
                         offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_0x0586) {
+                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
+                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
+                        offset_save = offset;
+                        offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
                         dlength = dlength - (offset - offset_save);
                     }
 
