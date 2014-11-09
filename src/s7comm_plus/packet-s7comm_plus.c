@@ -109,6 +109,7 @@ static const value_string datatype_names[] = {
 #define S7COMMP_PDU_DATAFUNC_READ           0x054c      /* Allgemeines Read, für alles mögliche */
 #define S7COMMP_PDU_DATAFUNC_WATCHTABLE12   0x0071      /* Werteübertragung in einer Beobachtungstabelle bei einer 1200 */
 #define S7COMMP_PDU_DATAFUNC_0x0586         0x0586
+#define S7COMMP_PDU_DATAFUNC_EXPLORE        0x04bb
 
 static const value_string pdu_datafunc_names[] = {
     { S7COMMP_PDU_DATAFUNC_STARTSESSION,    "Start session" },
@@ -118,6 +119,7 @@ static const value_string pdu_datafunc_names[] = {
     { S7COMMP_PDU_DATAFUNC_READ,            "Read" },
     { S7COMMP_PDU_DATAFUNC_WATCHTABLE12,    "Watch table data 1200" },
     { S7COMMP_PDU_DATAFUNC_0x0586,          "Unknown read/write?" },
+    { S7COMMP_PDU_DATAFUNC_EXPLORE,         "Explore" },
     { 0,                                     NULL }
 };
 /**************************************************************************
@@ -1811,6 +1813,35 @@ s7commp_decode_func0x0586_response(tvbuff_t *tvb,
     return offset;
 }
 /*******************************************************************************************************
+ *
+ * Exploring the data structure of a plc
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_explore_request(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    /* Speicherbereich der durchsucht werden soll:
+     * Linke 2 (1) Bytes        Rechte 2 (3) Bytes
+     * ==============================================
+     *  0x9200 = Global-DB      Global-DB-Nummer (bei 1200 maximal Nr. 59999 erlaubt)
+     *      nn = Substrukturelement
+     *  0x9300 = Instanz-DB     Nummer des FBs von dem abgeleitet wurde
+     *  0x9002 = ?
+     *  0x9003 = Merker
+     *  0x9004 = ?
+     *  0x9005 = ?
+     *  0x9006 = ?
+     */
+    proto_tree_add_text(tree, tvb, offset , 2, "Exploration area 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    proto_tree_add_text(tree, tvb, offset , 2, "Exploration area 2: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+
+    return offset;
+}
+/*******************************************************************************************************
  *******************************************************************************************************
  *
  * S7-Protocol plus (main tree)
@@ -2026,6 +2057,10 @@ dissect_s7commp(tvbuff_t *tvb,
                     } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
                         offset_save = offset;
                         offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_EXPLORE) {
+                        offset_save = offset;
+                        offset = s7commp_decode_explore_request(tvb, s7commp_data_tree, offset);
                         dlength = dlength - (offset - offset_save);
                     }
 
