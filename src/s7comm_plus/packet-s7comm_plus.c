@@ -266,6 +266,31 @@ static const value_string mod_session_func_names[] = {
     { 0,                                        NULL }
 };
 
+#define S7COMMP_EXPLORE_AREA_DB                 0x00000003
+#define S7COMMP_EXPLORE_AREA_TONINSTANCE        0x0200001f
+#define S7COMMP_EXPLORE_AREA_GLOBALDB_NO        0x92000000
+#define S7COMMP_EXPLORE_AREA_INSTANCEDB         0x93000000
+#define S7COMMP_EXPLORE_AREA_INPUT              0x90010000
+#define S7COMMP_EXPLORE_AREA_OUTPUT             0x90020000
+#define S7COMMP_EXPLORE_AREA_BITMEM             0x90030000
+#define S7COMMP_EXPLORE_AREA_9004               0x90040000
+#define S7COMMP_EXPLORE_AREA_9005               0x90050000
+#define S7COMMP_EXPLORE_AREA_9006               0x90060000
+
+static const value_string explore_area_names[] = {
+    { S7COMMP_EXPLORE_AREA_DB,                  "DB" },
+    { S7COMMP_EXPLORE_AREA_TONINSTANCE,         "TON Instance" },
+    { S7COMMP_EXPLORE_AREA_GLOBALDB_NO,         "Specific Global-DB" },
+    { S7COMMP_EXPLORE_AREA_INSTANCEDB,          "Specific Instance-DB" },
+    { S7COMMP_EXPLORE_AREA_INPUT,               "Input area" },
+    { S7COMMP_EXPLORE_AREA_OUTPUT,              "Output area" },
+    { S7COMMP_EXPLORE_AREA_BITMEM,              "M Bit memory" },
+    { S7COMMP_EXPLORE_AREA_9004,                "Unknown area 9004" },
+    { S7COMMP_EXPLORE_AREA_9005,                "Unknown area 9005" },
+    { S7COMMP_EXPLORE_AREA_9006,                "Unknown area 9006" },
+    { 0,                                        NULL }
+};
+
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
@@ -343,6 +368,8 @@ static const int *s7commp_itemval_datatype_flags_fields[] = {
 static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
+
+static gint hf_s7commp_explore_req_area1 = -1;
 
 /* Register this protocol */
 void
@@ -492,7 +519,7 @@ proto_register_s7commp (void)
         { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
           "Array of values for Item Address via CRC and LID", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_0x90unkn,
-        { "Unknown-Flag1", "7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
+        { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
           "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
 
         { &hf_s7commp_itemval_datatype,
@@ -503,6 +530,11 @@ proto_register_s7commp (void)
             "varuint32: Number of values of the specified datatype following", HFILL }},
         { &hf_s7commp_itemval_value,
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
+        /* Exploring plc */
+        { &hf_s7commp_explore_req_area1,
+          { "Data area to explore", "s7comm-plus.explore.req_area1", FT_UINT32, BASE_HEX, VALS(explore_area_names), 0x0,
             NULL, HFILL }},
 
     };
@@ -1814,31 +1846,121 @@ s7commp_decode_func0x0586_response(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Exploring the data structure of a plc
+ * Exploration ares
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_explore_request(tvbuff_t *tvb,
+s7commp_decode_explore_area(tvbuff_t *tvb,
+                               packet_info *pinfo,
                                proto_tree *tree,
                                guint32 offset)
 {
     /* Speicherbereich der durchsucht werden soll:
      * Linke 2 (1) Bytes        Rechte 2 (3) Bytes
      * ==============================================
+     *  0x0000 0x0003 = Globale DBs (Liste)
+     *  0x0200 0x001f = TON Instanz. Unbekannt wie die Zugehörigkeit zu einem DB/IDB hergestellt wird.
      *  0x9200 = Global-DB      Global-DB-Nummer (bei 1200 maximal Nr. 59999 erlaubt)
      *      nn = Substrukturelement
      *  0x9300 = Instanz-DB     Nummer des FBs von dem abgeleitet wurde
-     *  0x9002 = ?
-     *  0x9003 = Merker
+     *  0x9001 = Input area
+     *  0x9002 = Output area
+     *  0x9003 = M Bit memory
      *  0x9004 = ?
      *  0x9005 = ?
      *  0x9006 = ?
      */
-    proto_tree_add_text(tree, tvb, offset , 2, "Exploration area 1: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    proto_tree_add_text(tree, tvb, offset , 2, "Exploration area 2: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
+    guint32 area, area_masked;
+    guint16 db1 = 0;
+    guint16 db2 = 0;
 
+    area = tvb_get_ntohl(tvb, offset);
+    area_masked = area & 0xff000000;    /* unmask DB and structure number */
+    if ((area_masked != S7COMMP_EXPLORE_AREA_GLOBALDB_NO) &&
+        (area_masked != S7COMMP_EXPLORE_AREA_INSTANCEDB)) {   /* specific DB or FB instance */
+        /* use without mask */
+        area_masked = area;
+    }
+
+    proto_tree_add_uint(tree, hf_s7commp_explore_req_area1, tvb, offset, 4, area_masked);
+
+    if ((area & 0xff000000) == S7COMMP_EXPLORE_AREA_GLOBALDB_NO) {
+        db1 = (area >> 16) & 0x00ff;
+        db2 = area & 0x0000ffff;
+        proto_tree_add_text(tree, tvb, offset, 2, "Global-DB Sub-Structure-Element: %d", db1);
+        proto_tree_add_text(tree, tvb, offset + 2, 2, "Global-DB Number: %d", db2);
+        if (pinfo != NULL)
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s No:%d]", val_to_str(area_masked, explore_area_names, "0x%08x"), db2);
+    } else if ((area & 0xff000000) == S7COMMP_EXPLORE_AREA_INSTANCEDB) {
+        db1 = area & 0x0000ffff;
+        proto_tree_add_text(tree, tvb, offset + 2, 2, "Instance-DB of FB number: %d", (area & 0x0000ffff));
+        if (pinfo != NULL)
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s of FB No:%d]", val_to_str(area_masked, explore_area_names, "0x%08x"), db1);
+    } else {
+        if (pinfo != NULL)
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s]", val_to_str(area_masked, explore_area_names, "0x%08x"));
+    }
+    offset += 4;
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Exploring the data structure of a plc, request
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_explore_request(tvbuff_t *tvb,
+                               packet_info *pinfo,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    offset = s7commp_decode_explore_area(tvb, pinfo, tree, offset);
+    /* 4 oder 5 weitere Bytes unbekannter Funktion */
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Exploring the data structure of a plc, response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_explore_response(tvbuff_t *tvb,
+                               packet_info *pinfo,
+                               proto_tree *tree,
+                               guint16 dlength,
+                               guint32 offset)
+{
+    /* 6 Bytes unbekannt. Zumindest das erste word sollte 0x0000 sein, sonst Fehler? */
+    guint16 ret1;
+    guint8 number_of_fields;
+
+    ret1 = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", ret1);
+    offset += 2;
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    number_of_fields = tvb_get_guint8(tvb, offset); /* passt evtl. auch nur zufällig */
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of fields in id/value dataset?: %d", number_of_fields);
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset, 1, "Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    if (ret1 == 0x0000) {
+        /* 4 Bytes exploration area wie auch beim Request */
+        offset = s7commp_decode_explore_area(tvb, NULL, tree, offset);
+    } else {
+        proto_tree_add_text(tree, tvb, offset, 4, "Explore area error?: 0x%08x", tvb_get_ntohl(tvb, offset));
+        offset += 4;
+    }
+    /* 4 Bytes unbekannt */
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    /* Datenarray, ID, Typ, Wert.
+     * Aber nur so viele Felder wie oben angegeben.
+     * Danach folgt eine andere Struktur.
+     */
+    offset = s7commp_decode_id_value_pairs(tvb, tree, offset, dlength);
     return offset;
 }
 /*******************************************************************************************************
@@ -2059,8 +2181,11 @@ dissect_s7commp(tvbuff_t *tvb,
                         offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
                         dlength = dlength - (offset - offset_save);
                     } else if (function == S7COMMP_PDU_DATAFUNC_EXPLORE) {
+                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
+                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
                         offset_save = offset;
-                        offset = s7commp_decode_explore_request(tvb, s7commp_data_tree, offset);
+                        offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
+                        proto_item_set_len(item_tree, offset - offset_save);
                         dlength = dlength - (offset - offset_save);
                     }
 
@@ -2095,6 +2220,14 @@ dissect_s7commp(tvbuff_t *tvb,
                         item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
                         offset_save = offset;
                         offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
+                        proto_item_set_len(item_tree, offset - offset_save);
+                        dlength = dlength - (offset - offset_save);
+                    } else if (function == S7COMMP_PDU_DATAFUNC_EXPLORE) {
+                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
+                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
+                        offset_save = offset;
+                        offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
+                        proto_item_set_len(item_tree, offset - offset_save);
                         dlength = dlength - (offset - offset_save);
                     }
 
