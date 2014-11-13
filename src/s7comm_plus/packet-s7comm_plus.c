@@ -123,49 +123,48 @@ static const value_string pdu_datafunc_names[] = {
     { 0,                                     NULL }
 };
 /**************************************************************************
- * Wert Datentypen in HMI Antworttelegrammen
- *
+ * Data types
  */
 
+#define S7COMMP_ITEM_DATA_TYPE_NULL         0x00
 /*** Binärzahlen **/
-#define S7COMMP_ITEM_DATA_TYPE_BOOL         0x01        /* BOOL, Wert in 1 Byte */
+#define S7COMMP_ITEM_DATA_TYPE_BOOL         0x01        /* BOOL: fix 1 Byte */
 /*** Ganzzahlen ohne Vorzeichen ***/
-#define S7COMMP_ITEM_DATA_TYPE_USINT        0x02        /* USINT oder CHAR, Wert in 1 Byte */
-#define S7COMMP_ITEM_DATA_TYPE_UINT         0x03        /* UINT, oder auch DATE, Wert in 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_UDINT        0x04        /* UDint, TIME_OF_DAY, Wert in 4 Bytes, bzw. abhängig vom Wert da kann es aber noch ein Byte mehr sein*/
-#define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt, Wert in varuint64 */
+#define S7COMMP_ITEM_DATA_TYPE_USINT        0x02        /* USINT, CHAR: fix 1 Byte */
+#define S7COMMP_ITEM_DATA_TYPE_UINT         0x03        /* UINT, DATE: fix 2 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_UDINT        0x04        /* UDint: varuint32 */
+#define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt: varuint64 */
 /*** Ganzzahlen mit Vorzeichen ***/
-#define S7COMMP_ITEM_DATA_TYPE_SINT         0x06        /* SINT, Wert in 1 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_INT          0x07        /* INT, Wert in 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_DINT         0x08        /* DINT, Wert in 4 Byte, kommt auch bei erster Antwort von der SPS, auch für TIME */
-#define S7COMMP_ITEM_DATA_TYPE_LINT         0x09        /* LInt, Wert in varint64 */
+#define S7COMMP_ITEM_DATA_TYPE_SINT         0x06        /* SINT: fix 1 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_INT          0x07        /* INT: fix 2 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_DINT         0x08        /* DINT, TIME: varint32 */
+#define S7COMMP_ITEM_DATA_TYPE_LINT         0x09        /* LInt: varint64 */
 /*** Bitfolgen ***/
-#define S7COMMP_ITEM_DATA_TYPE_BYTE         0x0a        /* BYTE, Wert in 1 Byte */
-#define S7COMMP_ITEM_DATA_TYPE_WORD         0x0b        /* WORD, Wert in 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_DWORD        0x0c        /* DWORD, Wert in 4 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_LWORD        0x0d        /* LWORD, Wert in 8 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_BYTE         0x0a        /* BYTE: fix 1 Byte */
+#define S7COMMP_ITEM_DATA_TYPE_WORD         0x0b        /* WORD: fix 2 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_DWORD        0x0c        /* DWORD: fix 4 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_LWORD        0x0d        /* LWORD: fix 8 Bytes */
 /*** Gleitpunktzahlen ***/
-#define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL, Wert in 4 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL, Wert in 8 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL: fix 4 Bytes */
+#define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL: fix 8 Bytes */
 /*** Spezial ***/
 #define S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER  0x10
 #define S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER   0x11
+#define S7COMMP_ITEM_DATA_TYPE_DWORD2       0x12        /* Why another dword, maybe this is something special? fix 4 Bytes */
+/* 0x13 ?? */
+#define S7COMMP_ITEM_DATA_TYPE_BLOB         0x14
+#define S7COMMP_ITEM_DATA_TYPE_STRING       0x15        /* string with length header */
+/* 0x16 ?? */
+#define S7COMMP_ITEM_DATA_TYPE_STRUCT       0x17
 
-/**************************************************************************
- * Datatype IDs in Connect -> Session telegrams
- * appear in the start session request/response and within the write after start session
+#define S7COMMP_ITEM_DATA_TYPE_DWORD1       0xd3        /* Why another dword, maybe this is something special? fix 4 Bytes */
+
+/* Theoretical missing types:
+ * - Variant
+ * - Enumerations
  */
-#define S7COMMP_ITEM_DATA_TYPE_NULL         0x00
-#define S7COMMP_SESS_TYPEID_STRING          0x15
-#define S7COMMP_TYPEID_STRUCT               0x17
-/* Why two dwords, maybe one is integer? */
-#define S7COMMP_SESS_TYPEID_DWORD1          0xd3
-#define S7COMMP_SESS_TYPEID_DWORD2          0x12
-
-#define S7COMMP_ITEM_DATA_TYPE_3BYTE        0x14    /* unknown meaning, 3 bytes long */
-
-
 static const value_string item_data_type_names[] = {
+    { S7COMMP_ITEM_DATA_TYPE_NULL,          "Null" },
     { S7COMMP_ITEM_DATA_TYPE_BOOL,          "Bool" },
     { S7COMMP_ITEM_DATA_TYPE_USINT,         "USInt" },
     { S7COMMP_ITEM_DATA_TYPE_UINT,          "UInt" },
@@ -178,17 +177,16 @@ static const value_string item_data_type_names[] = {
     { S7COMMP_ITEM_DATA_TYPE_BYTE,          "Byte" },
     { S7COMMP_ITEM_DATA_TYPE_WORD,          "Word" },
     { S7COMMP_ITEM_DATA_TYPE_DWORD,         "DWord" },
-    { S7COMMP_ITEM_DATA_TYPE_LWORD,         "LWORD" },
+    { S7COMMP_ITEM_DATA_TYPE_LWORD,         "LWord" },
     { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
     { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
     { S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER,    "IEC LTimer" },
-    { S7COMMP_ITEM_DATA_TYPE_NULL,          "Null" },
-    { S7COMMP_SESS_TYPEID_STRING,           "String with length header" },
-    { S7COMMP_TYPEID_STRUCT,                "Struct" },
-    { S7COMMP_SESS_TYPEID_DWORD1,           "DWORD 1" },
-    { S7COMMP_SESS_TYPEID_DWORD2,           "DWORD 2" },
-    { S7COMMP_ITEM_DATA_TYPE_3BYTE,         "3Byte" },
+    { S7COMMP_ITEM_DATA_TYPE_STRING,        "String" },
+    { S7COMMP_ITEM_DATA_TYPE_STRUCT,        "Struct" },
+    { S7COMMP_ITEM_DATA_TYPE_DWORD1,        "DWord 1" },
+    { S7COMMP_ITEM_DATA_TYPE_DWORD2,        "DWord 2" },
+    { S7COMMP_ITEM_DATA_TYPE_BLOB,          "Blob" },
     { 0,                                    NULL }
 };
 
@@ -889,15 +887,15 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
-            case S7COMMP_TYPEID_STRUCT:
+            case S7COMMP_ITEM_DATA_TYPE_STRUCT:
                 if(structLevel) *structLevel += 1; /* entering a new structure level */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATA_TYPE_DWORD:
-            case S7COMMP_SESS_TYPEID_DWORD1:        /* 0xd3 */
-            case S7COMMP_SESS_TYPEID_DWORD2:        /* 0x12 */
+            case S7COMMP_ITEM_DATA_TYPE_DWORD1:        /* 0xd3 */
+            case S7COMMP_ITEM_DATA_TYPE_DWORD2:        /* 0x12 */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
@@ -914,7 +912,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATA_TYPE_LREAL:
-                length_of_value = 4;
+                length_of_value = 8;
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
@@ -924,13 +922,13 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
                 length_of_value = 0;
                 break;
-            case S7COMMP_SESS_TYPEID_STRING:        /* 0x15 */
+            case S7COMMP_ITEM_DATA_TYPE_STRING:        /* 0x15 */
                 /* Es folgt ein String mit vorab einem Byte für die Stringlänge
                  * TODO: Falls das hier kein S7-String ist, sind auch längere Strings möglich.
                  * Evtl. ist die Stringlänge ein varint?
                  */
                 length_of_value = tvb_get_guint8(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "STRING Actual length: %d", length_of_value);
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "String actual length: %u", length_of_value);
                 offset += 1;
                 g_snprintf(str_val, sizeof(str_val), "%s",
                            tvb_get_string(wmem_packet_scope(), tvb, offset, length_of_value));
@@ -945,13 +943,11 @@ s7commp_decode_value(tvbuff_t *tvb,
                     offset += length_of_value;
                 }
                 break;
-            /******** Type Ids which meaning is unknown ***********/
-            case S7COMMP_ITEM_DATA_TYPE_3BYTE:
-                /* TODO:
-                 * See capture file S7-1200-Uploading-OB1-TIAV12.pcap #30, #33, #103, #116, #119
-                 * Value seems to be 3 bytes long.
-                 */
-                length_of_value = 3;
+            /******** Blob, number of bytes with length header ***********/
+            case S7COMMP_ITEM_DATA_TYPE_BLOB:
+                length_of_value = tvb_get_ntohs(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Blob size: %u", length_of_value);
+                offset += 2;
                 g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
                 offset += length_of_value;
                 break;
@@ -1846,7 +1842,7 @@ s7commp_decode_func0x0586_response(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Exploration ares
+ * Exploration areas
  *
  *******************************************************************************************************/
 static guint32
@@ -1856,19 +1852,21 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
                                guint32 offset)
 {
     /* Speicherbereich der durchsucht werden soll:
-     * Linke 2 (1) Bytes        Rechte 2 (3) Bytes
-     * ==============================================
-     *  0x0000 0x0003 = Globale DBs (Liste)
-     *  0x0200 0x001f = TON Instanz. Unbekannt wie die Zugehörigkeit zu einem DB/IDB hergestellt wird.
-     *  0x9200 = Global-DB      Global-DB-Nummer (bei 1200 maximal Nr. 59999 erlaubt)
-     *      nn = Substrukturelement
-     *  0x9300 = Instanz-DB     Nummer des FBs von dem abgeleitet wurde
-     *  0x9001 = Input area
-     *  0x9002 = Output area
-     *  0x9003 = M Bit memory
-     *  0x9004 = ?
-     *  0x9005 = ?
-     *  0x9006 = ?
+     * Linke 2 (1) Bytes        Rechte 2 (3) Bytes                                                  Antwort Kopf
+     * ==============================================================================================================
+     *  0000 0003 = Globale DBs (Liste) oder Wurzelknoten bei Programm-Download                     ASRoot / ---
+     *  0000 0219 = ?                                                                               ConfiguredTypes
+     *  0000 000c = ?                                                                               CommCont
+     *  0200 001f = TON Instanz. Unbekannt wie die Zugehörigkeit zu einem DB/IDB hergestellt wird.
+     *  9200 mmmm = Global-DB     mmmm = Global-DB-Nummer (bei 1200 maximal Nr. 59999 erlaubt)
+     *    nn      = nn = Substrukturelement
+     *  9300      = Instanz-DB     Nummer des FBs von dem abgeleitet wurde
+     *  9001 0000 = Input area                                                                      IArea
+     *  9002 0000 = Output area                                                                     QArea
+     *  9003 0000 = M Bit memory                                                                    MArea
+     *  9004 0000 = ?
+     *  9005 0000 = ?
+     *  9006 0000 = ?
      */
     guint32 area, area_masked;
     guint16 db1 = 0;
