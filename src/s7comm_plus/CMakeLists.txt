@@ -49,13 +49,13 @@ register_dissector_files(plugin.c
 	${DISSECTOR_SRC}
 )
 
-add_library(s7commp ${LINK_MODE_MODULE}
+add_library(s7comm_plus ${LINK_MODE_MODULE}
 	${PLUGIN_FILES}
 )
-set_target_properties(s7commp PROPERTIES PREFIX "")
-set_target_properties(s7commp PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
+set_target_properties(s7comm_plus PROPERTIES PREFIX "")
+set_target_properties(s7comm_plus PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
 
-target_link_libraries(s7commp epan)
+target_link_libraries(s7comm_plus epan)
 
 install(TARGETS s7comm_plus
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/@CPACK_PACKAGE_NAME@/plugins/${CPACK_PACKAGE_VERSION} NAMELINK_SKIP
