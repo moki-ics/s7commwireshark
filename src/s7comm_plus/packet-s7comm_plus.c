@@ -195,6 +195,29 @@ static const value_string item_data_type_names[] = {
 #define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY 0x20
 
 /**************************************************************************
+ * Item value syntax Ids
+ */
+#define S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT     0x00
+#define S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT    0xa1
+#define S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT     0xa2
+#define S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL     0xa3
+#define S7COMMP_ITEMVAL_SYNTAXID_0xA4           0xa4
+#define S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT    0x82
+/* Womöglich bitcodiert?:
+ * abcd efgh
+ *   c = true wenn im Wurzelknoten, wenn innerhalb einer Struct dann false
+ */
+static const value_string itemval_syntaxid_names[] = {
+    { S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT,      "Terminating Struct" },
+    { S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT,     "Start of Object" },
+    { S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT,      "Terminating Object" },
+    { S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL,      "Value with (id, flags, type, value)" },
+    { S7COMMP_ITEMVAL_SYNTAXID_0xA4,            "Unknown Id 0xA4" },
+    { S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT,     "Value inside struct with (id, flags, type, value)" },
+    { 0,                                        NULL }
+};
+
+/**************************************************************************
  * There are IDs which values can be read or be written to.
  * This is some kind of operating system data/function for the plc.
  * The IDs seem to be unique for all telegrams in which they occur.
@@ -352,10 +375,11 @@ static gint hf_s7commp_itemaddr_lid_value = -1;
 
 /* Item Value */
 static gint hf_s7commp_itemval_itemnumber = -1;
+static gint hf_s7commp_itemval_syntaxid = -1;
 static gint hf_s7commp_itemval_datatype_flags = -1;
-static gint hf_s7commp_itemval_datatype_flags_array = -1;       /* 0x10 for array */
+static gint hf_s7commp_itemval_datatype_flags_array = -1;               /* 0x10 for array */
 static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 for address-array */
-static gint hf_s7commp_itemval_datatype_flags_0x90unkn = -1;    /* 0x90 unknown, seen in S7-1500 */
+static gint hf_s7commp_itemval_datatype_flags_0x90unkn = -1;            /* 0x90 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
 static const int *s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
@@ -506,6 +530,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_itemnumber,
           { "Item Number", "s7comm-plus.item.val.item_number", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Item Number", HFILL }},
+        { &hf_s7commp_itemval_syntaxid,
+          { "Item Syntax-Id", "s7comm-plus.item.val.syntaxid", FT_UINT8, BASE_HEX, VALS(itemval_syntaxid_names), 0x0,
+            NULL, HFILL }},
         /* Datatype flags */
         { &hf_s7commp_itemval_datatype_flags,
         { "Datatype flags", "s7comm-plus.item.val.datatype_flags", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -1015,6 +1042,9 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     int structLevel = 0;
     guint8 octet_count = 0;
+    guint8 syntax_id = 0;
+    guint16 data_len = 0;
+    int object_level = 0;
 
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
@@ -1026,33 +1056,82 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
         data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
         data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-        /* the size of the id seems also variable */
-        id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-
-        proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-        offset += octet_count;
-
-        if (structLevel > 0) {
-            proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
-        } else {
-            proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
-        }
-
-        if (id_number) {    /* assuming that item id = 0 marks end of structure */
-            /* the type and value assigned to the id is coded in the same way as the read response values */
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel);
-        }
-        item_nr++;
-
-        proto_item_set_len(data_item_tree, offset - start_offset);
-        if (!id_number) {   /* assuming that item id = 0 marks end of structure */
+        /* Syntax Id:
+         * a1 = Start eines Objekts + 8 Bytes unbekannter Funktion
+         * a2 = Terminierung eines Objekts, keine weiteren Daten
+         * a3 = Strukturierter Wert mit: id, flags, typ, value
+         * a4 = Funktion unbekannt, 6 Bytes unbekannter Funktion folgen
+         * 82 = Strukturierter Wert mit: id, flags, typ, value innerhalb einer Struct 
+         * 00 = Terminierung einer Struktur
+         */
+        syntax_id = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+        offset += 1;
+        if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {            /* 0xa1 */
+            object_level += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Level = %d): 0x%08x / 0x%08x", object_level, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
+            proto_item_append_text(data_item_tree, ": Start of Object (Level = %d)", object_level);
+            offset += 8;
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {     /* 0xa2 */
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Object (Level = %d)", object_level);
+            proto_item_append_text(data_item_tree, ": Terminating Object (Level = %d)", object_level);
+            object_level -= 1;
+            proto_item_set_len(data_item_tree, offset - start_offset);
+            if (object_level == 0) {
+                break;
+            }
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {     /* 0xa4 */
+            proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
+            proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
+            offset += 6;
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Struct (Struct-Level %d)", structLevel);
+            proto_item_append_text(data_item_tree, ": Terminating Struct (Struct-Level %d)", structLevel);
+            proto_item_set_len(data_item_tree, offset - start_offset);
             structLevel--;
             if(structLevel < 0) {
                 break; /* highest structure terminated -> leave */
             }
+        } else {    /* S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL 0xa3  - und alles weitere deren Bedeutung noch nicht bekannt ist. */
+            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+
+            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+            offset += octet_count;
+
+            if (structLevel > 0) {
+                proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
+            } else {
+                proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
+            }
+
+            if (id_number) {    /* assuming that item id = 0 marks end of structure */
+                /* the type and value assigned to the id is coded in the same way as the read response values */
+                offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel);
+            }
+            item_nr++;
+            proto_item_set_len(data_item_tree, offset - start_offset);
         }
     }
-
+    /* Trailer */
+    /*
+    if (offset + 2 >= offsetmax) {
+        proto_tree_add_text(tree, tvb, offset, 0, "Dissector error! This is not working");
+    } else {
+        data_len = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 2, "Data trailer length: %d", data_len);
+        offset += 2;
+        if (data_len > 0 ) {
+            if (offset + data_len > offsetmax) {
+                proto_tree_add_text(tree, tvb, offset, data_len, "Dissector error! This is not working");
+            } else {
+                proto_tree_add_text(tree, tvb, offset, data_len, "Data trailer data: %s", tvb_bytes_to_ep_str(tvb, offset, data_len));
+                offset += data_len;
+            }
+        }
+    }
+    */
     return offset;
 }
 
@@ -1093,7 +1172,7 @@ s7commp_decode_startsession(tvbuff_t *tvb,
     }
     while ((offset + unkownBytes) < offsetmax) {    /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
         scannedByte = tvb_get_guint8(tvb, offset + unkownBytes);
-        if (scannedByte == 0xa3) {
+        if (scannedByte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
             break; /* found some known good ID */
         }
         else unkownBytes++;
