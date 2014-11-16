@@ -193,6 +193,7 @@ static const value_string item_data_type_names[] = {
 /* Datatype flags */
 #define S7COMMP_DATATYPE_FLAG_ARRAY         0x10
 #define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY 0x20
+#define S7COMMP_DATATYPE_FLAG_STRINGSPECIAL 0x40
 
 /**************************************************************************
  * Item value syntax Ids
@@ -379,12 +380,14 @@ static gint hf_s7commp_itemval_syntaxid = -1;
 static gint hf_s7commp_itemval_datatype_flags = -1;
 static gint hf_s7commp_itemval_datatype_flags_array = -1;               /* 0x10 for array */
 static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 for address-array */
-static gint hf_s7commp_itemval_datatype_flags_0x90unkn = -1;            /* 0x90 unknown, seen in S7-1500 */
+static gint hf_s7commp_itemval_datatype_flags_string_spec = -1;         /* 0x40 String with special header */
+static gint hf_s7commp_itemval_datatype_flags_0x80unkn = -1;            /* 0x80 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
 static const int *s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
     &hf_s7commp_itemval_datatype_flags_address_array,
-    &hf_s7commp_itemval_datatype_flags_0x90unkn,
+    &hf_s7commp_itemval_datatype_flags_string_spec,
+    &hf_s7commp_itemval_datatype_flags_0x80unkn,
     NULL
 };
 static gint hf_s7commp_itemval_datatype = -1;
@@ -543,7 +546,10 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_datatype_flags_address_array,
         { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
           "Array of values for Item Address via CRC and LID", HFILL }},
-        { &hf_s7commp_itemval_datatype_flags_0x90unkn,
+        { &hf_s7commp_itemval_datatype_flags_string_spec,
+        { "String special", "s7comm-plus.item.val.datatype_flags.string_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGSPECIAL,
+          "String has a value before length, and terminating null", HFILL }},
+        { &hf_s7commp_itemval_datatype_flags_0x80unkn,
         { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
           "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
 
@@ -950,13 +956,24 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 0;
                 break;
             case S7COMMP_ITEM_DATA_TYPE_STRING:        /* 0x15 */
-                /* Es folgt ein String mit vorab einem Byte für die Stringlänge
-                 * TODO: Falls das hier kein S7-String ist, sind auch längere Strings möglich.
-                 * Evtl. ist die Stringlänge ein varint?
-                 */
-                length_of_value = tvb_get_guint8(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "String actual length: %u", length_of_value);
-                offset += 1;
+                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
+                length_of_value = 0;
+                if (datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL) {
+                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special length: %u", length_of_value);
+                    offset += octet_count;
+                    if (length_of_value > 0) {
+                        length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
+                        offset += octet_count;
+                        /* additional terminating null */
+                        length_of_value += 1;
+                    }
+                } else {
+                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
+                    offset += octet_count;
+                }
                 g_snprintf(str_val, sizeof(str_val), "%s",
                            tvb_get_string(wmem_packet_scope(), tvb, offset, length_of_value));
                 offset += length_of_value;
@@ -972,9 +989,14 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             /******** Blob, number of bytes with length header ***********/
             case S7COMMP_ITEM_DATA_TYPE_BLOB:
-                length_of_value = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Blob size: %u", length_of_value);
-                offset += 2;
+                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
+                if (!(datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL)) {
+                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x", tvb_get_guint8(tvb, offset));
+                    offset += 1;
+                }
+                length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
+                offset += octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
                 offset += length_of_value;
                 break;
