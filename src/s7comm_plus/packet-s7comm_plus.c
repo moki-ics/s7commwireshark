@@ -203,6 +203,8 @@ static const value_string item_data_type_names[] = {
 #define S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT     0xa2
 #define S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL     0xa3
 #define S7COMMP_ITEMVAL_SYNTAXID_0xA4           0xa4
+#define S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC   0xa7
+#define S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC    0xa8
 #define S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT    0x82
 /* Womöglich bitcodiert?:
  * abcd efgh
@@ -214,6 +216,8 @@ static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT,      "Terminating Object" },
     { S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL,      "Value with (id, flags, type, value)" },
     { S7COMMP_ITEMVAL_SYNTAXID_0xA4,            "Unknown Id 0xA4" },
+    { S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC,    "Start of Variable-Description" },
+    { S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC,     "Terminating Variable-Description" },
     { S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT,     "Value inside struct with (id, flags, type, value)" },
     { 0,                                        NULL }
 };
@@ -975,7 +979,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     offset += octet_count;
                 }
                 g_snprintf(str_val, sizeof(str_val), "%s",
-                           tvb_get_string(wmem_packet_scope(), tvb, offset, length_of_value));
+                           tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
             /**************************  ***************************/
@@ -1067,6 +1071,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
     guint8 syntax_id = 0;
     guint16 data_len = 0;
     int object_level = 0;
+    guint32 length_of_value = 0;
 
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
@@ -1096,18 +1101,69 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             offset += 8;
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {     /* 0xa2 */
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Object (Level = %d)", object_level);
             proto_item_append_text(data_item_tree, ": Terminating Object (Level = %d)", object_level);
             object_level -= 1;
             proto_item_set_len(data_item_tree, offset - start_offset);
-            if (object_level == 0) {
+            if (object_level < 0) {
                 break;
             }
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {     /* 0xa4 */
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {        /* 0xa4 */
             proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
             proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
             offset += 6;
             proto_item_set_len(data_item_tree, offset - start_offset);
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC) {             /* 0xa7 */
+            /* Hiermit kann eine Variablenbeschreibung aus der SPS abgefragt werden */
+            proto_item_append_text(data_item_tree, ": Start of Variable-Description");
+
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+
+            length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "VarDescr - Length of name: %u", length_of_value);
+            offset += octet_count;
+
+            proto_tree_add_text(data_item_tree, tvb, offset, length_of_value, "VarDescr - Name: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+            proto_item_append_text(data_item_tree, " - For Variable: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+            offset += length_of_value;
+            /* es folgen noch min. 15 bytes, darin werden die weiteren Daten wie Datetyp, LID usw. codiert sein */
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));   /* String Terminierung NULL? */
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 7: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 8: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 9 LID?: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 10: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 11: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 12: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 13: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 14: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            /* Länge ist nicht fix, ex folgen ggf. noch weitere Bytes bis 0xa8 */
+            syntax_id = tvb_get_guint8(tvb, offset);
+            while (syntax_id != S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC) {
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Trailer: 0x%02x", syntax_id);
+                offset += 1;
+                syntax_id = tvb_get_guint8(tvb, offset);
+            }   
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC) {              /* 0xa8 */
+            proto_item_append_text(data_item_tree, ": Terminating Variable-Description");
+            proto_item_set_len(data_item_tree, offset - start_offset);        
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
             proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Struct (Struct-Level %d)", structLevel);
             proto_item_append_text(data_item_tree, ": Terminating Struct (Struct-Level %d)", structLevel);
@@ -2031,35 +2087,20 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
 {
     /* 6 Bytes unbekannt. Zumindest das erste word sollte 0x0000 sein, sonst Fehler? */
     guint16 ret1;
-    guint8 number_of_fields;
+    guint32 max_offset = offset + dlength;
 
     ret1 = tvb_get_ntohs(tvb, offset);
     proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", ret1);
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
-    number_of_fields = tvb_get_guint8(tvb, offset); /* passt evtl. auch nur zufällig */
-    proto_tree_add_text(tree, tvb, offset, 1, "Number of fields in id/value dataset?: %d", number_of_fields);
-    offset += 1;
     proto_tree_add_text(tree, tvb, offset, 1, "Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
+
+    /* nur wenn der erste Wert 0 ist, dann ist ein Datensatz vorhanden */
     if (ret1 == 0x0000) {
-        /* 4 Bytes exploration area wie auch beim Request */
-        offset = s7commp_decode_explore_area(tvb, NULL, tree, offset);
-    } else {
-        proto_tree_add_text(tree, tvb, offset, 4, "Explore area error?: 0x%08x", tvb_get_ntohl(tvb, offset));
-        offset += 4;
+        offset = s7commp_decode_id_value_pairs(tvb, tree, offset, max_offset);
     }
-    /* 4 Bytes unbekannt */
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    /* Datenarray, ID, Typ, Wert.
-     * Aber nur so viele Felder wie oben angegeben.
-     * Danach folgt eine andere Struktur.
-     */
-    offset = s7commp_decode_id_value_pairs(tvb, tree, offset, dlength);
     return offset;
 }
 /*******************************************************************************************************
