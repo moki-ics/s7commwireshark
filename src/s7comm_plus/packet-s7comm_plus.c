@@ -229,10 +229,10 @@ static const value_string itemval_syntaxid_names[] = {
  * Add the datatype for this value in parentheses.
  */
 static const value_string id_number_names[] = {
-    { 573673,                       "Subscription name (String with length header)" },
-    { 574488,                       "Cyclic variables update set of addresses (UDInt, Addressarray)" },
-    { 574489,                       "Cyclic variables update rate (UDInt, in milliseconds)" },
-    { 574493,                       "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
+    { 233,                          "Subscription name (String)" },
+    { 1048,                         "Cyclic variables update set of addresses (UDInt, Addressarray)" },
+    { 1049,                         "Cyclic variables update rate (UDInt, in milliseconds)" },
+    { 1053,                         "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
     { 0,                            NULL }
 };
 
@@ -1083,7 +1083,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
          * a2 = Terminierung eines Objekts, keine weiteren Daten
          * a3 = Strukturierter Wert mit: id, flags, typ, value
          * a4 = Funktion unbekannt, 6 Bytes unbekannter Funktion folgen
-         * 82 = Strukturierter Wert mit: id, flags, typ, value innerhalb einer Struct 
+         * 82 = Strukturierter Wert mit: id, flags, typ, value innerhalb einer Struct
          * 00 = Terminierung einer Struktur
          */
         syntax_id = tvb_get_guint8(tvb, offset);
@@ -1154,11 +1154,11 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
                 proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Trailer: 0x%02x", syntax_id);
                 offset += 1;
                 syntax_id = tvb_get_guint8(tvb, offset);
-            }   
+            }
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC) {              /* 0xa8 */
             proto_item_append_text(data_item_tree, ": Terminating Variable-Description");
-            proto_item_set_len(data_item_tree, offset - start_offset);        
+            proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
             proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Struct (Struct-Level %d)", structLevel);
             proto_item_append_text(data_item_tree, ": Terminating Struct (Struct-Level %d)", structLevel);
@@ -1187,24 +1187,6 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
     }
-    /* Trailer */
-    /*
-    if (offset + 2 >= offsetmax) {
-        proto_tree_add_text(tree, tvb, offset, 0, "Dissector error! This is not working");
-    } else {
-        data_len = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 2, "Data trailer length: %d", data_len);
-        offset += 2;
-        if (data_len > 0 ) {
-            if (offset + data_len > offsetmax) {
-                proto_tree_add_text(tree, tvb, offset, data_len, "Dissector error! This is not working");
-            } else {
-                proto_tree_add_text(tree, tvb, offset, data_len, "Data trailer data: %s", tvb_bytes_to_ep_str(tvb, offset, data_len));
-                offset += data_len;
-            }
-        }
-    }
-    */
     return offset;
 }
 
@@ -1225,6 +1207,8 @@ s7commp_decode_startsession(tvbuff_t *tvb,
     guint32 unkownBytes = 0;
     guint8 scannedByte = 0;
     guint8 octet_count = 0;
+    guint8 sessionid_count = 0;
+    int i;
     guint32 value = 0;
 
     /* Eine Session-Aufbau wird z.B. für die folgenden Dinge verwendet:
@@ -1233,13 +1217,21 @@ s7commp_decode_startsession(tvbuff_t *tvb,
      * - Aufbau einer Upload-Session, in deren Folge ein Baustein über mehrere PDUs in die SPS hochgeladen werden kann.
      *
      */
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
+
     if (datatype == S7COMMP_DATATYPE_RES) {
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Result Session Id: 0x%08x", value, value);
-        offset += octet_count;
+        proto_tree_add_text(tree, tvb, offset, 1, "Response Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+        sessionid_count = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Number of following Session Ids: %d", sessionid_count);
+        offset += 1;
+        for (i = 1; i <= sessionid_count; i++) {
+            value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(tree, tvb, offset, octet_count, "Result Session Id[%i]: 0x%08x", i, value);
+            offset += octet_count;
+        }
     } else {
+        proto_tree_add_text(tree, tvb, offset, 2, "Request Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
         offset += 1;
     }
@@ -1250,9 +1242,11 @@ s7commp_decode_startsession(tvbuff_t *tvb,
         }
         else unkownBytes++;
     }
-    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkownBytes, tvb_get_ptr(tvb, offset, unkownBytes));
-    offset += unkownBytes;
-    return s7commp_decode_id_value_pairs(tvb,tree,offset,offsetmax);
+    if (unkownBytes > 0) {
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkownBytes, tvb_get_ptr(tvb, offset, unkownBytes));
+        offset += unkownBytes;
+    }
+    return s7commp_decode_id_value_pairs(tvb, tree, offset, offsetmax);
 }
 /*******************************************************************************************************
  *
@@ -1537,7 +1531,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         /* 27 byte unbekannt */
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
-        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of session settings for session ID : 0x%08x. ", value);
+        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x. ", value);
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item count: %d", item_count);
         offset +=1;
