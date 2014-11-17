@@ -694,6 +694,10 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
  * Decoding of an Address-Array, used to subscribe cyclic variables from HMI
  *
  *******************************************************************************************************/
+ /* Funktion wird z.Zt. nicht mehr benötigt, da das Adressarray wie ein "normales" Array
+  * zerlegt wird. GGf. später die Feldinformationen in anderer Weise hinzufügen.
+  * Z.B. Funktion mit (arr_size, arr_index_actual, return_string_with_info).
+  */
 static guint32
 s7commp_decode_udint_address_array(tvbuff_t *tvb,
                                    proto_tree *tree,
@@ -815,10 +819,10 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
+    gchar str_arr_prefix[16];
 
     guint8 string_actlength = 0;
 
-    guint32 offset_save;
     guint32 start_offset;
     guint32 length_of_value = 0;
 
@@ -846,6 +850,11 @@ s7commp_decode_value(tvbuff_t *tvb,
         array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
         array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
         start_offset = offset;
+        if (is_array) {
+            g_strlcpy(str_arr_prefix, "Array", sizeof(str_arr_prefix));
+        } else if (is_address_array) {
+            g_strlcpy(str_arr_prefix, "Addressarray", sizeof(str_arr_prefix));
+        }
     }
 
     /* Use array loop also for non-arrays */
@@ -869,20 +878,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATA_TYPE_UDINT:
-                /* an address array has its own subfunction */
-                if (is_address_array) {
-                    offset_save = offset;
-                    offset = s7commp_decode_udint_address_array(tvb, array_item_tree, array_size, offset);
-                    length_of_value = offset - offset_save;
-                    g_strlcpy(str_val, "Array of addresses", sizeof(str_val));
-                    /* set array index to zero, because all data decoded inside subfunction */
-                    array_index = array_size;
-                } else {
-                    uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                    offset += octet_count;
-                    length_of_value = octet_count;
-                    g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
-                }
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATA_TYPE_ULINT:
             case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
@@ -1015,7 +1014,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             break;
         }
 
-        if (is_array) {
+        if (is_array || is_address_array) {
             /* Build a string of all array values. Maximum number of 10 values */
             if (array_index < S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
                 g_strlcat(str_arrval, str_val, sizeof(str_arrval));
@@ -1030,14 +1029,10 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
     } /* for */
 
-    if (is_array) {
-        proto_item_append_text(array_item_tree, " Array[%u] = %s", array_size, str_arrval);
+    if (is_array || is_address_array) {
+        proto_item_append_text(array_item_tree, " %s[%u] = %s", str_arr_prefix, array_size, str_arrval);
         proto_item_set_len(array_item_tree, offset - start_offset);
-        proto_item_append_text(data_item_tree, " (%s) Array[%u] = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), array_size, str_arrval);
-    } else if (is_address_array) {
-        proto_item_append_text(array_item_tree, " = %s", str_val);
-        proto_item_set_len(array_item_tree, offset - start_offset);
-        proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+        proto_item_append_text(data_item_tree, " (%s) %s[%u] = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_arr_prefix, array_size, str_arrval);
     } else { /* not an array or address array */
         if (length_of_value > 0) {
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
