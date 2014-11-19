@@ -39,7 +39,7 @@
 #define PROTO_TAG_S7COMM_PLUS               "S7COMM-PLUS"
 
 /* Min. telegram length for heuristic check */
-#define S7COMMP_MIN_TELEGRAM_LENGTH	        4
+#define S7COMMP_MIN_TELEGRAM_LENGTH         4
 
 /* Protocol identifier */
 #define S7COMM_PLUS_PROT_ID                 0x72
@@ -75,118 +75,106 @@ static const value_string pdutype_names[] = {
 };
 
 /**************************************************************************
- * Data telegramm Typen
- * Typen die ich schonmal gesehen habe sind nur mit der Nummer angegeben
+ * Opcodes in data part
  */
-#define S7COMMP_DATATYPE_x05                0x05
-#define S7COMMP_DATATYPE_REQ                0x31
-#define S7COMMP_DATATYPE_RES                0x32
-#define S7COMMP_DATATYPE_CYC                0x33
-#define S7COMMP_DATATYPE_x88                0x88
-#define S7COMMP_DATATYPE_xba                0xba
-#define S7COMMP_DATATYPE_RES2               0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
+#define S7COMMP_OPCODE_REQ                  0x31
+#define S7COMMP_OPCODE_RES                  0x32
+#define S7COMMP_OPCODE_CYC                  0x33
+#define S7COMMP_OPCODE_RES2                 0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
 
-static const value_string datatype_names[] = {
-    { S7COMMP_DATATYPE_x05,                 "? 0x05 ?" },
-    { S7COMMP_DATATYPE_REQ,                 "Request " },
-    { S7COMMP_DATATYPE_RES,                 "Response" },
-    { S7COMMP_DATATYPE_CYC,                 "Cyclic  " },
-    { S7COMMP_DATATYPE_x88,                 "? 0x88 ?" },
-    { S7COMMP_DATATYPE_xba,                 "? 0xba ?" },
-    { S7COMMP_DATATYPE_RES2,                "Response2" },
+static const value_string opcode_names[] = {
+    { S7COMMP_OPCODE_REQ,                   "Request " },
+    { S7COMMP_OPCODE_RES,                   "Response" },
+    { S7COMMP_OPCODE_CYC,                   "Cyclic  " },
+    { S7COMMP_OPCODE_RES2,                  "Response2" },
     { 0,                                    NULL }
 };
 
 /**************************************************************************
- * Data Funktions-Typen für PDU
- *
+ * Function codes in data part
  */
+#define S7COMMP_FUNCTIONCODE_STARTSESSION   0x04ca
+#define S7COMMP_FUNCTIONCODE_ENDSESSION     0x04d4
+#define S7COMMP_FUNCTIONCODE_MODSESSION     0x04f2
+#define S7COMMP_FUNCTIONCODE_WRITE          0x0542
+#define S7COMMP_FUNCTIONCODE_READ           0x054c
+#define S7COMMP_FUNCTIONCODE_0x0586         0x0586
+#define S7COMMP_FUNCTIONCODE_EXPLORE        0x04bb
 
-#define S7COMMP_PDU_DATAFUNC_STARTSESSION   0x04ca
-#define S7COMMP_PDU_DATAFUNC_ENDSESSION     0x04d4      /* kommt auch wenn zyklische Dienste an-/abgemeldet werden */
-#define S7COMMP_PDU_DATAFUNC_MODSESSION     0x04f2      /* aktualisiert/bearbeitet eine Session */
-#define S7COMMP_PDU_DATAFUNC_WRITE          0x0542      /* kommt immer nach PDU1 connect, und wenn Variablen geschrieben werden */
-#define S7COMMP_PDU_DATAFUNC_READ           0x054c      /* Allgemeines Read, für alles mögliche */
-#define S7COMMP_PDU_DATAFUNC_WATCHTABLE12   0x0071      /* Werteübertragung in einer Beobachtungstabelle bei einer 1200 */
-#define S7COMMP_PDU_DATAFUNC_0x0586         0x0586
-#define S7COMMP_PDU_DATAFUNC_EXPLORE        0x04bb
-
-static const value_string pdu_datafunc_names[] = {
-    { S7COMMP_PDU_DATAFUNC_STARTSESSION,    "Start session" },
-    { S7COMMP_PDU_DATAFUNC_ENDSESSION,      "End session" },
-    { S7COMMP_PDU_DATAFUNC_MODSESSION,      "Modify session" },
-    { S7COMMP_PDU_DATAFUNC_WRITE,           "Write" },
-    { S7COMMP_PDU_DATAFUNC_READ,            "Read" },
-    { S7COMMP_PDU_DATAFUNC_WATCHTABLE12,    "Watch table data 1200" },
-    { S7COMMP_PDU_DATAFUNC_0x0586,          "Unknown read/write?" },
-    { S7COMMP_PDU_DATAFUNC_EXPLORE,         "Explore" },
+static const value_string data_functioncode_names[] = {
+    { S7COMMP_FUNCTIONCODE_STARTSESSION,    "Start session" },
+    { S7COMMP_FUNCTIONCODE_ENDSESSION,      "End session" },
+    { S7COMMP_FUNCTIONCODE_MODSESSION,      "Modify session" },
+    { S7COMMP_FUNCTIONCODE_WRITE,           "Write" },
+    { S7COMMP_FUNCTIONCODE_READ,            "Read" },
+    { S7COMMP_FUNCTIONCODE_0x0586,          "Unknown read/write?" },
+    { S7COMMP_FUNCTIONCODE_EXPLORE,         "Explore" },
     { 0,                                     NULL }
 };
 /**************************************************************************
  * Data types
  */
-
-#define S7COMMP_ITEM_DATA_TYPE_NULL         0x00
+#define S7COMMP_ITEM_DATATYPE_NULL          0x00
 /*** Binärzahlen **/
-#define S7COMMP_ITEM_DATA_TYPE_BOOL         0x01        /* BOOL: fix 1 Byte */
-/*** Ganzzahlen ohne Vorzeichen ***/
-#define S7COMMP_ITEM_DATA_TYPE_USINT        0x02        /* USINT, CHAR: fix 1 Byte */
-#define S7COMMP_ITEM_DATA_TYPE_UINT         0x03        /* UINT, DATE: fix 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_UDINT        0x04        /* UDint: varuint32 */
-#define S7COMMP_ITEM_DATA_TYPE_ULINT        0x05        /* ULInt: varuint64 */
-/*** Ganzzahlen mit Vorzeichen ***/
-#define S7COMMP_ITEM_DATA_TYPE_SINT         0x06        /* SINT: fix 1 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_INT          0x07        /* INT: fix 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_DINT         0x08        /* DINT, TIME: varint32 */
-#define S7COMMP_ITEM_DATA_TYPE_LINT         0x09        /* LInt: varint64 */
-/*** Bitfolgen ***/
-#define S7COMMP_ITEM_DATA_TYPE_BYTE         0x0a        /* BYTE: fix 1 Byte */
-#define S7COMMP_ITEM_DATA_TYPE_WORD         0x0b        /* WORD: fix 2 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_DWORD        0x0c        /* DWORD: fix 4 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_LWORD        0x0d        /* LWORD: fix 8 Bytes */
-/*** Gleitpunktzahlen ***/
-#define S7COMMP_ITEM_DATA_TYPE_REAL         0x0e        /* REAL: fix 4 Bytes */
-#define S7COMMP_ITEM_DATA_TYPE_LREAL        0x0f        /* LREAL: fix 8 Bytes */
-/*** Spezial ***/
-#define S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER  0x10
-#define S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER   0x11
-#define S7COMMP_ITEM_DATA_TYPE_DWORD2       0x12        /* Why another dword, maybe this is something special? fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_BOOL          0x01        /* BOOL: fix 1 Byte */
+/*** Unsigned integers ***/
+#define S7COMMP_ITEM_DATATYPE_USINT         0x02        /* USINT, CHAR: fix 1 Byte */
+#define S7COMMP_ITEM_DATATYPE_UINT          0x03        /* UINT, DATE: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_UDINT         0x04        /* UDint: varuint32 */
+#define S7COMMP_ITEM_DATATYPE_ULINT         0x05        /* ULInt: varuint64 */
+/*** Signed integers ***/
+#define S7COMMP_ITEM_DATATYPE_SINT          0x06        /* SINT: fix 1 Bytes */
+#define S7COMMP_ITEM_DATATYPE_INT           0x07        /* INT: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_DINT          0x08        /* DINT, TIME: varint32 */
+#define S7COMMP_ITEM_DATATYPE_LINT          0x09        /* LInt: varint64 */
+/*** Bitstream ***/
+#define S7COMMP_ITEM_DATATYPE_BYTE          0x0a        /* BYTE: fix 1 Byte */
+#define S7COMMP_ITEM_DATATYPE_WORD          0x0b        /* WORD: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_DWORD         0x0c        /* DWORD: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_LWORD         0x0d        /* LWORD: fix 8 Bytes */
+/*** Floatingpoint numbers ***/
+#define S7COMMP_ITEM_DATATYPE_REAL          0x0e        /* REAL: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_LREAL         0x0f        /* LREAL: fix 8 Bytes */
+/*** Special ***/
+#define S7COMMP_ITEM_DATATYPE_IEC_COUNTER   0x10
+#define S7COMMP_ITEM_DATATYPE_IEC_LTIMER    0x11
+#define S7COMMP_ITEM_DATATYPE_DWORD2        0x12        /* Why another dword, maybe this is something special? fix 4 Bytes */
 /* 0x13 ?? */
-#define S7COMMP_ITEM_DATA_TYPE_BLOB         0x14
-#define S7COMMP_ITEM_DATA_TYPE_STRING       0x15        /* string with length header */
+#define S7COMMP_ITEM_DATATYPE_BLOB          0x14
+#define S7COMMP_ITEM_DATATYPE_STRING        0x15        /* string with length header */
 /* 0x16 ?? */
-#define S7COMMP_ITEM_DATA_TYPE_STRUCT       0x17
+#define S7COMMP_ITEM_DATATYPE_STRUCT        0x17
 
-#define S7COMMP_ITEM_DATA_TYPE_DWORD1       0xd3        /* Why another dword, maybe this is something special? fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_DWORD1        0xd3        /* Why another dword, maybe this is something special? fix 4 Bytes */
 
 /* Theoretical missing types:
  * - Variant
  * - Enumerations
  */
-static const value_string item_data_type_names[] = {
-    { S7COMMP_ITEM_DATA_TYPE_NULL,          "Null" },
-    { S7COMMP_ITEM_DATA_TYPE_BOOL,          "Bool" },
-    { S7COMMP_ITEM_DATA_TYPE_USINT,         "USInt" },
-    { S7COMMP_ITEM_DATA_TYPE_UINT,          "UInt" },
-    { S7COMMP_ITEM_DATA_TYPE_UDINT,         "UDInt" },
-    { S7COMMP_ITEM_DATA_TYPE_ULINT,         "ULInt" },
-    { S7COMMP_ITEM_DATA_TYPE_SINT,          "SInt" },
-    { S7COMMP_ITEM_DATA_TYPE_INT,           "Int" },
-    { S7COMMP_ITEM_DATA_TYPE_DINT,          "DInt" },
-    { S7COMMP_ITEM_DATA_TYPE_LINT,          "LInt" },
-    { S7COMMP_ITEM_DATA_TYPE_BYTE,          "Byte" },
-    { S7COMMP_ITEM_DATA_TYPE_WORD,          "Word" },
-    { S7COMMP_ITEM_DATA_TYPE_DWORD,         "DWord" },
-    { S7COMMP_ITEM_DATA_TYPE_LWORD,         "LWord" },
-    { S7COMMP_ITEM_DATA_TYPE_REAL,          "Real" },
-    { S7COMMP_ITEM_DATA_TYPE_LREAL,         "LReal" },
-    { S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER,   "IEC Counter" },
-    { S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER,    "IEC LTimer" },
-    { S7COMMP_ITEM_DATA_TYPE_STRING,        "String" },
-    { S7COMMP_ITEM_DATA_TYPE_STRUCT,        "Struct" },
-    { S7COMMP_ITEM_DATA_TYPE_DWORD1,        "DWord 1" },
-    { S7COMMP_ITEM_DATA_TYPE_DWORD2,        "DWord 2" },
-    { S7COMMP_ITEM_DATA_TYPE_BLOB,          "Blob" },
+static const value_string item_datatype_names[] = {
+    { S7COMMP_ITEM_DATATYPE_NULL,           "Null" },
+    { S7COMMP_ITEM_DATATYPE_BOOL,           "Bool" },
+    { S7COMMP_ITEM_DATATYPE_USINT,          "USInt" },
+    { S7COMMP_ITEM_DATATYPE_UINT,           "UInt" },
+    { S7COMMP_ITEM_DATATYPE_UDINT,          "UDInt" },
+    { S7COMMP_ITEM_DATATYPE_ULINT,          "ULInt" },
+    { S7COMMP_ITEM_DATATYPE_SINT,           "SInt" },
+    { S7COMMP_ITEM_DATATYPE_INT,            "Int" },
+    { S7COMMP_ITEM_DATATYPE_DINT,           "DInt" },
+    { S7COMMP_ITEM_DATATYPE_LINT,           "LInt" },
+    { S7COMMP_ITEM_DATATYPE_BYTE,           "Byte" },
+    { S7COMMP_ITEM_DATATYPE_WORD,           "Word" },
+    { S7COMMP_ITEM_DATATYPE_DWORD,          "DWord" },
+    { S7COMMP_ITEM_DATATYPE_LWORD,          "LWord" },
+    { S7COMMP_ITEM_DATATYPE_REAL,           "Real" },
+    { S7COMMP_ITEM_DATATYPE_LREAL,          "LReal" },
+    { S7COMMP_ITEM_DATATYPE_IEC_COUNTER,    "IEC Counter" },
+    { S7COMMP_ITEM_DATATYPE_IEC_LTIMER,     "IEC LTimer" },
+    { S7COMMP_ITEM_DATATYPE_STRING,         "String" },
+    { S7COMMP_ITEM_DATATYPE_STRUCT,         "Struct" },
+    { S7COMMP_ITEM_DATATYPE_DWORD1,         "DWord 1" },
+    { S7COMMP_ITEM_DATATYPE_DWORD2,         "DWord 2" },
+    { S7COMMP_ITEM_DATATYPE_BLOB,           "Blob" },
     { 0,                                    NULL }
 };
 
@@ -330,10 +318,11 @@ static gint hf_s7commp_data_item_address = -1;
 static gint hf_s7commp_data_item_value = -1;
 static gint hf_s7commp_data_item_errorvalue = -1;
 static gint hf_s7commp_data_data = -1;
-static gint hf_s7commp_data_datatype = -1;
+static gint hf_s7commp_data_opcode = -1;
 static gint hf_s7commp_data_unknown1 = -1;
 static gint hf_s7commp_data_unknown2 = -1;
-static gint hf_s7commp_data_pdufunction = -1;
+static gint hf_s7commp_data_unknown3 = -1;
+static gint hf_s7commp_data_function = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
 
@@ -341,7 +330,6 @@ static gint hf_s7commp_trailer = -1;
 static gint hf_s7commp_trailer_protid = -1;
 static gint hf_s7commp_trailer_pdutype = -1;
 static gint hf_s7commp_trailer_datlg = -1;
-static gint hf_s7commp_trailer_item = -1;
 
 /* Read Response */
 static gint hf_s7commp_data_req_set = -1;
@@ -349,19 +337,18 @@ static gint hf_s7commp_data_res_set = -1;
 
 static gint hf_s7commp_data_id_number = -1;
 
+static gint hf_s7commp_cyclic_set = -1;
 
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
 static gint ett_s7commp_header = -1;                    /* Subtree for header block */
-static gint ett_s7commp_param = -1;                     /* Subtree for parameter block */
-static gint ett_s7commp_param_item = -1;                /* Subtree for items in parameter block */
 static gint ett_s7commp_data = -1;                      /* Subtree for data block */
 static gint ett_s7commp_data_item = -1;                 /* Subtree for an item in data block */
 static gint ett_s7commp_trailer = -1;                   /* Subtree for trailer block */
-static gint ett_s7commp_trailer_item = -1;              /* Subtree for item in trailer block */
 
 static gint ett_s7commp_data_req_set = -1;              /* Subtree for data request set*/
 static gint ett_s7commp_data_res_set = -1;              /* Subtree for data response set*/
+static gint ett_s7commp_cyclic_set = -1;                /* Subtree for cyclic data set */
 
 static gint ett_s7commp_itemaddr_area = -1;             /* Subtree for item address area */
 static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value is an array */
@@ -434,6 +421,28 @@ proto_register_s7commp (void)
           { "Data", "s7comm-plus.data", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the data part of S7 communication plus", HFILL }},
 
+        { &hf_s7commp_data_opcode,
+          { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_data_unknown1,
+          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+            "Unknown 1, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
+        { &hf_s7commp_data_function,
+          { "Function", "s7comm-plus.data.function", FT_UINT16, BASE_HEX, VALS(data_functioncode_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_data_unknown2,
+          { "Unknown 2", "s7comm-plus.data.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
+            "Unknown 2, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
+        { &hf_s7commp_data_seqnum,
+          { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "Sequence number (for reference)", HFILL }},
+        { &hf_s7commp_data_unknown3,
+          { "Unknown 3", "s7comm-plus.data.unknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
+            "Unknown 3. Maybe flags or split into nibbles", HFILL }},
+        { &hf_s7commp_data_sessionid,
+          { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            "Session Id, negotiated on session start", HFILL }},
+
         { &hf_s7commp_data_item_address,
           { "Item Address", "s7comm-plus.data.item_address", FT_NONE, BASE_NONE, NULL, 0x0,
             "Address of one Item", HFILL }},
@@ -449,46 +458,7 @@ proto_register_s7commp (void)
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             "Data unknown", HFILL }},
 
-        { &hf_s7commp_data_datatype,
-          { "Type of data", "s7comm-plus.data.datatype", FT_UINT8, BASE_HEX, VALS(datatype_names), 0x0,
-            "Type of data packet", HFILL }},
 
-        { &hf_s7commp_data_unknown1,
-          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 1, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
-
-        { &hf_s7commp_data_unknown2,
-          { "Unknown 2", "s7comm-plus.data.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 2, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
-
-        { &hf_s7commp_data_pdufunction,
-          { "Function", "s7comm-plus.data.pdu_function", FT_UINT16, BASE_HEX, VALS(pdu_datafunc_names), 0x0,
-            "Function of PDUs", HFILL }},
-
-        { &hf_s7commp_data_sessionid,
-          { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "Session Id, negotiated on session start", HFILL }},
-
-        { &hf_s7commp_data_seqnum,
-          { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
-            "Sequence number (for reference)", HFILL }},
-
-        /*** Trailer fields ***/
-        { &hf_s7commp_trailer,
-          { "Trailer", "s7comm-plus.trailer", FT_NONE, BASE_NONE, NULL, 0x0,
-            "This is the trailer part of S7 communication plus", HFILL }},
-        { &hf_s7commp_trailer_item,
-          { "Trailer", "s7comm-plus.traileritem", FT_BYTES, BASE_NONE, NULL, 0x0,
-            "This is the trailer part of S7 communication plus", HFILL }},
-        { &hf_s7commp_trailer_protid,
-          { "Protocol Id", "s7comm-plus.trailer.protid", FT_UINT8, BASE_HEX, NULL, 0x0,
-            "Protocol Identification", HFILL }},
-        { &hf_s7commp_trailer_pdutype,
-          { "PDU-Type", "s7comm-plus.trailer.pdutype", FT_UINT8, BASE_HEX, VALS(pdutype_names), 0x0,
-            "Type of packet", HFILL }},
-        { &hf_s7commp_trailer_datlg,
-          { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
-            "Specifies the entire length of the data block in bytes", HFILL }},
 
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -496,6 +466,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_res_set,
           { "Response Set", "s7comm-plus.data.res_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a response telegram", HFILL }},
+        { &hf_s7commp_cyclic_set,
+          { "Cyclic Data Set", "s7comm-plus.cyclic_dataset", FT_NONE, BASE_NONE, NULL, 0x0,
+            "This is a set of data in a cyclic data telegram", HFILL }},
 
         { &hf_s7commp_data_id_number,
           { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_DEC, VALS(id_number_names), 0x0,
@@ -558,7 +531,7 @@ proto_register_s7commp (void)
           "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
 
         { &hf_s7commp_itemval_datatype,
-          { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_data_type_names), 0x0,
+          { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
             "Type of data following", HFILL }},
         { &hf_s7commp_itemval_arraysize,
           { "Array size", "s7comm-plus.item.val.arraysize", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -572,19 +545,31 @@ proto_register_s7commp (void)
           { "Data area to explore", "s7comm-plus.explore.req_area1", FT_UINT32, BASE_HEX, VALS(explore_area_names), 0x0,
             NULL, HFILL }},
 
+        /*** Trailer fields ***/
+        { &hf_s7commp_trailer,
+          { "Trailer", "s7comm-plus.trailer", FT_NONE, BASE_NONE, NULL, 0x0,
+            "This is the trailer part of S7 communication plus", HFILL }},
+        { &hf_s7commp_trailer_protid,
+          { "Protocol Id", "s7comm-plus.trailer.protid", FT_UINT8, BASE_HEX, NULL, 0x0,
+            "Protocol Identification", HFILL }},
+        { &hf_s7commp_trailer_pdutype,
+          { "PDU-Type", "s7comm-plus.trailer.pdutype", FT_UINT8, BASE_HEX, VALS(pdutype_names), 0x0,
+            "Type of packet", HFILL }},
+        { &hf_s7commp_trailer_datlg,
+          { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "Specifies the entire length of the data block in bytes", HFILL }},
+
     };
 
     static gint *ett[] = {
         &ett_s7commp,
         &ett_s7commp_header,
-        &ett_s7commp_param,
-        &ett_s7commp_param_item,
         &ett_s7commp_data,
         &ett_s7commp_data_item,
         &ett_s7commp_trailer,
-        &ett_s7commp_trailer_item,
         &ett_s7commp_data_req_set,
         &ett_s7commp_data_res_set,
+        &ett_s7commp_cyclic_set,
         &ett_s7commp_itemaddr_area,
 
         &ett_s7commp_itemval_datatype_flags,
@@ -819,7 +804,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
-    gchar str_arr_prefix[16];
+    const gchar *str_arr_prefix;
 
     guint8 string_actlength = 0;
 
@@ -851,9 +836,9 @@ s7commp_decode_value(tvbuff_t *tvb,
         array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
         start_offset = offset;
         if (is_array) {
-            g_strlcpy(str_arr_prefix, "Array", sizeof(str_arr_prefix));
+            str_arr_prefix = "Array";
         } else if (is_address_array) {
-            g_strlcpy(str_arr_prefix, "Addressarray", sizeof(str_arr_prefix));
+            str_arr_prefix = "Addressarray";
         }
     }
 
@@ -861,104 +846,104 @@ s7commp_decode_value(tvbuff_t *tvb,
     for (array_index = 1; array_index <= array_size; array_index++) {
         switch (datatype) {
             /************************** Binärzahlen **************************/
-            case S7COMMP_ITEM_DATA_TYPE_BOOL:
+            case S7COMMP_ITEM_DATATYPE_BOOL:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             /************************** Ganzzahlen ohne Vorzeichen **************************/
-            case S7COMMP_ITEM_DATA_TYPE_USINT:
+            case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_UINT:
+            case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_UDINT:
+            case S7COMMP_ITEM_DATATYPE_UDINT:
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_ULINT:
-            case S7COMMP_ITEM_DATA_TYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
-            case S7COMMP_ITEM_DATA_TYPE_LINT: /* maybe we have to add some kind of sign bit handling */
+            case S7COMMP_ITEM_DATATYPE_ULINT:
+            case S7COMMP_ITEM_DATATYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
+            case S7COMMP_ITEM_DATATYPE_LINT: /* maybe we have to add some kind of sign bit handling */
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
                 break;
             /************************** Ganzzahlen mit Vorzeichen **************************/
-            case S7COMMP_ITEM_DATA_TYPE_SINT:
+            case S7COMMP_ITEM_DATATYPE_SINT:
                 uint8val = tvb_get_guint8(tvb, offset);
                 memcpy(&int8val, &uint8val, sizeof(int8val));
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "%d", int8val);
                 offset += 1;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_INT:
+            case S7COMMP_ITEM_DATATYPE_INT:
                 uint16val = tvb_get_ntohs(tvb, offset);
                 memcpy(&int16val, &uint16val, sizeof(int16val));
                 length_of_value = 2;
                 g_snprintf(str_val, sizeof(str_val), "%d", int16val);
                 offset += 2;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_DINT:
+            case S7COMMP_ITEM_DATATYPE_DINT:
                 int32val = tvb_get_varint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%d", int32val);
                 break;
             /************************** Bitfolgen **************************/
-            case S7COMMP_ITEM_DATA_TYPE_BYTE:
+            case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_WORD:
+            case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
                 g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_STRUCT:
+            case S7COMMP_ITEM_DATATYPE_STRUCT:
                 if(structLevel) *structLevel += 1; /* entering a new structure level */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
                 offset += 4;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_DWORD:
-            case S7COMMP_ITEM_DATA_TYPE_DWORD1:        /* 0xd3 */
-            case S7COMMP_ITEM_DATA_TYPE_DWORD2:        /* 0x12 */
+            case S7COMMP_ITEM_DATATYPE_DWORD:
+            case S7COMMP_ITEM_DATATYPE_DWORD1:        /* 0xd3 */
+            case S7COMMP_ITEM_DATATYPE_DWORD2:        /* 0x12 */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_LWORD:
+            case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
                 g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
                 /************************** Gleitpunktzahlen **************************/
-            case S7COMMP_ITEM_DATA_TYPE_REAL:
+            case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
                 offset += 4;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_LREAL:
+            case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
             /************************** Special ***************************/
-            case S7COMMP_ITEM_DATA_TYPE_NULL:       /* 0x00 */
+            case S7COMMP_ITEM_DATATYPE_NULL:       /* 0x00 */
                 /* No value following */
                 g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
                 length_of_value = 0;
                 break;
-            case S7COMMP_ITEM_DATA_TYPE_STRING:        /* 0x15 */
+            case S7COMMP_ITEM_DATATYPE_STRING:        /* 0x15 */
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 length_of_value = 0;
                 if (datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL) {
@@ -982,7 +967,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += length_of_value;
                 break;
             /**************************  ***************************/
-            case S7COMMP_ITEM_DATA_TYPE_IEC_COUNTER:
+            case S7COMMP_ITEM_DATATYPE_IEC_COUNTER:
                 if(datatype_flags == 0x80) {
                      /* length is known as 8 bytes with flags 0x80 */
                     length_of_value = 8;
@@ -991,7 +976,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 }
                 break;
             /******** Blob, number of bytes with length header ***********/
-            case S7COMMP_ITEM_DATA_TYPE_BLOB:
+            case S7COMMP_ITEM_DATATYPE_BLOB:
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 if (!(datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL)) {
                     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x", tvb_get_guint8(tvb, offset));
@@ -1032,12 +1017,12 @@ s7commp_decode_value(tvbuff_t *tvb,
     if (is_array || is_address_array) {
         proto_item_append_text(array_item_tree, " %s[%u] = %s", str_arr_prefix, array_size, str_arrval);
         proto_item_set_len(array_item_tree, offset - start_offset);
-        proto_item_append_text(data_item_tree, " (%s) %s[%u] = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_arr_prefix, array_size, str_arrval);
+        proto_item_append_text(data_item_tree, " (%s) %s[%u] = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_arr_prefix, array_size, str_arrval);
     } else { /* not an array or address array */
         if (length_of_value > 0) {
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         }
-        proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_data_type_names, "Unknown datatype: 0x%02x"), str_val);
+        proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
     }
     return offset;
 }
@@ -1160,7 +1145,6 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, ": Terminating Variable-Description");
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Struct (Struct-Level %d)", structLevel);
             proto_item_append_text(data_item_tree, ": Terminating Struct (Struct-Level %d)", structLevel);
             proto_item_set_len(data_item_tree, offset - start_offset);
             structLevel--;
@@ -1200,12 +1184,12 @@ s7commp_decode_startsession(tvbuff_t *tvb,
                             proto_tree *tree,
                             guint32 offset,
                             const guint32 offsetmax,
-                            guint8 datatype,
+                            guint8 opcode,
                             guint8 pdutype)
 {
     /* einige Bytes unbekannt */
-    guint32 unkownBytes = 0;
-    guint8 scannedByte = 0;
+    guint32 unknown_bytes = 0;
+    guint8 scanned_byte = 0;
     guint8 octet_count = 0;
     guint8 sessionid_count = 0;
     int i;
@@ -1218,7 +1202,7 @@ s7commp_decode_startsession(tvbuff_t *tvb,
      *
      */
 
-    if (datatype == S7COMMP_DATATYPE_RES) {
+    if (opcode == S7COMMP_OPCODE_RES) {
         proto_tree_add_text(tree, tvb, offset, 1, "Response Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
         sessionid_count = tvb_get_guint8(tvb, offset);
@@ -1235,16 +1219,16 @@ s7commp_decode_startsession(tvbuff_t *tvb,
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 1, tvb_get_ptr(tvb, offset, 1));
         offset += 1;
     }
-    while ((offset + unkownBytes) < offsetmax) {    /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
-        scannedByte = tvb_get_guint8(tvb, offset + unkownBytes);
-        if (scannedByte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+    while ((offset + unknown_bytes) < offsetmax) {    /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
+        scanned_byte = tvb_get_guint8(tvb, offset + unknown_bytes);
+        if (scanned_byte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
             break; /* found some known good ID */
         }
-        else unkownBytes++;
+        else unknown_bytes++;
     }
-    if (unkownBytes > 0) {
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkownBytes, tvb_get_ptr(tvb, offset, unkownBytes));
-        offset += unkownBytes;
+    if (unknown_bytes > 0) {
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unknown_bytes, tvb_get_ptr(tvb, offset, unknown_bytes));
+        offset += unknown_bytes;
     }
     return s7commp_decode_id_value_pairs(tvb, tree, offset, offsetmax);
 }
@@ -1257,10 +1241,10 @@ static guint32
 s7commp_decode_endsession(tvbuff_t *tvb,
                             proto_tree *tree,
                             guint32 offset,
-                            guint8 datatype,
+                            guint8 opcode,
                             guint8 pdutype)
 {
-    if (datatype == S7COMMP_DATATYPE_RES) {
+    if (opcode == S7COMMP_OPCODE_RES) {
         proto_tree_add_text(tree, tvb, offset, 1, "End Session Unknown (Result?): 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
     }
@@ -1393,7 +1377,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     guint32 item_number;
     guint32 start_offset = offset;
     guint8 octet_count = 0;
-    int structLevel = 0;
+    int struct_level = 0;
 
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
@@ -1403,7 +1387,7 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     offset += octet_count;
 
     proto_item_append_text(data_item_tree, " [%u]:", item_number);
-    offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel);
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
     proto_item_set_len(data_item_tree, offset - start_offset);
     return offset;
 }
@@ -1500,11 +1484,11 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     guint32 offsetmax = offset + dlength;
     guint8 octet_count = 0;
 
-    guint8 itemAddressCount;
-    guint8 ItemAddressRead;
-    guint8 ItemReadCount;
+    guint8 item_address_count;
+    guint8 item_address_read;
+    guint8 item_read_count;
     gint32 int32val;
-    int remainingDecodeSession;
+    int remaining_decode_session;
 
     /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl
      * Es kann sein dass hier die Session-ID steht, dann ist der Aufbau anders
@@ -1531,31 +1515,31 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         /* 27 byte unbekannt */
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
-        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x. ", value);
+        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x", value);
         item_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Item count: %d", item_count);
-        offset +=1;
-        itemAddressCount = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %d", itemAddressCount);
-        offset +=1;
-        for (ItemAddressRead=1; (ItemAddressRead <= itemAddressCount) && (offset < offsetmax); ItemAddressRead++) {
+        offset += 1;
+        item_address_count = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %d", item_address_count);
+        offset += 1;
+        for (item_address_read = 1; (item_address_read <= item_address_count) && (offset < offsetmax); item_address_read++) {
             int32val = tvb_get_varint32(tvb, &octet_count, offset);
             proto_tree_add_text(tree, tvb, offset, octet_count, "Item-Address[%d]: 0x%08x : %d",
-                                ItemAddressRead, int32val, int32val);
+                                item_address_read, int32val, int32val);
             offset += octet_count;
         }
         /* the begin of the remaining part could be decoded similar to the start session stuff: */
-        for (ItemReadCount = 1; (ItemReadCount <= item_count) && (offset < offsetmax); ItemReadCount++) {
+        for (item_read_count = 1; (item_read_count <= item_count) && (offset < offsetmax); item_read_count++) {
             offset = s7commp_decode_id_value_pairs(tvb, tree, offset, offsetmax);
         }
         /* Bei der S7-1500 folgt ein weiterer Block unbekannter Daten, da s7commp_decode_id_value_pairs()
          * nicht alles decodieren kann.
          */
-        remainingDecodeSession = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
-        if (remainingDecodeSession > 0) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, remainingDecodeSession,
-                                 tvb_get_ptr(tvb, offset, remainingDecodeSession));
-            offset += remainingDecodeSession;
+        remaining_decode_session = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
+        if (remaining_decode_session > 0) {
+            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, remaining_decode_session,
+                                 tvb_get_ptr(tvb, offset, remaining_decode_session));
+            offset += remaining_decode_session;
         }
         /* Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write */
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
@@ -1796,11 +1780,11 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_cyclic(tvbuff_t *tvb,
-                           packet_info *pinfo,
-                           proto_tree *tree,
-                           guint16 dlength,
-                           guint32 offset)
+s7commp_decode_cyclic(tvbuff_t *tvb,
+                      packet_info *pinfo,
+                      proto_tree *tree,
+                      guint16 dlength,
+                      guint32 offset)
 {
     guint16 unknown2;
     guint32 cyclic_session_id;
@@ -1812,7 +1796,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint32 item_number;
     guint32 start_offset;
-    int structLevel = 0;
+    int struct_level = 0;
     gboolean add_data_info_column = FALSE;
 
     /* Bei zyklischen Daten ist die Funktionsnummer nicht so wie bei anderen Telegrammen. Dieses ist eine
@@ -1876,7 +1860,7 @@ s7commp_decode_data_cyclic(tvbuff_t *tvb,
             offset += 4;
 
             proto_item_append_text(data_item_tree, " [%u]:", item_number);
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
             proto_item_set_len(data_item_tree, offset - start_offset);
 
             item_return_value = tvb_get_guint8(tvb, offset);
@@ -2075,19 +2059,35 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
                                guint32 offset)
 {
     /* 6 Bytes unbekannt. Zumindest das erste word sollte 0x0000 sein, sonst Fehler? */
-    guint16 ret1;
+    guint16 ret1, ret2;
     guint32 max_offset = offset + dlength;
+    int unkown_bytes = 0;
+    guint8 scanned_byte = 0;
 
     ret1 = tvb_get_ntohs(tvb, offset);
     proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", ret1);
     offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
+    ret2 = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", ret2);
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 1, "Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
 
-    /* nur wenn der erste Wert 0 ist, dann ist ein Datensatz vorhanden */
+    /* maybe the first word is a kind of error code */
     if (ret1 == 0x0000) {
+        /* possible that other bytes are following. Search for valid id */
+        while ((offset + unkown_bytes) < max_offset) {
+            scanned_byte = tvb_get_guint8(tvb, offset + unkown_bytes);
+            if (scanned_byte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+                break;
+            } else {
+                unkown_bytes++;
+            }
+        }
+        if (unkown_bytes > 0) {
+            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkown_bytes, tvb_get_ptr(tvb, offset, unkown_bytes));
+            offset += unkown_bytes;
+        }
         offset = s7commp_decode_id_value_pairs(tvb, tree, offset, max_offset);
     }
     return offset;
@@ -2120,17 +2120,17 @@ dissect_s7commp(tvbuff_t *tvb,
 
     guint8 pdutype = 0;
     guint8 hlength = 4;
-    guint8 datatype = 0;
+    guint8 opcode = 0;
     guint16 dlength = 0;
     guint16 seqnum = 0;
-    guint16 function = 0;
+    guint16 functioncode = 0;
     guint16 unknown1 = 0;
     guint16 unknown2 = 0;
     gboolean has_trailer;
 
     guint16 packetlength;
 
-    packetlength = tvb_length(tvb);
+    packetlength = tvb_reported_length(tvb);    /* Payload length reported from tpkt/cotp dissector. */
     /*----------------- Heuristic Checks - Begin */
     /* 1) check for minimum length */
     if (packetlength < S7COMMP_MIN_TELEGRAM_LENGTH) {
@@ -2158,19 +2158,11 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * 4 Bytes Header
          ******************************************************/
-
-        /* insert header tree */
         s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, hlength, FALSE );
-        /* insert sub-items in header tree */
         s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
-
         proto_item_append_text(s7commp_header_tree, ", PDU-Type: %s", val_to_str(pdutype, pdutype_names, ", PDU-Type: 0x%02x"));
-
-        /* 1: Protocol Identifier, constant 0x72 */
         proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_protid, tvb, offset, 1, FALSE);
         offset += 1;
-
-        /* 2: Type */
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_pdutype, tvb, offset, 1, pdutype);
         offset += 1;
 
@@ -2199,182 +2191,137 @@ dissect_s7commp(tvbuff_t *tvb,
              ******************************************************/
 
             /* insert data tree */
-            s7commp_sub_item = proto_tree_add_item( s7commp_tree, hf_s7commp_data, tvb, offset, dlength, FALSE );
+            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, tvb, offset, dlength, FALSE);
             /* insert sub-items in data tree */
             s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
 
-            /* Prüfen ob das erste Byte eine bekannte Kennung hat */
-
-            /* Ich weiß nicht ob das richtig ist ein Paket anhand dieser Kennung zu prüfen!
-             * Es ist möglich dass Pakete über mehrere PDUs fragmentiert übertragen werden:
-             * Dabei hat das erste Paket keinen trailer, aber den Data-Header.
-             * Die mittleren Pakete besitzen keinen Data-Header und auch keinen Trailer.
-             * Das letzte Paket besitzt keinen Data-Header, aber einen Trailer.
-             *
-             * Wenn die Prüfung so wie sie jetzt hier programmiert ist funktionieren soll, wären im
-             * ersten Byte des Data-Teils die zu überprüfenden Bytes nicht erlaubt.
-             * Das ist aber wahrscheinlich nicht der Fall. So wie es aussieht ist das Byte ganz normal
-             * im Datenstrom, sodass die Erkennung so wie sie jetzt programmiert ist nur
-             * zufällig funktioniert.
-             * Um das in Wireshark zu erkennen, müsste man sich Informationen von vorigen Paketen "merken"
-             * und dann in folgenden Paketen kombinieren.
-             * Da habe ich aber noch keine Idee wie man das in Wireshark umsetzen kann.
-             * Man müsste nicht beendete Telegramme anhand der Sequenznummern (und IP/Port) auf einen Stack für "offene PDUs" legen.
-             * Erst mit dem Endtelegramm werden diese wieder vom Stack gelöscht.
-             */
-
-            /* 1: Kennung*? */
-            datatype = tvb_get_guint8(tvb, offset);
-            proto_item_append_text(s7commp_data_tree, ", Data: %s", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
-
-            if ((datatype == S7COMMP_DATATYPE_REQ) || (datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_RES2)) {
-                /* 1: Kennung*? */
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_datatype, tvb, offset, 1, datatype);
-                /* add type to info column */
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
+            opcode = tvb_get_guint8(tvb, offset);
+            /* TODO: This check works only if the valid opcodes do not occur as first byte in a continuation packet */
+            if (opcode != S7COMMP_OPCODE_CYC &&
+                opcode != S7COMMP_OPCODE_REQ &&
+                opcode != S7COMMP_OPCODE_RES &&
+                opcode != S7COMMP_OPCODE_RES2) {
+                if (has_trailer) {
+                    proto_item_append_text(s7commp_data_tree, ", Data continuation of a previous packet (end)");
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data continuation (end)");
+                 } else {
+                    proto_item_append_text(s7commp_data_tree, ", Data continuation of a previous packet (inner)");
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data continuation (inner)");
+                }
+            } else {
+                /* 1: Opcode */
+                proto_item_append_text(s7commp_data_tree, ", Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Op: [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
                 offset += 1;
                 dlength -= 1;
 
-                /* 2/3: Unbekannt */
-                unknown1 = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
-                offset += 2;
-                dlength -= 2;
-
-                /* 4/5: Funktionscode? */
-                function = tvb_get_ntohs(tvb, offset);
-
-                /* Funktionsbezeichnung in Abhängigkeit vom PDU Typ */
-                if ((pdutype == S7COMMP_PDUTYPE_CONNECT) || (pdutype == S7COMMP_PDUTYPE_DATA)) {
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_pdufunction, tvb, offset, 2, function);
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", function,
-                                    val_to_str(function, pdu_datafunc_names, "?"));
-                } else {
-                    proto_tree_add_text(s7commp_data_tree, tvb, offset , 2, "Function: 0x%04x", function);
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x]", function);
-                }
-                offset += 2;
-                dlength -= 2;
-
-                /* 6/7: Unbekannt */
-                unknown2 = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
-                offset += 2;
-                dlength -= 2;
-
-                /* 8/9: Sequenz-Nummer für die Referenzierung Request/Response */
-                seqnum = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u", seqnum);
-                offset += 2;
-                dlength -= 2;
-            }
-
-            if (pdutype == S7COMMP_PDUTYPE_CONNECT || pdutype == S7COMMP_PDUTYPE_DATA) {
-                if (datatype == S7COMMP_DATATYPE_REQ) {
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
-                    offset += 4;
-                    dlength -= 4;
-                    proto_tree_add_text(s7commp_data_tree, tvb, offset , 1,   "Req. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
-                    offset += 1;
-                    dlength -= 1;
-                    if (function == S7COMMP_PDU_DATAFUNC_READ) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_WRITE) {
-                        /* Ein HMI Write-Request hat in den 4 Bytes nach dem 0x34 normalerweise 0x0000.
-                         * Beim ersten Write-Request nach dem Verbindungsaufbau, steht hier die Session-Id, und der
-                         * Aufbau des Datensatzes ist anders.
-                         * TODO: Außerhalb Abfangen!
-                         */
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_MODSESSION) {
-                        offset_save = offset;
-                        offset = s7commp_decode_data_modify_session(tvb, pinfo, s7commp_data_tree, dlength, offset);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_STARTSESSION) {
-                        offset_save = offset;
-                        offset = s7commp_decode_startsession(tvb, s7commp_data_tree, offset, offset + dlength, datatype, pdutype);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
-                        offset_save = offset;
-                        offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_EXPLORE) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    }
-
-                } else if ((datatype == S7COMMP_DATATYPE_RES) || (datatype == S7COMMP_DATATYPE_RES2)){      /* Response */
-                    proto_tree_add_text(s7commp_data_tree, tvb, offset , 1, "Res. Typ 2? : 0x%02x", tvb_get_guint8(tvb, offset));
-                    offset += 1;
-                    dlength -= 1;
-                    if (function == S7COMMP_PDU_DATAFUNC_READ) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_data_response_read(tvb, item_tree, dlength, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_WRITE) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_STARTSESSION) {
-                        offset_save = offset;
-                        offset = s7commp_decode_startsession(tvb, s7commp_data_tree, offset, offset + dlength, datatype, pdutype);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_ENDSESSION) {
-                        offset_save = offset;
-                        offset = s7commp_decode_endsession(tvb, s7commp_data_tree, offset, datatype, pdutype);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_0x0586) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if (function == S7COMMP_PDU_DATAFUNC_EXPLORE) {
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-                        offset_save = offset;
-                        offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    }
-
-                } else if (datatype == S7COMMP_DATATYPE_CYC) {
-                    /* 1: Kennung -> Standard */
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_datatype, tvb, offset, 1, datatype);
-                    /* add type to info column */
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data: [%s]", val_to_str(datatype, datatype_names, "Unknown type of data: 0x%02x"));
-                    offset += 1;
-                    dlength -= 1;
-
+                if (opcode == S7COMMP_OPCODE_CYC) {
+                    item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_cyclic_set, tvb, offset, -1, FALSE);
+                    item_tree = proto_item_add_subtree(item, ett_s7commp_cyclic_set);
                     offset_save = offset;
-                    offset = s7commp_decode_data_cyclic(tvb, pinfo, s7commp_data_tree, dlength, offset);
+                    offset = s7commp_decode_cyclic(tvb, pinfo, item_tree, dlength, offset);
                     dlength = dlength - (offset - offset_save);
+                } else {
+                    /* 2/3: Unknown */
+                    unknown1 = tvb_get_ntohs(tvb, offset);
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
+                    offset += 2;
+                    dlength -= 2;
+
+                    /* 4/5: Functioncode */
+                    functioncode = tvb_get_ntohs(tvb, offset);
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", functioncode,
+                                    val_to_str(functioncode, data_functioncode_names, "?"));
+                    offset += 2;
+                    dlength -= 2;
+
+                    /* 6/7: Unknown */
+                    unknown2 = tvb_get_ntohs(tvb, offset);
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
+                    offset += 2;
+                    dlength -= 2;
+
+                    /* 8/9: Sequence number */
+                    seqnum = tvb_get_ntohs(tvb, offset);
+                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u", seqnum);
+                    offset += 2;
+                    dlength -= 2;
+
+                    if (opcode == S7COMMP_OPCODE_REQ) {
+                        proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
+                        offset += 4;
+                        dlength -= 4;
+
+                        /* unknown byte */
+                        proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+                        offset += 1;
+                        dlength -= 1;
+
+                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
+                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
+                        offset_save = offset;
+
+                        switch (functioncode) {
+                            case S7COMMP_FUNCTIONCODE_READ:
+                                offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_WRITE:
+                                offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_MODSESSION:
+                                offset = s7commp_decode_data_modify_session(tvb, pinfo, item_tree, dlength, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_STARTSESSION:
+                                offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode, pdutype);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_ENDSESSION:
+                                offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode, pdutype);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_EXPLORE:
+                                offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
+                        }
+                        proto_item_set_len(item_tree, offset - offset_save);
+                        dlength = dlength - (offset - offset_save);
+                    } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {      /* Response */
+                        /* unknown byte */
+                        proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+                        offset += 1;
+                        dlength -= 1;
+
+                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
+                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
+                        offset_save = offset;
+
+                        switch (functioncode) {
+                            case S7COMMP_FUNCTIONCODE_READ:
+                                offset = s7commp_decode_data_response_read(tvb, item_tree, dlength, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_WRITE:
+                                offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_STARTSESSION:
+                                offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode, pdutype);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_ENDSESSION:
+                                offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode, pdutype);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_0x0586:
+                                offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
+                                break;
+                            case S7COMMP_FUNCTIONCODE_EXPLORE:
+                                offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
+                                break;
+                        }
+                        proto_item_set_len(item_tree, offset - offset_save);
+                        dlength = dlength - (offset - offset_save);
+                    }
                 }
             }
 
-            /* Alles was noch fehlt als Hex anzeigen */
+            /* Show undecoded data as raw bytes */
             if (dlength > 0) {
                 proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
                 offset += dlength;
@@ -2385,23 +2332,14 @@ dissect_s7commp(tvbuff_t *tvb,
              * 4 Bytes Anhängsel mit 0x72, Typecode wie im Header, und folgende 0x00 0x00
              * Es gibt Pakete die über mehrere Telegramme gehe, da fehlt dieser Part
              ******************************************************/
-
             if (has_trailer) {
-                /* insert trailer tree */
                 s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, tvb, offset, 4, FALSE);
-                /* insert sub-items in data tree */
                 s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
-
-                /* 1: Protocol Identifier, constant 0x72 */
                 proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, tvb, offset, 1, FALSE);
                 offset += 1;
-
-                /* 2: PDU Type */
                 proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, tvb, offset, 1, tvb_get_guint8(tvb, offset));
                 proto_item_append_text(s7commp_trailer_tree, ", PDU-Type: %s", val_to_str(tvb_get_guint8(tvb, offset), pdutype_names, ", PDU-Type: 0x%02x"));
                 offset += 1;
-
-                /* 3/4: Data length, hier immer 0 */
                 proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
                 offset += 2;
             }
