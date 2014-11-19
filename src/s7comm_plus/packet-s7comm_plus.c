@@ -33,6 +33,7 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
+/* #define USE_INTERNALS */
 
 #include "packet-s7comm_plus.h"
 
@@ -61,15 +62,11 @@ static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *t
  */
 #define S7COMMP_PDUTYPE_CONNECT             0x01
 #define S7COMMP_PDUTYPE_DATA                0x02
-#define S7COMMP_PDUTYPE_3                   0x03
-#define S7COMMP_PDUTYPE_4                   0x04
 #define S7COMMP_PDUTYPE_KEEPALIVE           0xff
 
 static const value_string pdutype_names[] = {
     { S7COMMP_PDUTYPE_CONNECT,              "Connect" },
     { S7COMMP_PDUTYPE_DATA,                 "Data" },
-    { S7COMMP_PDUTYPE_3,                    "-3-" },
-    { S7COMMP_PDUTYPE_4,                    "-4-" },
     { S7COMMP_PDUTYPE_KEEPALIVE,            "Keep Alive" },
     { 0,                                    NULL }
 };
@@ -115,37 +112,29 @@ static const value_string data_functioncode_names[] = {
  * Data types
  */
 #define S7COMMP_ITEM_DATATYPE_NULL          0x00
-/*** Binärzahlen **/
 #define S7COMMP_ITEM_DATATYPE_BOOL          0x01        /* BOOL: fix 1 Byte */
-/*** Unsigned integers ***/
 #define S7COMMP_ITEM_DATATYPE_USINT         0x02        /* USINT, CHAR: fix 1 Byte */
 #define S7COMMP_ITEM_DATATYPE_UINT          0x03        /* UINT, DATE: fix 2 Bytes */
 #define S7COMMP_ITEM_DATATYPE_UDINT         0x04        /* UDint: varuint32 */
 #define S7COMMP_ITEM_DATATYPE_ULINT         0x05        /* ULInt: varuint64 */
-/*** Signed integers ***/
 #define S7COMMP_ITEM_DATATYPE_SINT          0x06        /* SINT: fix 1 Bytes */
 #define S7COMMP_ITEM_DATATYPE_INT           0x07        /* INT: fix 2 Bytes */
 #define S7COMMP_ITEM_DATATYPE_DINT          0x08        /* DINT, TIME: varint32 */
 #define S7COMMP_ITEM_DATATYPE_LINT          0x09        /* LInt: varint64 */
-/*** Bitstream ***/
 #define S7COMMP_ITEM_DATATYPE_BYTE          0x0a        /* BYTE: fix 1 Byte */
 #define S7COMMP_ITEM_DATATYPE_WORD          0x0b        /* WORD: fix 2 Bytes */
 #define S7COMMP_ITEM_DATATYPE_DWORD         0x0c        /* DWORD: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_LWORD         0x0d        /* LWORD: fix 8 Bytes */
-/*** Floatingpoint numbers ***/
 #define S7COMMP_ITEM_DATATYPE_REAL          0x0e        /* REAL: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_LREAL         0x0f        /* LREAL: fix 8 Bytes */
-/*** Special ***/
-#define S7COMMP_ITEM_DATATYPE_IEC_COUNTER   0x10
-#define S7COMMP_ITEM_DATATYPE_IEC_LTIMER    0x11
-#define S7COMMP_ITEM_DATATYPE_DWORD2        0x12        /* Why another dword, maybe this is something special? fix 4 Bytes */
-/* 0x13 ?? */
+#define S7COMMP_ITEM_DATATYPE_IEC_COUNTER   0x10        /* TODO: Prüfen! Sieht mir unlogisch aus */
+#define S7COMMP_ITEM_DATATYPE_IEC_LTIMER    0x11        /* TODO: Prüfen! Sieht mir unlogisch aus */
+#define S7COMMP_ITEM_DATATYPE_RID           0x12        /* RID: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_AID           0x13        /* AID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_BLOB          0x14
-#define S7COMMP_ITEM_DATATYPE_STRING        0x15        /* string with length header */
+#define S7COMMP_ITEM_DATATYPE_WSTRING       0x15        /* Wide string with length header, UTF8 encoded */
 /* 0x16 ?? */
 #define S7COMMP_ITEM_DATATYPE_STRUCT        0x17
-
-#define S7COMMP_ITEM_DATATYPE_DWORD1        0xd3        /* Why another dword, maybe this is something special? fix 4 Bytes */
 
 /* Theoretical missing types:
  * - Variant
@@ -170,11 +159,11 @@ static const value_string item_datatype_names[] = {
     { S7COMMP_ITEM_DATATYPE_LREAL,          "LReal" },
     { S7COMMP_ITEM_DATATYPE_IEC_COUNTER,    "IEC Counter" },
     { S7COMMP_ITEM_DATATYPE_IEC_LTIMER,     "IEC LTimer" },
-    { S7COMMP_ITEM_DATATYPE_STRING,         "String" },
-    { S7COMMP_ITEM_DATATYPE_STRUCT,         "Struct" },
-    { S7COMMP_ITEM_DATATYPE_DWORD1,         "DWord 1" },
-    { S7COMMP_ITEM_DATATYPE_DWORD2,         "DWord 2" },
+    { S7COMMP_ITEM_DATATYPE_RID,            "RID" },
+    { S7COMMP_ITEM_DATATYPE_AID,            "AID" },
     { S7COMMP_ITEM_DATATYPE_BLOB,           "Blob" },
+    { S7COMMP_ITEM_DATATYPE_WSTRING,        "WString" },
+    { S7COMMP_ITEM_DATATYPE_STRUCT,         "Struct" },
     { 0,                                    NULL }
 };
 
@@ -216,6 +205,9 @@ static const value_string itemval_syntaxid_names[] = {
  * The IDs seem to be unique for all telegrams in which they occur.
  * Add the datatype for this value in parentheses.
  */
+ #ifdef USE_INTERNALS
+    #include "internals/packet-s7comm_plus-aid-names.h"
+#else
 static const value_string id_number_names[] = {
     { 233,                          "Subscription name (String)" },
     { 1048,                         "Cyclic variables update set of addresses (UDInt, Addressarray)" },
@@ -223,6 +215,8 @@ static const value_string id_number_names[] = {
     { 1053,                         "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
     { 0,                            NULL }
 };
+#endif
+static value_string_ext id_number_names_ext = VALUE_STRING_EXT_INIT(id_number_names);
 
 /* Item access area */
 #define S7COMMP_VAR_ITEM_AREA1_DB    0x8a0e              /* Reading DB, 2 byte DB-Number following */
@@ -471,7 +465,7 @@ proto_register_s7commp (void)
             "This is a set of data in a cyclic data telegram", HFILL }},
 
         { &hf_s7commp_data_id_number,
-          { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_DEC, VALS(id_number_names), 0x0,
+          { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
             "varuint32: ID Number for function", HFILL }},
 
         /* Item Address */
@@ -845,13 +839,16 @@ s7commp_decode_value(tvbuff_t *tvb,
     /* Use array loop also for non-arrays */
     for (array_index = 1; array_index <= array_size; array_index++) {
         switch (datatype) {
-            /************************** Binärzahlen **************************/
+            case S7COMMP_ITEM_DATATYPE_NULL:
+                /* No value following */
+                g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
+                length_of_value = 0;
+                break;
             case S7COMMP_ITEM_DATATYPE_BOOL:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
-            /************************** Ganzzahlen ohne Vorzeichen **************************/
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
@@ -876,7 +873,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
                 break;
-            /************************** Ganzzahlen mit Vorzeichen **************************/
             case S7COMMP_ITEM_DATATYPE_SINT:
                 uint8val = tvb_get_guint8(tvb, offset);
                 memcpy(&int8val, &uint8val, sizeof(int8val));
@@ -897,7 +893,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%d", int32val);
                 break;
-            /************************** Bitfolgen **************************/
             case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
                 g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
@@ -911,12 +906,10 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_STRUCT:
                 if(structLevel) *structLevel += 1; /* entering a new structure level */
                 length_of_value = 4;
-                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset)); /* the following struct-items are using this number in ascending order */
+                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
-            case S7COMMP_ITEM_DATATYPE_DWORD1:        /* 0xd3 */
-            case S7COMMP_ITEM_DATATYPE_DWORD2:        /* 0x12 */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
@@ -926,7 +919,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
-                /************************** Gleitpunktzahlen **************************/
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
@@ -937,13 +929,13 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
-            /************************** Special ***************************/
-            case S7COMMP_ITEM_DATATYPE_NULL:       /* 0x00 */
-                /* No value following */
-                g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
-                length_of_value = 0;
+            case S7COMMP_ITEM_DATATYPE_RID:
+            case S7COMMP_ITEM_DATATYPE_AID:
+                length_of_value = 4;
+                g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
+                offset += 4;
                 break;
-            case S7COMMP_ITEM_DATATYPE_STRING:        /* 0x15 */
+            case S7COMMP_ITEM_DATATYPE_WSTRING:       /* 0x15 */
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 length_of_value = 0;
                 if (datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL) {
@@ -1075,16 +1067,16 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
         proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
         offset += 1;
         if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {            /* 0xa1 */
+            proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Lvl:%d -> Lvl:%d): 0x%08x / 0x%08x", object_level, object_level+1, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
+            proto_item_append_text(data_item_tree, ": Start of Object (Lvl:%d -> Lvl:%d)", object_level, object_level+1);
             object_level += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Level = %d): 0x%08x / 0x%08x", object_level, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
-            proto_item_append_text(data_item_tree, ": Start of Object (Level = %d)", object_level);
             offset += 8;
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {     /* 0xa2 */
-            proto_item_append_text(data_item_tree, ": Terminating Object (Level = %d)", object_level);
+            proto_item_append_text(data_item_tree, ": Terminating Object (Lvl:%d <- Lvl:%d)", object_level-1, object_level);
             object_level -= 1;
             proto_item_set_len(data_item_tree, offset - start_offset);
-            if (object_level < 0) {
+            if (object_level <= 0) {
                 break;
             }
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {        /* 0xa4 */
@@ -1145,7 +1137,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, ": Terminating Variable-Description");
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
-            proto_item_append_text(data_item_tree, ": Terminating Struct (Struct-Level %d)", structLevel);
+            proto_item_append_text(data_item_tree, ": Terminating Struct (Lvl:%d <- Lvl:%d)", structLevel-1, structLevel);
             proto_item_set_len(data_item_tree, offset - start_offset);
             structLevel--;
             if(structLevel < 0) {
