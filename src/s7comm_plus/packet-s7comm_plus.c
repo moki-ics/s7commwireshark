@@ -127,8 +127,8 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_LWORD         0x0d        /* LWORD: fix 8 Bytes */
 #define S7COMMP_ITEM_DATATYPE_REAL          0x0e        /* REAL: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_LREAL         0x0f        /* LREAL: fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_IEC_COUNTER   0x10        /* TODO: Prüfen! Sieht mir unlogisch aus */
-#define S7COMMP_ITEM_DATATYPE_IEC_LTIMER    0x11        /* TODO: Prüfen! Sieht mir unlogisch aus */
+#define S7COMMP_ITEM_DATATYPE_TIMESTAMP     0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
+#define S7COMMP_ITEM_DATATYPE_TIMESPAN      0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, fix 8 bytes */
 #define S7COMMP_ITEM_DATATYPE_RID           0x12        /* RID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_AID           0x13        /* AID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_BLOB          0x14
@@ -157,8 +157,8 @@ static const value_string item_datatype_names[] = {
     { S7COMMP_ITEM_DATATYPE_LWORD,          "LWord" },
     { S7COMMP_ITEM_DATATYPE_REAL,           "Real" },
     { S7COMMP_ITEM_DATATYPE_LREAL,          "LReal" },
-    { S7COMMP_ITEM_DATATYPE_IEC_COUNTER,    "IEC Counter" },
-    { S7COMMP_ITEM_DATATYPE_IEC_LTIMER,     "IEC LTimer" },
+    { S7COMMP_ITEM_DATATYPE_TIMESTAMP,      "Timestamp" },
+    { S7COMMP_ITEM_DATATYPE_TIMESPAN,       "Timespan" },
     { S7COMMP_ITEM_DATATYPE_RID,            "RID" },
     { S7COMMP_ITEM_DATATYPE_AID,            "AID" },
     { S7COMMP_ITEM_DATATYPE_BLOB,           "Blob" },
@@ -267,10 +267,12 @@ static const value_string var_item_base_area_names[] = {
 #define S7COMMP_MODSESSION_FUNC_REFRESH         0x1d
 #define S7COMMP_MODSESSION_FUNC_UNSUBSCRIBE     0x1b
 #define S7COMMP_MODSESSION_FUNC_VALUE           0x30
+#define S7COMMP_MODSESSION_FUNC_SETCLOCK        0x75
 static const value_string mod_session_func_names[] = {
     { S7COMMP_MODSESSION_FUNC_REFRESH,          "Refresh until cyclic sequence" },
     { S7COMMP_MODSESSION_FUNC_UNSUBSCRIBE,      "Unsubscribe" },
     { S7COMMP_MODSESSION_FUNC_VALUE,            "Unknown, value follows" },
+    { S7COMMP_MODSESSION_FUNC_SETCLOCK,         "Set CPU clock" },
     { 0,                                        NULL }
 };
 
@@ -298,6 +300,8 @@ static const value_string explore_area_names[] = {
     { S7COMMP_EXPLORE_AREA_9006,                "Unknown area 9006" },
     { 0,                                        NULL }
 };
+
+static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
 /**************************************************************************
  **************************************************************************/
@@ -674,6 +678,35 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 }
 /*******************************************************************************************************
  *
+ * Returns an timestamp as string from a unix-timestamp 64 bit value. Needs a char array of size 34.
+ * Format:
+ * Jan 31, 2014 23:59:59.999.999.999
+ *
+ *******************************************************************************************************/
+static void
+s7comm_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
+{
+    guint16 nanosec, microsec, millisec;
+    struct tm *mt;
+    time_t t;
+
+    nanosec = timestamp % 1000;
+    timestamp /= 1000;
+    microsec = timestamp % 1000;
+    timestamp /= 1000;
+    millisec = timestamp % 1000;
+    timestamp /= 1000;
+    t = timestamp;
+    mt = gmtime(&t);
+    str[0] = '\0';
+    if (mt != NULL) {
+        g_snprintf(str, max, "%s %2d, %d %02d:%02d:%02d.%03d.%03d.%03d", mon_names[mt->tm_mon], mt->tm_mday,
+            mt->tm_year + 1900, mt->tm_hour, mt->tm_min, mt->tm_sec,
+            millisec, microsec, nanosec);
+    }
+}
+/*******************************************************************************************************
+ *
  * Decoding of an Address-Array, used to subscribe cyclic variables from HMI
  *
  *******************************************************************************************************/
@@ -870,7 +903,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
-            case S7COMMP_ITEM_DATATYPE_IEC_LTIMER: /* this one has a variable length, guessed to 64 bits */
             case S7COMMP_ITEM_DATATYPE_LINT: /* maybe we have to add some kind of sign bit handling */
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
@@ -933,6 +965,19 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
+            case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
+                length_of_value = 8;
+                uint64val = tvb_get_ntoh64(tvb, offset);
+                s7comm_get_timestring_from_uint64(uint64val, str_val, sizeof(str_val));
+                offset += 8;
+                break;
+            case S7COMMP_ITEM_DATATYPE_TIMESPAN:
+                uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%llu ns", uint64val);
+                offset += 8;
+                break;
             case S7COMMP_ITEM_DATATYPE_RID:
             case S7COMMP_ITEM_DATATYPE_AID:
                 length_of_value = 4;
@@ -962,16 +1007,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                            tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
-            /**************************  ***************************/
-            case S7COMMP_ITEM_DATATYPE_IEC_COUNTER:
-                if(datatype_flags == 0x80) {
-                     /* length is known as 8 bytes with flags 0x80 */
-                    length_of_value = 8;
-                    g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
-                    offset += length_of_value;
-                }
-                break;
-            /******** Blob, number of bytes with length header ***********/
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 if (!(datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL)) {
