@@ -306,6 +306,7 @@ static gint hf_s7commp_header = -1;
 static gint hf_s7commp_header_protid = -1;              /* Header Byte  0 */
 static gint hf_s7commp_header_pdutype = -1;             /* Header Bytes 1 */
 static gint hf_s7commp_header_datlg = -1;               /* Header Bytes 2, 3*/
+static gint hf_s7commp_header_keepaliveseqnum = -1;     /* Sequence number in keep alive telegrams */
 
 static gint hf_s7commp_data = -1;
 static gint hf_s7commp_data_item_address = -1;
@@ -409,6 +410,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_header_datlg,
           { "Data length", "s7comm-plus.header.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
+        { &hf_s7commp_header_keepaliveseqnum,
+          { "Keep alive sequence number", "s7comm-plus.header.keepalive_seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "Sequence number in keep alive telegrams", HFILL }},
 
         /*** Fields in data part ***/
         { &hf_s7commp_data,
@@ -775,7 +779,7 @@ static guint32
 s7commp_decode_value(tvbuff_t *tvb,
                      proto_tree *data_item_tree,
                      guint32 offset,
-                     int* structLevel)
+                     int* struct_level)
 {
     guint8 octet_count = 0;
     guint8 datatype;
@@ -904,7 +908,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
-                if(structLevel) *structLevel += 1; /* entering a new structure level */
+                if (struct_level) *struct_level += 1; /* entering a new structure level */
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset));
                 offset += 4;
@@ -1038,7 +1042,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
 
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    int structLevel = 0;
+    int structLevel = 1;
     guint8 octet_count = 0;
     guint8 syntax_id = 0;
     guint16 data_len = 0;
@@ -1076,9 +1080,6 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, ": Terminating Object (Lvl:%d <- Lvl:%d)", object_level-1, object_level);
             object_level -= 1;
             proto_item_set_len(data_item_tree, offset - start_offset);
-            if (object_level <= 0) {
-                break;
-            }
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {        /* 0xa4 */
             proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
             proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
@@ -1140,7 +1141,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, ": Terminating Struct (Lvl:%d <- Lvl:%d)", structLevel-1, structLevel);
             proto_item_set_len(data_item_tree, offset - start_offset);
             structLevel--;
-            if(structLevel < 0) {
+            if(structLevel <= 0) {
                 break; /* highest structure terminated -> leave */
             }
         } else {    /* S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL 0xa3  - und alles weitere deren Bedeutung noch nicht bekannt ist. */
@@ -1149,7 +1150,7 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
 
-            if (structLevel > 0) {
+            if (structLevel > 1) {
                 proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
             } else {
                 proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
@@ -1355,10 +1356,9 @@ s7commp_decode_item_address(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decodes a item value
+ * Decodes a single item-number with value
  *
  *******************************************************************************************************/
-
 static guint32
 s7commp_decode_item_value(tvbuff_t *tvb,
                           proto_tree *tree,
@@ -1383,54 +1383,110 @@ s7commp_decode_item_value(tvbuff_t *tvb,
     proto_item_set_len(data_item_tree, offset - start_offset);
     return offset;
 }
-
 /*******************************************************************************************************
  *
- * Decodes a single error value of a plc variable access response
+ * Decodes a series of item-number and a value, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_item_errorvalue(tvbuff_t *tvb,
-                               proto_tree *tree,
-                               guint32 offset)
+s7commp_decode_itemnumber_value_series(tvbuff_t *tvb,
+                                       proto_tree *tree,
+                                       guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint32 item_number;
+    guint32 start_offset = offset;
+    guint8 octet_count = 0;
+    int struct_level = 1;
+
+    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    while (struct_level > 0) {
+        if (item_number == 0) {
+            struct_level--;
+            if (struct_level <= 0) {
+                proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct / Terminating Dataset");
+                offset += octet_count;
+                break;
+            } else {
+                proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct (Lvl:%d <- Lvl:%d) %d", struct_level, struct_level+1, octet_count);
+                offset += octet_count;
+            }
+        }
+        if (item_number > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
+            offset += octet_count;
+
+            proto_item_append_text(data_item_tree, " [%u]:", item_number);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
+        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    };
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decodes a series of error values, until terminating null and lowest struct level
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
+                                            proto_tree *tree,
+                                            guint32 offset)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
 
-    guint8 item_number;
-    guint8 datatype_flags;
+    guint32 item_number;
+    guint8 octet_count = 0;
 
-    guint32 errorvalue1 = 0;
-    guint32 errorvalue2 = 0;
+    gint32 errorvalue1 = 0;
+    gint16 errorvalue2 = 0;
+    int struct_level = 1;
+    guint32 start_offset = offset;
 
-    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_errorvalue, tvb, offset, 10, FALSE);
-    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    while (struct_level > 0) {
+        if (item_number == 0) {
+            struct_level--;
+            if (struct_level <= 0) {
+                proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct / Terminating Error Dataset");
+                offset += octet_count;
+                break;
+            } else {
+                proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
+                offset += octet_count;
+            }
+        }
+        if (item_number > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
+            proto_item_append_text(data_item_tree, " [%u]:", item_number);
+            offset += octet_count;
 
-    item_number = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Item Number: %d", item_number);
-    offset += 1;
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Unknown Error value 1: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
 
-    /* Byte nach Item-Nummer: Ist dieses ein Standard Datentyp ist hier immer 0x00
-     * bei Strings steht hier 0x10, und als Datentyp hat ein String 0x02=USint
-     *
-     * Steht hier ein 0xc0, dann ist es ein Fehlertelegramm und es folgen
-     * Zwei Varuint mit Fehlercode.
-     */
-    datatype_flags = tvb_get_guint8(tvb, offset);
-    proto_tree_add_bitmask(data_item_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
-        ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
-    offset += 1;
-    /*///////////////////////////////////////////////////////////////////////////////////////////*/
-    errorvalue1 = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 1: 0x%08x dez %u", errorvalue1, errorvalue1);
-    offset += 4;
+            errorvalue1 = tvb_get_varint32(tvb, &octet_count, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Errorvalue 1 (varint32): 0x%08x dez %d", errorvalue1, errorvalue1);
+            offset += octet_count;
 
-    errorvalue2 = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Errorvalue 2: 0x%08x dez %u", errorvalue2, errorvalue2);
-    offset += 4;
+            errorvalue2 = tvb_get_ntohs(tvb, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, 2, "Errorvalue 2 (fix 2 byte): 0x%04x dez %d", (guint16)errorvalue2, errorvalue2);
+            offset += 2;
 
-    proto_item_append_text(data_item_tree, " [%d]: Error values: 0x%08x/0x%08x", item_number, errorvalue1, errorvalue2);
-
+            proto_item_append_text(data_item_tree, " Error values: 0x%08x / %d", errorvalue1, errorvalue2);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
+        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    };
     return offset;
 }
 
@@ -1459,7 +1515,7 @@ s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Write-Request for plc variables
+ * Write-Request
  *
  *******************************************************************************************************/
 static guint32
@@ -1541,7 +1597,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Read-Request zu einer Variablen-Anfrage bei einer 1200er
+ * Read-Request
  *
  *******************************************************************************************************/
 static guint32
@@ -1590,7 +1646,7 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Read-Response zu eier Variablen-Anfrage bei einer 1200er
+ * Read-Response
  *
  *******************************************************************************************************/
 static guint32
@@ -1600,83 +1656,35 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
                                   guint32 offset)
 {
     guint8 first_response_byte;
-    guint32 item_number;
     guint8 octet_count = 0;
     guint8 in_error_set = 0;
 
     guint32 offset_at_start = offset;
     gint32 int32val = 0;
+    int struct_level = 0;
 
     first_response_byte = tvb_get_guint8(tvb, offset);
-    /* Wenn kein Fehler bei einem Item, kommt als erstes ein 0x00 und dann die Item-Werte
-     *
-     * Bei Fehler (Vermutung):
-     * Tritt ein Fehler auf, ist das erste Byte 0x90 (oder ungleich 0x00)
-     * Dann folgen zwei varint Werte (vermutlich).
-     * Dann folgen die Items die mit Erfolg gelesen werden konnten.
-     * Dann folgt ein Byte mit 0x00
-     * Dann folgt Fehlerdatensatz pro Item:
-     *  - Itemnummer
-     *  - Dann 9 Bytes (oder eine Anzahl varuint??)
-     *  - Dann entweder die nächste Itemnummer, oder wenn 0x00 dann Ende.
-     *
-     */
     proto_tree_add_text(tree, tvb, offset, 1, "Result (0x00 when all Items OK): 0x%02x", first_response_byte);
     offset += 1;
     if (first_response_byte != 0x00) {
         /******* Erste zwei Werte bei Fehler ******/
         int32val = tvb_get_varint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 1: 0x%08x : %d", int32val, int32val);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 1: 0x%08x / %d", int32val, int32val);
         offset += octet_count;
 
         int32val = tvb_get_varint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 2: 0x%08x : %d", int32val, int32val);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 2: 0x%08x / %d", int32val, int32val);
         offset += octet_count;
     }
 
-    /********** Items die OK sind ********/
-    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-    /* Den einzelnen Items folgen auf jeden Fall immer noch 6 Null-Bytes
-     * Bzw. nur 5 Null-Bytes, wenn vorher ein 0x00 als Trenner zum Fehlerdatensatz eingefügt wurde.
-     * Evtl. lässt sich dieses vereinheitlichen.
-     */
-    do {
-        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-        /* Dieses ist die nächste Item Nummer
-         * ACHTUNG!
-         * Gibt es einen Fehlerdatensatz, so wird mit den Items begonnen, dann folgt
-         * als Trennung ein Byte 0x00 und dann die Items mit den Fehlerdaten
-         */
-        if ((item_number == 0x00) && (in_error_set == 0x00)) {  /* && (first_response_byte != 0x00) */
-            proto_tree_add_text(tree, tvb, offset, 1, "End marker for good values (bad values with error code may follow): 0x%02x", item_number);
-            in_error_set = 1;
-            offset += 1;
-            item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-        }
-        /* Wenn jetzt trotzdem noch ein 0x00 folgt, dann ist Ende */
-        if (item_number == 0) {
-            break;
-        }
-
-        offset_at_start = offset;
-        if (in_error_set == 0x00) {
-            offset = s7commp_decode_item_value(tvb, tree, offset);
-        } else {
-            offset = s7commp_decode_item_errorvalue(tvb, tree, offset);
-        }
-
-        /* Fehler abfangen, falls das nicht funktioniert */
-        if (offset - offset_at_start >= dlength) {
-            break;
-        }
-
-    } while (item_number != 0x00);
+    offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
+    offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
 
     return offset;
 }
 /*******************************************************************************************************
  *
- * Write-Response zu einer Variablen-Anfrage bei einer 1200er
+ * Write-Response
  *
  *******************************************************************************************************/
 static guint32
@@ -1685,32 +1693,15 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
                                   guint16 dlength,
                                   guint32 offset)
 {
-/* Der Aufbau scheint ähnlich dem eines Antworttelegramms für eine Lese-Funktion zu sein
- * Evtl. lassen sich später Teile vereinheitlichen.
- * Der Unterschied zum Read-Response scheint, dass man hier sofort im Fehlerbereich ist, wenn
- * das erste Byte != 0.
- */
+    /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
+     * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestätigt zu werden.
+     */
     guint8 first_response_byte;
-    guint32 item_number;
     guint8 octet_count = 0;
-    guint8 in_error_set = 0;
 
-    guint32 offset_at_start = offset;
     gint32 int32val = 0;
 
     first_response_byte = tvb_get_guint8(tvb, offset);
-    /* Wenn kein Fehler bei einem Item, kommt als erstes ein 0x00 und dann die Item-Werte
-     *
-     * Bei Fehler (Vermutung):
-     * Tritt ein Fehler auf, ist das erste Byte 0x90 (oder ungleich 0x00)
-     * Dann folgen zwei varint Werte (vermutlich).
-     * Dann folgt ein Byte mit 0x00
-     * Dann folgt Fehlerdatensatz pro Item:
-     *  - Itemnummer
-     *  - Dann 9 Bytes (oder eine Anzahl varuint??)
-     *  - Dann entweder die nächste Itemnummer, oder wenn 0x00 dann Ende.
-     *
-     */
     proto_tree_add_text(tree, tvb, offset, 1, "Result (0x00 when all Items OK): 0x%02x", first_response_byte);
     offset += 1;
     if (first_response_byte != 0x00) {
@@ -1723,46 +1714,11 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset, octet_count, "Errorcode 2: 0x%08x : %d", int32val, int32val);
         offset += octet_count;
 
-        /* Beim Write-Response sind wir sofort im Fehler-Bereich */
-        in_error_set = 1;
+        offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
+    } else {
+        offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
+        offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
     }
-
-    /********** Items die OK sind ********/
-    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-    /* Den einzelnen Items folgen auf jeden Fall immer noch 6 Null-Bytes
-     * Bzw. nur 5 Null-Bytes, wenn vorher ein 0x00 als Trenner zum Fehlerdatensatz eingefügt wurde.
-     * Evtl. lässt sich dieses vereinheitlichen.
-     */
-    do {
-        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-        /* Dieses ist die nächste Item Nummer
-         * ACHTUNG!
-         * Gibt es einen Fehlerdatensatz, so wird mit den Items begonnen, dann folgt
-         * als Trennung ein Byte 0x00 und dann die Items mit den Fehlerdaten
-         */
-        if ((item_number == 0x00) && (in_error_set == 0x00)) {  /* && (first_response_byte != 0x00) */
-            proto_tree_add_text(tree, tvb, offset, 1, "End marker for good values (bad values with error code may follow): 0x%02x", item_number);
-            in_error_set = 1;
-            offset += 1;
-            item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-        }
-        /* Wenn jetzt trotzdem noch ein 0x00 folgt, dann ist Ende */
-        if (item_number == 0) {
-            break;
-        }
-
-        offset_at_start = offset;
-        if (in_error_set == 0x00) {
-            offset = s7commp_decode_item_value(tvb, tree, offset);
-        } else {
-            offset = s7commp_decode_item_errorvalue(tvb, tree, offset);
-        }
-
-        /* Fehler abfangen, falls das nicht funktioniert */
-        if (offset - offset_at_start >= dlength) break;
-
-    } while (item_number != 0x00);
-
     return offset;
 }
 
@@ -2163,8 +2119,8 @@ dissect_s7commp(tvbuff_t *tvb,
          */
         if (pdutype == S7COMMP_PDUTYPE_KEEPALIVE) {
             seqnum = tvb_get_guint8(tvb, offset);
-            proto_tree_add_uint(s7commp_header_tree, hf_s7commp_data_seqnum, tvb, offset, 1, seqnum);
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%d", seqnum);
+            proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, seqnum);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", seqnum);
             offset += 1;
             /* dann noch ein Byte, noch nicht klar wozu */
             proto_tree_add_text(s7commp_header_tree, tvb, offset , 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
