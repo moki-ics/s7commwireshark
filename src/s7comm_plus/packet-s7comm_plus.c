@@ -128,7 +128,7 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_REAL          0x0e        /* REAL: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_LREAL         0x0f        /* LREAL: fix 8 Bytes */
 #define S7COMMP_ITEM_DATATYPE_TIMESTAMP     0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_TIMESPAN      0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, fix 8 bytes */
+#define S7COMMP_ITEM_DATATYPE_TIMESPAN      0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varuint64 */
 #define S7COMMP_ITEM_DATATYPE_RID           0x12        /* RID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_AID           0x13        /* AID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_BLOB          0x14
@@ -976,7 +976,6 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%llu ns", uint64val);
-                offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
             case S7COMMP_ITEM_DATATYPE_AID:
