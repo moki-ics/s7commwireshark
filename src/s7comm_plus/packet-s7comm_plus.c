@@ -135,6 +135,8 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_WSTRING       0x15        /* Wide string with length header, UTF8 encoded */
 /* 0x16 ?? */
 #define S7COMMP_ITEM_DATATYPE_STRUCT        0x17
+/* 0x18 ?? */
+#define S7COMMP_ITEM_DATATYPE_S7STRING      0x19        /* S7 String with maximum length of 254 characters, only for tag-description */
 
 /* Theoretical missing types:
  * - Variant
@@ -164,6 +166,7 @@ static const value_string item_datatype_names[] = {
     { S7COMMP_ITEM_DATATYPE_BLOB,           "Blob" },
     { S7COMMP_ITEM_DATATYPE_WSTRING,        "WString" },
     { S7COMMP_ITEM_DATATYPE_STRUCT,         "Struct" },
+    { S7COMMP_ITEM_DATATYPE_S7STRING,       "S7String" },
     { 0,                                    NULL }
 };
 
@@ -180,8 +183,8 @@ static const value_string item_datatype_names[] = {
 #define S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT     0xa2
 #define S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL     0xa3
 #define S7COMMP_ITEMVAL_SYNTAXID_0xA4           0xa4
-#define S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC   0xa7
-#define S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC    0xa8
+#define S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC   0xa7
+#define S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC    0xa8
 #define S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT    0x82
 /* Womöglich bitcodiert?:
  * abcd efgh
@@ -193,8 +196,8 @@ static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT,      "Terminating Object" },
     { S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL,      "Value with (id, flags, type, value)" },
     { S7COMMP_ITEMVAL_SYNTAXID_0xA4,            "Unknown Id 0xA4" },
-    { S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC,    "Start of Variable-Description" },
-    { S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC,     "Terminating Variable-Description" },
+    { S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC,    "Start of Tag-Description" },
+    { S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC,     "Terminating Tag-Description" },
     { S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT,     "Value inside struct with (id, flags, type, value)" },
     { 0,                                        NULL }
 };
@@ -303,6 +306,11 @@ static const value_string explore_area_names[] = {
 
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+/* Attribute flags in tag description */
+#define S7COMMP_TAGDESCR_ATTRIBUTE_RETAIN           0x02
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE    0x80
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE       0x10
+
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
@@ -386,6 +394,40 @@ static gint hf_s7commp_itemval_value = -1;
 
 static gint hf_s7commp_explore_req_area1 = -1;
 
+/* Explore result, variable (tag) description */
+static gint hf_s7commp_tagdescr_unknown1 = -1;
+static gint hf_s7commp_tagdescr_namelength = -1;
+static gint hf_s7commp_tagdescr_name = -1;
+static gint hf_s7commp_tagdescr_unknown2 = -1;
+static gint hf_s7commp_tagdescr_datatype = -1;
+static gint hf_s7commp_tagdescr_unknown3 = -1;
+
+static gint hf_s7commp_tagdescr_attributeflags1 = -1;
+static gint hf_s7commp_tagdescr_attributeflags1_retain = -1;
+static gint hf_s7commp_tagdescr_attributeflags1_unknown1 = -1;
+static gint hf_s7commp_tagdescr_attributeflags1_unknown2 = -1;
+static gint ett_s7commp_tagdescr_attributeflags1 = -1;
+static const int *s7commp_tagdescr_attributeflags1_fields[] = {
+    &hf_s7commp_tagdescr_attributeflags1_unknown1,
+    &hf_s7commp_tagdescr_attributeflags1_retain,
+    &hf_s7commp_tagdescr_attributeflags1_unknown2,
+    NULL
+};
+
+static gint hf_s7commp_tagdescr_attributeflags2 = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmiaccessible = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmivisible = -1;
+static gint ett_s7commp_tagdescr_attributeflags2 = -1;
+static const int *s7commp_tagdescr_attributeflags2_fields[] = {
+    &hf_s7commp_tagdescr_attributeflags2_hmivisible,
+    &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
+    NULL
+};
+
+static gint hf_s7commp_tagdescr_unknown4 = -1;
+static gint hf_s7commp_tagdescr_unknown5 = -1;
+static gint hf_s7commp_tagdescr_lid = -1;
+
 /* Register this protocol */
 void
 proto_reg_handoff_s7commp(void)
@@ -460,8 +502,6 @@ proto_register_s7commp (void)
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             "Data unknown", HFILL }},
 
-
-
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a request telegram", HFILL }},
@@ -517,20 +557,20 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         /* Datatype flags */
         { &hf_s7commp_itemval_datatype_flags,
-        { "Datatype flags", "s7comm-plus.item.val.datatype_flags", FT_UINT8, BASE_HEX, NULL, 0x0,
-          NULL, HFILL }},
+          { "Datatype flags", "s7comm-plus.item.val.datatype_flags", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_itemval_datatype_flags_array,
-        { "Array", "s7comm-plus.item.val.datatype_flags.array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ARRAY,
-          "The data has to be interpreted as an array of values", HFILL }},
+          { "Array", "s7comm-plus.item.val.datatype_flags.array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ARRAY,
+            "The data has to be interpreted as an array of values", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_address_array,
-        { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
-          "Array of values for Item Address via CRC and LID", HFILL }},
+          { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
+            "Array of values for Item Address via CRC and LID", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_string_spec,
-        { "String special", "s7comm-plus.item.val.datatype_flags.string_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGSPECIAL,
-          "String has a value before length, and terminating null", HFILL }},
+          { "String special", "s7comm-plus.item.val.datatype_flags.string_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGSPECIAL,
+            "String has a value before length, and terminating null", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
-        { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
-          "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
+          { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
+            "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
 
         { &hf_s7commp_itemval_datatype,
           { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
@@ -546,6 +586,56 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_req_area1,
           { "Data area to explore", "s7comm-plus.explore.req_area1", FT_UINT32, BASE_HEX, VALS(explore_area_names), 0x0,
             NULL, HFILL }},
+
+         /* Explore result, variable (tag) description */
+        { &hf_s7commp_tagdescr_unknown1,
+          { "Tag description - Unknown 1", "s7comm-plus.tagdescr.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_namelength,
+          { "Tag description - Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
+            "varuint32: Tag description - Length of name", HFILL }},
+        { &hf_s7commp_tagdescr_name,
+          { "Tag description - Name", "s7comm-plus.tagdescr.name", FT_STRING, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unknown2,
+          { "Tag description - Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_datatype,
+          { "Tag description - Datatype", "s7comm-plus.tagdescr.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unknown3,
+          { "Tag description - Unknown 3", "s7comm-plus.tagdescr.unknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags1,
+          { "Tag description - Attributes 1", "s7comm-plus.tagdescr.attributeflags1", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags1_retain,
+          { "Retain", "s7comm-plus.tagdescr.attributeflags1.retain", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_RETAIN,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags1_unknown1,
+          { "UnknownFlag1", "s7comm-plus.tagdescr.attributeflags1.unknown1", FT_BOOLEAN, 8, NULL, 0x01,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags1_unknown2,
+          { "UnknownFlag2", "s7comm-plus.tagdescr.attributeflags1.unknown2", FT_BOOLEAN, 8, NULL, 0x80,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2,
+          { "Tag description - Attributes 2", "s7comm-plus.tagdescr.attributeflags2", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
+          { "HMI accessible", "s7comm-plus.tagdescr.attributeflags2.hmiaccessible", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmivisible,
+          { "HMI visible", "s7comm-plus.tagdescr.attributeflags2.hmivisible", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unknown4,
+          { "Tag description - Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unknown5,
+          { "Tag description - Unknown 5", "s7comm-plus.tagdescr.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_lid,
+          { "Tag description - LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "varuint32: Tag description - LID", HFILL }},
 
         /*** Trailer fields ***/
         { &hf_s7commp_trailer,
@@ -573,9 +663,10 @@ proto_register_s7commp (void)
         &ett_s7commp_data_res_set,
         &ett_s7commp_cyclic_set,
         &ett_s7commp_itemaddr_area,
-
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
+        &ett_s7commp_tagdescr_attributeflags1,
+        &ett_s7commp_tagdescr_attributeflags2
     };
 
     proto_s7commp = proto_register_protocol (
@@ -1059,6 +1150,88 @@ s7commp_decode_value(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
+ * Decodes a tag description
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_tagdescription(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset)
+{
+    guint32 lid;
+    guint32 length_of_value;
+    guint8 octet_count = 0;
+    guint8 syntax_id;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_namelength, tvb, offset, octet_count, length_of_value);
+    offset += octet_count;
+
+    proto_tree_add_item(tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
+    proto_item_append_text(tree, ", for Tag: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+    offset += length_of_value;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_datatype, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown3, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+    /* In 5/6 sind Attribute der Variable gespeichert. Unklar ist ob es ein Dword als VLQ oder
+     * zwei einzelne Bytes mit normalen Flags sind.
+     * Die Option nur sichbar ohne erreichbar ist nicht einstellbar.
+     * Die Option "Einstellwert" findet sich nicht wieder.
+     * Typ              ErreichbarHMI   Sichbar in HMI  Remanenz    Byte 5  Byte 6
+     * Variable im DB   Ja              Nein            Nicht       0x80    0x10
+     * Variable im DB   Ja              Ja              Nicht       0x80    0x90
+     * Variable im DB   Ja              Ja              Remanent    0x82    0x90
+     */
+    proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags1,
+        ett_s7commp_tagdescr_attributeflags1, s7commp_tagdescr_attributeflags1_fields, ENC_BIG_ENDIAN);
+    offset += 1;
+
+    proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
+        ett_s7commp_tagdescr_attributeflags2, s7commp_tagdescr_attributeflags2_fields, ENC_BIG_ENDIAN);
+    offset += 1;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown4, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown5, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    lid = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_lid, tvb, offset, octet_count, lid);
+    offset += octet_count;
+
+    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 10: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    /* This byte gives the string length, when datatype is S7String, e.g. 0xfe for a STRING[254] */
+    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 11 (if datatype S7String, then this is the length): %d", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 12: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 13: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 14: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    /* Länge ist nicht fix, ex folgen ggf. noch weitere Bytes bis 0xa8 */
+    syntax_id = tvb_get_guint8(tvb, offset);
+    while (syntax_id != S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {
+        proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Trailer: 0x%02x", syntax_id);
+        offset += 1;
+        syntax_id = tvb_get_guint8(tvb, offset);
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decodes a set of ID / value pairs
  *
  *******************************************************************************************************/
@@ -1119,57 +1292,12 @@ s7commp_decode_id_value_pairs(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
             offset += 6;
             proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTVARDESC) {             /* 0xa7 */
-            /* Hiermit kann eine Variablenbeschreibung aus der SPS abgefragt werden */
-            proto_item_append_text(data_item_tree, ": Start of Variable-Description");
-
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-
-            length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "VarDescr - Length of name: %u", length_of_value);
-            offset += octet_count;
-
-            proto_tree_add_text(data_item_tree, tvb, offset, length_of_value, "VarDescr - Name: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
-            proto_item_append_text(data_item_tree, " - For Variable: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
-            offset += length_of_value;
-            /* es folgen noch min. 15 bytes, darin werden die weiteren Daten wie Datetyp, LID usw. codiert sein */
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));   /* String Terminierung NULL? */
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 7: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 8: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 9 LID?: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 10: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 11: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 12: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 13: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Unknown 14: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            /* Länge ist nicht fix, ex folgen ggf. noch weitere Bytes bis 0xa8 */
-            syntax_id = tvb_get_guint8(tvb, offset);
-            while (syntax_id != S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC) {
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "VarDescr - Trailer: 0x%02x", syntax_id);
-                offset += 1;
-                syntax_id = tvb_get_guint8(tvb, offset);
-            }
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC) {             /* 0xa7 */
+            proto_item_append_text(data_item_tree, ": Start of Tag-Description");
+            offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
             proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMVARDESC) {              /* 0xa8 */
-            proto_item_append_text(data_item_tree, ": Terminating Variable-Description");
+        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {              /* 0xa8 */
+            proto_item_append_text(data_item_tree, ": Terminating Tag-Description");
             proto_item_set_len(data_item_tree, offset - start_offset);
         } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
             proto_item_append_text(data_item_tree, ": Terminating Struct (Lvl:%d <- Lvl:%d)", structLevel-1, structLevel);
