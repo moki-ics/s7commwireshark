@@ -1990,6 +1990,11 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
                     proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown value after value 0x9c: 0x%08x", item_number);
                     proto_item_append_text(data_item_tree, " Returncode 0x9c, Value: 0x%08x", item_number);
                     offset += 4;
+                } else if (item_return_value == 0x13) {
+                    item_number = tvb_get_ntohl(tvb, offset);
+                    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
+                    proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
+                    offset += 4;
                 } else {
                     proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
                     proto_item_set_len(data_item_tree, offset - start_offset);
