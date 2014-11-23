@@ -29,11 +29,14 @@
 #include <stdio.h>
 #include <glib.h>
 #include <epan/packet.h>
+#include <epan/reassemble.h>
+#include <epan/conversation.h>
 #include <string.h>
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
 /* #define USE_INTERNALS */
+/* #define DEBUG_REASSEMBLING */
 
 #include "packet-s7comm_plus.h"
 
@@ -428,6 +431,74 @@ static gint hf_s7commp_tagdescr_unknown4 = -1;
 static gint hf_s7commp_tagdescr_unknown5 = -1;
 static gint hf_s7commp_tagdescr_lid = -1;
 
+
+/* These fields used when reassembling S7COMMP fragments */
+static gint hf_s7commp_fragments = -1;
+static gint hf_s7commp_fragment = -1;
+static gint hf_s7commp_fragment_overlap = -1;
+static gint hf_s7commp_fragment_overlap_conflict = -1;
+static gint hf_s7commp_fragment_multiple_tails = -1;
+static gint hf_s7commp_fragment_too_long_fragment = -1;
+static gint hf_s7commp_fragment_error = -1;
+static gint hf_s7commp_fragment_count = -1;
+static gint hf_s7commp_reassembled_in = -1;
+static gint hf_s7commp_reassembled_length = -1;
+static gint ett_s7commp_fragment = -1;
+static gint ett_s7commp_fragments = -1;
+
+static const fragment_items s7commp_frag_items = {
+    /* Fragment subtrees */
+    &ett_s7commp_fragment,
+    &ett_s7commp_fragments,
+    /* Fragment fields */
+    &hf_s7commp_fragments,
+    &hf_s7commp_fragment,
+    &hf_s7commp_fragment_overlap,
+    &hf_s7commp_fragment_overlap_conflict,
+    &hf_s7commp_fragment_multiple_tails,
+    &hf_s7commp_fragment_too_long_fragment,
+    &hf_s7commp_fragment_error,
+    &hf_s7commp_fragment_count,
+    /* Reassembled in field */
+    &hf_s7commp_reassembled_in,
+    /* Reassembled length field */
+    &hf_s7commp_reassembled_length,
+    /* Reassembled data field */
+    NULL,
+    /* Tag */
+    "S7COMMP fragments"
+};
+
+typedef struct {
+    gboolean first_fragment;
+    gboolean inner_fragment;
+    gboolean last_fragment;
+    guint32 start_frame;
+} frame_state_t;
+
+#define CONV_STATE_NEW         -1
+#define CONV_STATE_NOFRAG      0
+#define CONV_STATE_FIRST       1
+#define CONV_STATE_INNER       2
+#define CONV_STATE_LAST        3
+typedef struct {
+    int state;
+    guint32 start_frame;
+} conv_state_t;
+
+/*
+ * reassembly of S7COMMP
+ */
+static reassembly_table s7commp_reassembly_table;
+
+static void
+s7commp_defragment_init(void)
+{
+    reassembly_table_init(&s7commp_reassembly_table,
+                          &addresses_reassembly_table_functions);
+}
+
+
 /* Register this protocol */
 void
 proto_reg_handoff_s7commp(void)
@@ -651,6 +722,37 @@ proto_register_s7commp (void)
           { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
 
+        /* Fragment fields */
+        { &hf_s7commp_fragment_overlap,
+          { "Fragment overlap", "s7comm-plus.fragment.overlap", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
+            "Fragment overlaps with other fragments", HFILL }},
+        { &hf_s7commp_fragment_overlap_conflict,
+          { "Conflicting data in fragment overlap", "s7comm-plus.fragment.overlap.conflict", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
+            "Overlapping fragments contained conflicting data", HFILL }},
+        { &hf_s7commp_fragment_multiple_tails,
+          { "Multiple tail fragments found", "s7comm-plus.fragment.multipletails", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
+            "Several tails were found when defragmenting the packet", HFILL }},
+        { &hf_s7commp_fragment_too_long_fragment,
+          { "Fragment too long", "s7comm-plus.fragment.toolongfragment", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
+            "Fragment contained data past end of packet", HFILL }},
+        { &hf_s7commp_fragment_error,
+          { "Defragmentation error", "s7comm-plus.fragment.error", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+            "Defragmentation error due to illegal fragments", HFILL }},
+        { &hf_s7commp_fragment_count,
+          { "Fragment count", "s7comm-plus.fragment.count", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_reassembled_in,
+          { "Reassembled in", "s7comm-plus.reassembled.in", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+            "S7COMM-PLUS fragments are reassembled in the given packet", HFILL }},
+        { &hf_s7commp_reassembled_length,
+          { "Reassembled S7COMM-PLUS length", "s7comm-plus.reassembled.length", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "The total length of the reassembled payload", HFILL }},
+        { &hf_s7commp_fragment,
+          { "S7COMM-PLUS Fragment", "s7comm-plus.fragment", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_fragments,
+          { "S7COMM-PLUS Fragments", "s7comm-plus.fragments", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
     };
 
     static gint *ett[] = {
@@ -666,7 +768,9 @@ proto_register_s7commp (void)
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
         &ett_s7commp_tagdescr_attributeflags1,
-        &ett_s7commp_tagdescr_attributeflags2
+        &ett_s7commp_tagdescr_attributeflags2,
+        &ett_s7commp_fragments,
+        &ett_s7commp_fragment
     };
 
     proto_s7commp = proto_register_protocol (
@@ -678,6 +782,8 @@ proto_register_s7commp (void)
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
 
     proto_register_subtree_array(ett, array_length (ett));
+    /* Register the init routine. */
+    register_init_routine(s7commp_defragment_init);
 }
 /*******************************************************************************************************
  *
@@ -1339,8 +1445,7 @@ s7commp_decode_startsession(tvbuff_t *tvb,
                             proto_tree *tree,
                             guint32 offset,
                             const guint32 offsetmax,
-                            guint8 opcode,
-                            guint8 pdutype)
+                            guint8 opcode)
 {
     /* einige Bytes unbekannt */
     guint32 unknown_bytes = 0;
@@ -1396,8 +1501,7 @@ static guint32
 s7commp_decode_endsession(tvbuff_t *tvb,
                             proto_tree *tree,
                             guint32 offset,
-                            guint8 opcode,
-                            guint8 pdutype)
+                            guint8 opcode)
 {
     if (opcode == S7COMMP_OPCODE_RES) {
         proto_tree_add_text(tree, tvb, offset, 1, "End Session Unknown (Result?): 0x%02x", tvb_get_guint8(tvb, offset));
@@ -2231,6 +2335,147 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
     return offset;
 }
 /*******************************************************************************************************
+ *
+ * Decodes the data part
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_data(tvbuff_t *tvb,
+                    packet_info *pinfo,
+                    proto_tree *tree,
+                    guint dlength,
+                    guint32 offset)
+{
+    proto_item *item = NULL;
+    proto_tree *item_tree = NULL;
+
+    guint16 seqnum = 0;
+    guint16 functioncode = 0;
+    guint16 unknown1 = 0;
+    guint16 unknown2 = 0;
+    guint8 opcode = 0;
+    guint32 offset_save = 0;
+
+    opcode = tvb_get_guint8(tvb, offset);
+    /* 1: Opcode */
+    proto_item_append_text(tree, ", Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+    proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " Op: [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+    offset += 1;
+    dlength -= 1;
+
+    if (opcode == S7COMMP_OPCODE_CYC) {
+        item = proto_tree_add_item(tree, hf_s7commp_cyclic_set, tvb, offset, -1, FALSE);
+        item_tree = proto_item_add_subtree(item, ett_s7commp_cyclic_set);
+        offset_save = offset;
+        offset = s7commp_decode_cyclic(tvb, pinfo, item_tree, dlength, offset);
+        dlength = dlength - (offset - offset_save);
+    } else {
+        /* 2/3: Unknown */
+        unknown1 = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
+        offset += 2;
+        dlength -= 2;
+
+        /* 4/5: Functioncode */
+        functioncode = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", functioncode,
+                        val_to_str(functioncode, data_functioncode_names, "?"));
+        offset += 2;
+        dlength -= 2;
+
+        /* 6/7: Unknown */
+        unknown2 = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
+        offset += 2;
+        dlength -= 2;
+
+        /* 8/9: Sequence number */
+        seqnum = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u", seqnum);
+        offset += 2;
+        dlength -= 2;
+
+        if (opcode == S7COMMP_OPCODE_REQ) {
+            proto_tree_add_uint(tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
+            offset += 4;
+            dlength -= 4;
+
+            /* unknown byte */
+            proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+            offset += 1;
+            dlength -= 1;
+
+            item = proto_tree_add_item(tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
+            item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
+            offset_save = offset;
+
+            switch (functioncode) {
+                case S7COMMP_FUNCTIONCODE_READ:
+                    offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_WRITE:
+                    offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_MODSESSION:
+                    offset = s7commp_decode_data_modify_session(tvb, pinfo, item_tree, dlength, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_STARTSESSION:
+                    offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode);
+                    break;
+                case S7COMMP_FUNCTIONCODE_ENDSESSION:
+                    offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
+                    break;
+                case S7COMMP_FUNCTIONCODE_EXPLORE:
+                    offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
+            }
+            proto_item_set_len(item_tree, offset - offset_save);
+            dlength = dlength - (offset - offset_save);
+        } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {      /* Response */
+            /* unknown byte */
+            proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+            offset += 1;
+            dlength -= 1;
+
+            item = proto_tree_add_item(tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
+            item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
+            offset_save = offset;
+
+            switch (functioncode) {
+                case S7COMMP_FUNCTIONCODE_READ:
+                    offset = s7commp_decode_data_response_read(tvb, item_tree, dlength, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_WRITE:
+                    offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_STARTSESSION:
+                    offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode);
+                    break;
+                case S7COMMP_FUNCTIONCODE_ENDSESSION:
+                    offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
+                    break;
+                case S7COMMP_FUNCTIONCODE_0x0586:
+                    offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_EXPLORE:
+                    offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
+                    break;
+            }
+            proto_item_set_len(item_tree, offset - offset_save);
+            dlength = dlength - (offset - offset_save);
+        }
+    }
+
+    /* Show undecoded data as raw bytes */
+    if (dlength > 0) {
+        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
+        offset += dlength;
+    }
+    return offset;
+}
+/*******************************************************************************************************
  *******************************************************************************************************
  *
  * S7-Protocol plus (main tree)
@@ -2246,27 +2491,31 @@ dissect_s7commp(tvbuff_t *tvb,
     proto_item *s7commp_item = NULL;
     proto_item *s7commp_sub_item = NULL;
     proto_tree *s7commp_tree = NULL;
-    proto_item *item = NULL;
 
     proto_tree *s7commp_header_tree = NULL;
     proto_tree *s7commp_data_tree = NULL;
     proto_tree *s7commp_trailer_tree = NULL;
-    proto_tree *item_tree = NULL;
 
     guint32 offset = 0;
-    guint32 offset_save = 0;
 
     guint8 pdutype = 0;
     guint8 hlength = 4;
-    guint8 opcode = 0;
-    guint16 dlength = 0;
-    guint16 seqnum = 0;
-    guint16 functioncode = 0;
-    guint16 unknown1 = 0;
-    guint16 unknown2 = 0;
-    gboolean has_trailer;
+    guint dlength = 0;
+    guint8 keepaliveseqnum = 0;
 
-    guint16 packetlength;
+    gboolean has_trailer = FALSE;
+    gboolean save_fragmented;
+    guint32 frag_id;
+    frame_state_t *packet_state;
+    conversation_t *conversation;
+    conv_state_t *conversation_state;
+    gboolean no_fragment = FALSE;
+    gboolean first_fragment = FALSE;
+    gboolean inner_fragment = FALSE;
+    gboolean last_fragment = FALSE; 
+    tvbuff_t* next_tvb = NULL;
+
+    guint packetlength;
 
     packetlength = tvb_reported_length(tvb);    /* Payload length reported from tpkt/cotp dissector. */
     /*----------------- Heuristic Checks - Begin */
@@ -2289,12 +2538,12 @@ dissect_s7commp(tvbuff_t *tvb,
     /* display some infos in info-column of wireshark */
     col_add_fstr(pinfo->cinfo, COL_INFO, "PDU-Type: [%s]", val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x"));
 
-    if (tree) {
+//    if (tree) {
         s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
         s7commp_tree = proto_item_add_subtree(s7commp_item, ett_s7commp);
 
         /******************************************************
-         * 4 Bytes Header
+         * Header
          ******************************************************/
         s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, hlength, FALSE );
         s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
@@ -2308,9 +2557,9 @@ dissect_s7commp(tvbuff_t *tvb,
          * 1. Protocol-id, 2.PDU Typ und dann 3. eine Art sequenz-Nummer, und das 4. Byte bisher immer 0
          */
         if (pdutype == S7COMMP_PDUTYPE_KEEPALIVE) {
-            seqnum = tvb_get_guint8(tvb, offset);
-            proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, seqnum);
-            col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", seqnum);
+            keepaliveseqnum = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, keepaliveseqnum);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", keepaliveseqnum);
             offset += 1;
             /* dann noch ein Byte, noch nicht klar wozu */
             proto_tree_add_text(s7commp_header_tree, tvb, offset , 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
@@ -2324,165 +2573,208 @@ dissect_s7commp(tvbuff_t *tvb,
             /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
             has_trailer = packetlength > (dlength + 4);
 
-            /******************************************************
-             * data part
-             ******************************************************/
+            /************************************************** START REASSEMBLING *************************************************************************/
+            /* 
+             * Fragmentation check:
+             * Da es keine Kennzeichnungen über die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
+             *
+             * Istzustand   Transition                                      Aktion                                Neuer Zustand
+             * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
+             * state == 0:  Paket hat keinen Trailer, Start Fragmentierung  push data                             state = 1
+             * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
+             * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
+             *
+             * Die einzige Zugehörigkeit die es gibt, ist die TCP Portnummer. Es müssen dabei BEIDE übereinstimmen.
+             *
+             * Dabei muss zusätzlich beachtet werden, dass womöglich ein capture inmitten einer solchen Serie gestartet wurde.
+             * Das kann aber nicht zuverlässig abgefangen werden, wenn zufällig in den ersten Bytes des Datenteils gültige Daten stehen.
+             *
+             */
+            
+            /* Zustandsdiagramm:
+                             NEIN                Konversation    JA
+             has_trailer ---------------------mit vorigem Frame-------- Inneres Fragment
+                  ?                              vorhanden?
+                  |                                  |
+                  | JA                               | NEIN
+                  |                                  |
+               Konversation     NEIN        Neue Konversation anlegen
+            mit vorigem Frame--------+               |
+                vorhanden?           |          Erstes Fragment
+                  |                  |
+                  | JA        Nicht fragmentiert
+                  |
+              Letztes Fragment
+            */  
 
-            /* insert data tree */
-            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, tvb, offset, dlength, FALSE);
-            /* insert sub-items in data tree */
-            s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
+            if (!pinfo->fd->flags.visited) {        /* first pass */
+                #ifdef DEBUG_REASSEMBLING
+                printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
+                #endif
+                /* evtl. find_or_create_conversation verwenden? */
+                //conversation = find_or_create_conversation(pinfo);
 
-            opcode = tvb_get_guint8(tvb, offset);
-            /* TODO: This check works only if the valid opcodes do not occur as first byte in a continuation packet */
-            if (opcode != S7COMMP_OPCODE_CYC &&
-                opcode != S7COMMP_OPCODE_REQ &&
-                opcode != S7COMMP_OPCODE_RES &&
-                opcode != S7COMMP_OPCODE_RES2) {
-                if (has_trailer) {
-                    proto_item_append_text(s7commp_data_tree, ", Data continuation of a previous packet (end)");
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data continuation (end)");
-                 } else {
-                    proto_item_append_text(s7commp_data_tree, ", Data continuation of a previous packet (inner)");
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Data continuation (inner)");
+                conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                                 pinfo->ptype, pinfo->destport,
+                                                 0, NO_PORT_B);//
+                if (conversation == NULL) {
+                    conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                                    pinfo->ptype, pinfo->destport,
+                                                    0, NO_PORT2); //
+                    #ifdef DEBUG_REASSEMBLING
+                    printf(" NewConv" );
+                    #endif
                 }
-            } else {
-                /* 1: Opcode */
-                proto_item_append_text(s7commp_data_tree, ", Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
-                proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Op: [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
-                offset += 1;
-                dlength -= 1;
-
-                if (opcode == S7COMMP_OPCODE_CYC) {
-                    item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_cyclic_set, tvb, offset, -1, FALSE);
-                    item_tree = proto_item_add_subtree(item, ett_s7commp_cyclic_set);
-                    offset_save = offset;
-                    offset = s7commp_decode_cyclic(tvb, pinfo, item_tree, dlength, offset);
-                    dlength = dlength - (offset - offset_save);
+                conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
+                if (conversation_state == NULL) {
+                    conversation_state = wmem_new(wmem_file_scope(), conv_state_t);
+                    conversation_state->state = CONV_STATE_NEW;
+                    conversation_state->start_frame = 0;
+                    conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
+                    #ifdef DEBUG_REASSEMBLING
+                    printf(" NewConvState" );
+                    #endif
+                }
+                #ifdef DEBUG_REASSEMBLING
+                printf(" ConvState->state=%d", conversation_state->state);
+                #endif
+                
+                if (has_trailer) {
+                    if (conversation_state->state == CONV_STATE_NEW) {
+                        no_fragment = TRUE;
+                        #ifdef DEBUG_REASSEMBLING
+                        printf(" no_fragment=1");
+                        #endif
+                    } else {
+                        last_fragment = TRUE;
+                        /* rücksetzen */
+                        #ifdef DEBUG_REASSEMBLING
+                        col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
+                        printf(" last_fragment=1, delete_proto_data");
+                        #endif
+                        conversation_state->state = CONV_STATE_NOFRAG;
+                        conversation_delete_proto_data(conversation, proto_s7commp);
+                    }
                 } else {
-                    /* 2/3: Unknown */
-                    unknown1 = tvb_get_ntohs(tvb, offset);
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
-                    offset += 2;
-                    dlength -= 2;
-
-                    /* 4/5: Functioncode */
-                    functioncode = tvb_get_ntohs(tvb, offset);
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", functioncode,
-                                    val_to_str(functioncode, data_functioncode_names, "?"));
-                    offset += 2;
-                    dlength -= 2;
-
-                    /* 6/7: Unknown */
-                    unknown2 = tvb_get_ntohs(tvb, offset);
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
-                    offset += 2;
-                    dlength -= 2;
-
-                    /* 8/9: Sequence number */
-                    seqnum = tvb_get_ntohs(tvb, offset);
-                    proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u", seqnum);
-                    offset += 2;
-                    dlength -= 2;
-
-                    if (opcode == S7COMMP_OPCODE_REQ) {
-                        proto_tree_add_uint(s7commp_data_tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
-                        offset += 4;
-                        dlength -= 4;
-
-                        /* unknown byte */
-                        proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
-                        offset += 1;
-                        dlength -= 1;
-
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
-                        offset_save = offset;
-
-                        switch (functioncode) {
-                            case S7COMMP_FUNCTIONCODE_READ:
-                                offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_WRITE:
-                                offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_MODSESSION:
-                                offset = s7commp_decode_data_modify_session(tvb, pinfo, item_tree, dlength, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                                offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode, pdutype);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                                offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode, pdutype);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_EXPLORE:
-                                offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
-                        }
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
-                    } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {      /* Response */
-                        /* unknown byte */
-                        proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
-                        offset += 1;
-                        dlength -= 1;
-
-                        item = proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-                        item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-                        offset_save = offset;
-
-                        switch (functioncode) {
-                            case S7COMMP_FUNCTIONCODE_READ:
-                                offset = s7commp_decode_data_response_read(tvb, item_tree, dlength, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_WRITE:
-                                offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                                offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode, pdutype);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                                offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode, pdutype);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_0x0586:
-                                offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
-                                break;
-                            case S7COMMP_FUNCTIONCODE_EXPLORE:
-                                offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
-                                break;
-                        }
-                        proto_item_set_len(item_tree, offset - offset_save);
-                        dlength = dlength - (offset - offset_save);
+                    if (conversation_state->state == CONV_STATE_NEW) {
+                        first_fragment = TRUE;
+                        conversation_state->state = CONV_STATE_FIRST;
+                        conversation_state->start_frame = pinfo->fd->num;
+                        #ifdef DEBUG_REASSEMBLING
+                        printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
+                        #endif
+                    } else {
+                        inner_fragment = TRUE;
+                        conversation_state->state = CONV_STATE_INNER;
                     }
                 }
+                #ifdef DEBUG_REASSEMBLING
+                printf(" => Conv->state=%d", conversation_state->state);
+                printf(" => Conv->start_frame=%3d", conversation_state->start_frame);
+                printf("\n");
+                #endif
             }
 
-            /* Show undecoded data as raw bytes */
-            if (dlength > 0) {
-                proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
-                offset += dlength;
+            save_fragmented = pinfo->fragmented;
+            packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0);
+            if (!packet_state) {
+                /* First S7COMMP in frame*/
+                packet_state = wmem_new(wmem_file_scope(), frame_state_t);
+                p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0, packet_state);
+                packet_state->first_fragment = first_fragment;
+                packet_state->inner_fragment = inner_fragment;
+                packet_state->last_fragment = last_fragment;
+                packet_state->start_frame = conversation_state->start_frame;
+                #ifdef DEBUG_REASSEMBLING
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
+                #endif
+            } else {
+                first_fragment = packet_state->first_fragment;
+                inner_fragment = packet_state->inner_fragment;
+                last_fragment = packet_state->last_fragment;
             }
 
-            /******************************************************
-             * Trailer
-             * 4 Bytes Anhängsel mit 0x72, Typecode wie im Header, und folgende 0x00 0x00
-             * Es gibt Pakete die über mehrere Telegramme gehe, da fehlt dieser Part
-             ******************************************************/
-            if (has_trailer) {
-                s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, tvb, offset, 4, FALSE);
-                s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
-                proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, tvb, offset, 1, FALSE);
-                offset += 1;
-                proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-                proto_item_append_text(s7commp_trailer_tree, ", PDU-Type: %s", val_to_str(tvb_get_guint8(tvb, offset), pdutype_names, ", PDU-Type: 0x%02x"));
-                offset += 1;
-                proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-                offset += 2;
+            if (first_fragment || inner_fragment || last_fragment) {
+                tvbuff_t* new_tvb = NULL;
+                fragment_head *fd_head;
+                guint32 frag_data_len;
+                /* guint32 frag_number; */
+                gboolean more_frags;
+                #ifdef DEBUG_REASSEMBLING
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
+                #endif*/
+
+                frag_id       = packet_state->start_frame;
+                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
+                /* frag_number   = pinfo->fd->num; */
+                more_frags    = !last_fragment;
+                
+                pinfo->fragmented = TRUE;
+                /* 
+                * fragment_add_seq_next() geht davon aus dass die Pakete in der richtigen Reihenfolge reinkommen.
+                * Bei fragment_add_seq_check() muss eine Sequenznummer angegeben werden, die gibt es aber nicht im Protokoll.
+                */
+                fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                 tvb, offset, pinfo, 
+                                                 frag_id,               /* ID for fragments belonging together */
+                                                 NULL,                  /* void *data */
+                                                 //frag_number,           /* fragment sequence number */
+                                                 frag_data_len,         /* fragment length - to the end */
+                                                 more_frags);           /* More fragments? */
+                                                 
+               
+                new_tvb = process_reassembled_data(tvb, offset, pinfo,
+                                                   "Reassembled S7COMMP", fd_head, &s7commp_frag_items,
+                                                   NULL, s7commp_tree);
+
+                if (new_tvb) { /* take it all */
+                    next_tvb = new_tvb;
+                    offset = 0;
+                } else { /* make a new subset */
+                    next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+                    offset = 0;  
+                }
+            } else {    /* nicht fragmentiert */
+                next_tvb = tvb;
+            }
+            pinfo->fragmented = save_fragmented;
+            /******************************************************* END REASSEMBLING *******************************************************************/
+            if (tree) { 
+                /******************************************************
+                 * Data
+                 ******************************************************/
+                 /* insert data tree */
+                s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
+                /* insert sub-items in data tree */
+                s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
+                /* main dissect data function */
+                dlength = tvb_reported_length_remaining(next_tvb, offset) - 4;
+                if (first_fragment || inner_fragment) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMMP %s fragment)", first_fragment ? "first" : "inner" );
+                    proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
+                    offset += dlength;
+                } else {
+                    if (last_fragment) {
+                        col_append_str(pinfo->cinfo, COL_INFO, " (S7COMMP reassembled)");
+                    }  
+                    offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset);
+                }
+                /******************************************************
+                 * Trailer
+                 ******************************************************/
+                if (has_trailer) {
+                    s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, next_tvb, offset, 4, FALSE);
+                    s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
+                    proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
+                    offset += 1;
+                    proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
+                    proto_item_append_text(s7commp_trailer_tree, ", PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, ", PDU-Type: 0x%02x"));
+                    offset += 1;
+                    proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
+                    offset += 2;
+                }
             }
         }
-    }
     return TRUE;
 }
 
