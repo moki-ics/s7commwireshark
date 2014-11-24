@@ -1781,26 +1781,24 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
 {
     guint32 item_count = 0;
     guint32 number_of_fields_in_complete_set = 0;
-    guint8 i = 0;
+    guint32 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
     guint32 offsetmax = offset + dlength;
     guint8 octet_count = 0;
 
-    guint8 item_address_count;
-    guint8 item_address_read;
-    guint8 item_read_count;
-    gint32 int32val;
-    int remaining_decode_session;
+    guint32 item_address_count;
+    guint32 item_address_read;
+    guint32 id_number;
 
     /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl
      * Es kann sein dass hier die Session-ID steht, dann ist der Aufbau anders
      */
     value = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown: 0x%08x", value);
     offset += 4;
 
-    if (value == 0x00) {
+    if (value == 0) {
+        proto_tree_add_text(tree, tvb, offset-4, 4, "Unknown: 0x%08x", value);
         item_count = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(tree, hf_s7commp_item_count, tvb, offset, octet_count, item_count);
         offset += octet_count;
@@ -1819,35 +1817,20 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x", value);
-        item_count = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Item count: %d", item_count);
-        offset += 1;
-        item_address_count = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Item address count: %d", item_address_count);
-        offset += 1;
-        for (item_address_read = 1; (item_address_read <= item_address_count) && (offset < offsetmax); item_address_read++) {
-            int32val = tvb_get_varint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tree, tvb, offset, octet_count, "Item-Address[%d]: 0x%08x : %d",
-                                item_address_read, int32val, int32val);
+        item_count = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Item count: %u", item_count);
+        offset += octet_count;
+        item_address_count = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Item address count: %d", item_address_count);
+        offset += octet_count;
+        for (item_address_read = 1; item_address_read <= item_address_count; item_address_read++) {
+            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
         }
-        /* the begin of the remaining part could be decoded similar to the start session stuff: */
-        for (item_read_count = 1; (item_read_count <= item_count) && (offset < offsetmax); item_read_count++) {
-            offset = s7commp_decode_id_value_pairs(tvb, tree, offset, offsetmax);
-        }
-        /* Bei der S7-1500 folgt ein weiterer Block unbekannter Daten, da s7commp_decode_id_value_pairs()
-         * nicht alles decodieren kann.
-         */
-        remaining_decode_session = offsetmax - RW_REQUEST_TRAILER_LEN -offset;
-        if (remaining_decode_session > 0) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, remaining_decode_session,
-                                 tvb_get_ptr(tvb, offset, remaining_decode_session));
-            offset += remaining_decode_session;
-        }
-        /* Bei S7-1200 und 1500 folgen dann wieder die 27 unbekannten Bytes, wie beim "normalen" read/write */
-        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
+        /* TODO: Es ist keine Nummer, sondern eine ID! */
+        offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
     }
-
     return offset;
 }
 /*******************************************************************************************************
