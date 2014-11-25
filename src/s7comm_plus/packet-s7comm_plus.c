@@ -35,24 +35,24 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
-/* #define USE_INTERNALS */
+//#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
 #include "packet-s7comm_plus.h"
 
-#define PROTO_TAG_S7COMM_PLUS               "S7COMM-PLUS"
+#define PROTO_TAG_S7COMM_PLUS                   "S7COMM-PLUS"
 
 /* Min. telegram length for heuristic check */
-#define S7COMMP_MIN_TELEGRAM_LENGTH         4
+#define S7COMMP_MIN_TELEGRAM_LENGTH             4
 
 /* Protocol identifier */
-#define S7COMM_PLUS_PROT_ID                 0x72
+#define S7COMM_PLUS_PROT_ID                     0x72
 
 /* Length of trailing block within read and write requests */
 #define RW_REQUEST_TRAILER_LEN 27
 
 /* Max number of array values displays on Item-Value tree. */
-#define S7COMMP_ITEMVAL_ARR_MAX_DISPLAY     10
+#define S7COMMP_ITEMVAL_ARR_MAX_DISPLAY         10
 
 /* Wireshark ID of the S7COMM_PLUS protocol */
 static int proto_s7commp = -1;
@@ -63,119 +63,119 @@ static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *t
 /**************************************************************************
  * PDU types
  */
-#define S7COMMP_PDUTYPE_CONNECT             0x01
-#define S7COMMP_PDUTYPE_DATA                0x02
-#define S7COMMP_PDUTYPE_KEEPALIVE           0xff
+#define S7COMMP_PDUTYPE_CONNECT                 0x01
+#define S7COMMP_PDUTYPE_DATA                    0x02
+#define S7COMMP_PDUTYPE_KEEPALIVE               0xff
 
 static const value_string pdutype_names[] = {
-    { S7COMMP_PDUTYPE_CONNECT,              "Connect" },
-    { S7COMMP_PDUTYPE_DATA,                 "Data" },
-    { S7COMMP_PDUTYPE_KEEPALIVE,            "Keep Alive" },
-    { 0,                                    NULL }
+    { S7COMMP_PDUTYPE_CONNECT,                  "Connect" },
+    { S7COMMP_PDUTYPE_DATA,                     "Data" },
+    { S7COMMP_PDUTYPE_KEEPALIVE,                "Keep Alive" },
+    { 0,                                        NULL }
 };
 
 /**************************************************************************
  * Opcodes in data part
  */
-#define S7COMMP_OPCODE_REQ                  0x31
-#define S7COMMP_OPCODE_RES                  0x32
-#define S7COMMP_OPCODE_CYC                  0x33
-#define S7COMMP_OPCODE_RES2                 0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
+#define S7COMMP_OPCODE_REQ                      0x31
+#define S7COMMP_OPCODE_RES                      0x32
+#define S7COMMP_OPCODE_CYC                      0x33
+#define S7COMMP_OPCODE_RES2                     0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
 
 static const value_string opcode_names[] = {
-    { S7COMMP_OPCODE_REQ,                   "Request " },
-    { S7COMMP_OPCODE_RES,                   "Response" },
-    { S7COMMP_OPCODE_CYC,                   "Cyclic  " },
-    { S7COMMP_OPCODE_RES2,                  "Response2" },
-    { 0,                                    NULL }
+    { S7COMMP_OPCODE_REQ,                       "Request " },
+    { S7COMMP_OPCODE_RES,                       "Response" },
+    { S7COMMP_OPCODE_CYC,                       "Cyclic  " },
+    { S7COMMP_OPCODE_RES2,                      "Response2" },
+    { 0,                                        NULL }
 };
 
 /**************************************************************************
  * Function codes in data part
  */
-#define S7COMMP_FUNCTIONCODE_STARTSESSION   0x04ca
-#define S7COMMP_FUNCTIONCODE_ENDSESSION     0x04d4
-#define S7COMMP_FUNCTIONCODE_MODSESSION     0x04f2
-#define S7COMMP_FUNCTIONCODE_WRITE          0x0542
-#define S7COMMP_FUNCTIONCODE_READ           0x054c
-#define S7COMMP_FUNCTIONCODE_0x0586         0x0586
-#define S7COMMP_FUNCTIONCODE_EXPLORE        0x04bb
+#define S7COMMP_FUNCTIONCODE_STARTSESSION       0x04ca
+#define S7COMMP_FUNCTIONCODE_ENDSESSION         0x04d4
+#define S7COMMP_FUNCTIONCODE_MODSESSION         0x04f2
+#define S7COMMP_FUNCTIONCODE_WRITE              0x0542
+#define S7COMMP_FUNCTIONCODE_READ               0x054c
+#define S7COMMP_FUNCTIONCODE_0x0586             0x0586
+#define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 
 static const value_string data_functioncode_names[] = {
-    { S7COMMP_FUNCTIONCODE_STARTSESSION,    "Start session" },
-    { S7COMMP_FUNCTIONCODE_ENDSESSION,      "End session" },
-    { S7COMMP_FUNCTIONCODE_MODSESSION,      "Modify session" },
-    { S7COMMP_FUNCTIONCODE_WRITE,           "Write" },
-    { S7COMMP_FUNCTIONCODE_READ,            "Read" },
-    { S7COMMP_FUNCTIONCODE_0x0586,          "Unknown read/write?" },
-    { S7COMMP_FUNCTIONCODE_EXPLORE,         "Explore" },
-    { 0,                                     NULL }
+    { S7COMMP_FUNCTIONCODE_STARTSESSION,        "Start session" },
+    { S7COMMP_FUNCTIONCODE_ENDSESSION,          "End session" },
+    { S7COMMP_FUNCTIONCODE_MODSESSION,          "Modify session" },
+    { S7COMMP_FUNCTIONCODE_WRITE,               "Write" },
+    { S7COMMP_FUNCTIONCODE_READ,                "Read" },
+    { S7COMMP_FUNCTIONCODE_0x0586,              "Unknown read/write?" },
+    { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
+    { 0,                                        NULL }
 };
 /**************************************************************************
  * Data types
  */
-#define S7COMMP_ITEM_DATATYPE_NULL          0x00
-#define S7COMMP_ITEM_DATATYPE_BOOL          0x01        /* BOOL: fix 1 Byte */
-#define S7COMMP_ITEM_DATATYPE_USINT         0x02        /* USINT, CHAR: fix 1 Byte */
-#define S7COMMP_ITEM_DATATYPE_UINT          0x03        /* UINT, DATE: fix 2 Bytes */
-#define S7COMMP_ITEM_DATATYPE_UDINT         0x04        /* UDint: varuint32 */
-#define S7COMMP_ITEM_DATATYPE_ULINT         0x05        /* ULInt: varuint64 */
-#define S7COMMP_ITEM_DATATYPE_SINT          0x06        /* SINT: fix 1 Bytes */
-#define S7COMMP_ITEM_DATATYPE_INT           0x07        /* INT: fix 2 Bytes */
-#define S7COMMP_ITEM_DATATYPE_DINT          0x08        /* DINT, TIME: varint32 */
-#define S7COMMP_ITEM_DATATYPE_LINT          0x09        /* LInt: varint64 */
-#define S7COMMP_ITEM_DATATYPE_BYTE          0x0a        /* BYTE: fix 1 Byte */
-#define S7COMMP_ITEM_DATATYPE_WORD          0x0b        /* WORD: fix 2 Bytes */
-#define S7COMMP_ITEM_DATATYPE_DWORD         0x0c        /* DWORD: fix 4 Bytes */
-#define S7COMMP_ITEM_DATATYPE_LWORD         0x0d        /* LWORD: fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_REAL          0x0e        /* REAL: fix 4 Bytes */
-#define S7COMMP_ITEM_DATATYPE_LREAL         0x0f        /* LREAL: fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_TIMESTAMP     0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_TIMESPAN      0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varuint64 */
-#define S7COMMP_ITEM_DATATYPE_RID           0x12        /* RID: fix 4 Bytes */
-#define S7COMMP_ITEM_DATATYPE_AID           0x13        /* AID: fix 4 Bytes */
-#define S7COMMP_ITEM_DATATYPE_BLOB          0x14
-#define S7COMMP_ITEM_DATATYPE_WSTRING       0x15        /* Wide string with length header, UTF8 encoded */
+#define S7COMMP_ITEM_DATATYPE_NULL              0x00
+#define S7COMMP_ITEM_DATATYPE_BOOL              0x01        /* BOOL: fix 1 Byte */
+#define S7COMMP_ITEM_DATATYPE_USINT             0x02        /* USINT, CHAR: fix 1 Byte */
+#define S7COMMP_ITEM_DATATYPE_UINT              0x03        /* UINT, DATE: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_UDINT             0x04        /* UDint: varuint32 */
+#define S7COMMP_ITEM_DATATYPE_ULINT             0x05        /* ULInt: varuint64 */
+#define S7COMMP_ITEM_DATATYPE_SINT              0x06        /* SINT: fix 1 Bytes */
+#define S7COMMP_ITEM_DATATYPE_INT               0x07        /* INT: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_DINT              0x08        /* DINT, TIME: varint32 */
+#define S7COMMP_ITEM_DATATYPE_LINT              0x09        /* LInt: varint64 */
+#define S7COMMP_ITEM_DATATYPE_BYTE              0x0a        /* BYTE: fix 1 Byte */
+#define S7COMMP_ITEM_DATATYPE_WORD              0x0b        /* WORD: fix 2 Bytes */
+#define S7COMMP_ITEM_DATATYPE_DWORD             0x0c        /* DWORD: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_LWORD             0x0d        /* LWORD: fix 8 Bytes */
+#define S7COMMP_ITEM_DATATYPE_REAL              0x0e        /* REAL: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_LREAL             0x0f        /* LREAL: fix 8 Bytes */
+#define S7COMMP_ITEM_DATATYPE_TIMESTAMP         0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
+#define S7COMMP_ITEM_DATATYPE_TIMESPAN          0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varuint64 */
+#define S7COMMP_ITEM_DATATYPE_RID               0x12        /* RID: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_AID               0x13        /* AID: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_BLOB              0x14
+#define S7COMMP_ITEM_DATATYPE_WSTRING           0x15        /* Wide string with length header, UTF8 encoded */
 /* 0x16 ?? */
-#define S7COMMP_ITEM_DATATYPE_STRUCT        0x17
+#define S7COMMP_ITEM_DATATYPE_STRUCT            0x17
 /* 0x18 ?? */
-#define S7COMMP_ITEM_DATATYPE_S7STRING      0x19        /* S7 String with maximum length of 254 characters, only for tag-description */
+#define S7COMMP_ITEM_DATATYPE_S7STRING          0x19        /* S7 String with maximum length of 254 characters, only for tag-description */
 
 /* Theoretical missing types:
  * - Variant
  * - Enumerations
  */
 static const value_string item_datatype_names[] = {
-    { S7COMMP_ITEM_DATATYPE_NULL,           "Null" },
-    { S7COMMP_ITEM_DATATYPE_BOOL,           "Bool" },
-    { S7COMMP_ITEM_DATATYPE_USINT,          "USInt" },
-    { S7COMMP_ITEM_DATATYPE_UINT,           "UInt" },
-    { S7COMMP_ITEM_DATATYPE_UDINT,          "UDInt" },
-    { S7COMMP_ITEM_DATATYPE_ULINT,          "ULInt" },
-    { S7COMMP_ITEM_DATATYPE_SINT,           "SInt" },
-    { S7COMMP_ITEM_DATATYPE_INT,            "Int" },
-    { S7COMMP_ITEM_DATATYPE_DINT,           "DInt" },
-    { S7COMMP_ITEM_DATATYPE_LINT,           "LInt" },
-    { S7COMMP_ITEM_DATATYPE_BYTE,           "Byte" },
-    { S7COMMP_ITEM_DATATYPE_WORD,           "Word" },
-    { S7COMMP_ITEM_DATATYPE_DWORD,          "DWord" },
-    { S7COMMP_ITEM_DATATYPE_LWORD,          "LWord" },
-    { S7COMMP_ITEM_DATATYPE_REAL,           "Real" },
-    { S7COMMP_ITEM_DATATYPE_LREAL,          "LReal" },
-    { S7COMMP_ITEM_DATATYPE_TIMESTAMP,      "Timestamp" },
-    { S7COMMP_ITEM_DATATYPE_TIMESPAN,       "Timespan" },
-    { S7COMMP_ITEM_DATATYPE_RID,            "RID" },
-    { S7COMMP_ITEM_DATATYPE_AID,            "AID" },
-    { S7COMMP_ITEM_DATATYPE_BLOB,           "Blob" },
-    { S7COMMP_ITEM_DATATYPE_WSTRING,        "WString" },
-    { S7COMMP_ITEM_DATATYPE_STRUCT,         "Struct" },
-    { S7COMMP_ITEM_DATATYPE_S7STRING,       "S7String" },
-    { 0,                                    NULL }
+    { S7COMMP_ITEM_DATATYPE_NULL,               "Null" },
+    { S7COMMP_ITEM_DATATYPE_BOOL,               "Bool" },
+    { S7COMMP_ITEM_DATATYPE_USINT,              "USInt" },
+    { S7COMMP_ITEM_DATATYPE_UINT,               "UInt" },
+    { S7COMMP_ITEM_DATATYPE_UDINT,              "UDInt" },
+    { S7COMMP_ITEM_DATATYPE_ULINT,              "ULInt" },
+    { S7COMMP_ITEM_DATATYPE_SINT,               "SInt" },
+    { S7COMMP_ITEM_DATATYPE_INT,                "Int" },
+    { S7COMMP_ITEM_DATATYPE_DINT,               "DInt" },
+    { S7COMMP_ITEM_DATATYPE_LINT,               "LInt" },
+    { S7COMMP_ITEM_DATATYPE_BYTE,               "Byte" },
+    { S7COMMP_ITEM_DATATYPE_WORD,               "Word" },
+    { S7COMMP_ITEM_DATATYPE_DWORD,              "DWord" },
+    { S7COMMP_ITEM_DATATYPE_LWORD,              "LWord" },
+    { S7COMMP_ITEM_DATATYPE_REAL,               "Real" },
+    { S7COMMP_ITEM_DATATYPE_LREAL,              "LReal" },
+    { S7COMMP_ITEM_DATATYPE_TIMESTAMP,          "Timestamp" },
+    { S7COMMP_ITEM_DATATYPE_TIMESPAN,           "Timespan" },
+    { S7COMMP_ITEM_DATATYPE_RID,                "RID" },
+    { S7COMMP_ITEM_DATATYPE_AID,                "AID" },
+    { S7COMMP_ITEM_DATATYPE_BLOB,               "Blob" },
+    { S7COMMP_ITEM_DATATYPE_WSTRING,            "WString" },
+    { S7COMMP_ITEM_DATATYPE_STRUCT,             "Struct" },
+    { S7COMMP_ITEM_DATATYPE_S7STRING,           "S7String" },
+    { 0,                                        NULL }
 };
 
 /* Datatype flags */
-#define S7COMMP_DATATYPE_FLAG_ARRAY         0x10
-#define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY 0x20
+#define S7COMMP_DATATYPE_FLAG_ARRAY             0x10
+#define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY     0x20
 #define S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL 0x40
 
 /**************************************************************************
@@ -215,61 +215,61 @@ static const value_string itemval_syntaxid_names[] = {
     #include "internals/packet-s7comm_plus-aid-names.h"
 #else
 static const value_string id_number_names[] = {
-    { 233,                          "Subscription name (String)" },
-    { 1048,                         "Cyclic variables update set of addresses (UDInt, Addressarray)" },
-    { 1049,                         "Cyclic variables update rate (UDInt, in milliseconds)" },
-    { 1051,                         "Unsubscribe" },
-    { 1053,                         "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
-    { 2421,                         "Set CPU clock" },
-    { 2580,                         "MC7plus Code block" },
-    { 0,                            NULL }
+    { 233,                                      "Subscription name (String)" },
+    { 1048,                                     "Cyclic variables update set of addresses (UDInt, Addressarray)" },
+    { 1049,                                     "Cyclic variables update rate (UDInt, in milliseconds)" },
+    { 1051,                                     "Unsubscribe" },
+    { 1053,                                     "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
+    { 2421,                                     "Set CPU clock" },
+    { 2580,                                     "MC7plus Code block" },
+    { 0,                                        NULL }
 };
 #endif
 static value_string_ext id_number_names_ext = VALUE_STRING_EXT_INIT(id_number_names);
 
 /* Item access area */
-#define S7COMMP_VAR_ITEM_AREA1_DB    0x8a0e              /* Reading DB, 2 byte DB-Number following */
-#define S7COMMP_VAR_ITEM_AREA1_IQMCT 0x0000              /* Reading I/Q/M/C/T, 2 Byte detail area following */
+#define S7COMMP_VAR_ITEM_AREA1_DB               0x8a0e              /* Reading DB, 2 byte DB-Number following */
+#define S7COMMP_VAR_ITEM_AREA1_IQMCT            0x0000              /* Reading I/Q/M/C/T, 2 Byte detail area following */
 
 static const value_string var_item_area1_names[] = {
-    { S7COMMP_VAR_ITEM_AREA1_DB,     "DB" },
-    { S7COMMP_VAR_ITEM_AREA1_IQMCT,  "IQMCT" },
-    { 0,                             NULL }
+    { S7COMMP_VAR_ITEM_AREA1_DB,                "DB" },
+    { S7COMMP_VAR_ITEM_AREA1_IQMCT,             "IQMCT" },
+    { 0,                                        NULL }
 };
 
-#define S7COMMP_VAR_ITEM_AREA2_DB    0x8a0e
-#define S7COMMP_VAR_ITEM_AREA2_I     0x50
-#define S7COMMP_VAR_ITEM_AREA2_Q     0x51
-#define S7COMMP_VAR_ITEM_AREA2_M     0x52
-#define S7COMMP_VAR_ITEM_AREA2_C     0x53
-#define S7COMMP_VAR_ITEM_AREA2_T     0x54
+#define S7COMMP_VAR_ITEM_AREA2_DB               0x8a0e
+#define S7COMMP_VAR_ITEM_AREA2_I                0x50
+#define S7COMMP_VAR_ITEM_AREA2_Q                0x51
+#define S7COMMP_VAR_ITEM_AREA2_M                0x52
+#define S7COMMP_VAR_ITEM_AREA2_C                0x53
+#define S7COMMP_VAR_ITEM_AREA2_T                0x54
 
 static const value_string var_item_area2_names[] = {
-    { S7COMMP_VAR_ITEM_AREA2_I,      "Inputs (I)" },
-    { S7COMMP_VAR_ITEM_AREA2_Q,      "Outputs (Q)" },
-    { S7COMMP_VAR_ITEM_AREA2_M,      "Flags (M)" },
-    { S7COMMP_VAR_ITEM_AREA2_C,      "Counter (C)" },
-    { S7COMMP_VAR_ITEM_AREA2_T,      "Timer (T)" },
-    { S7COMMP_VAR_ITEM_AREA2_DB,     "Datablock (DB)" },
-    { 0,                             NULL }
+    { S7COMMP_VAR_ITEM_AREA2_I,                 "Inputs (I)" },
+    { S7COMMP_VAR_ITEM_AREA2_Q,                 "Outputs (Q)" },
+    { S7COMMP_VAR_ITEM_AREA2_M,                 "Flags (M)" },
+    { S7COMMP_VAR_ITEM_AREA2_C,                 "Counter (C)" },
+    { S7COMMP_VAR_ITEM_AREA2_T,                 "Timer (T)" },
+    { S7COMMP_VAR_ITEM_AREA2_DB,                "Datablock (DB)" },
+    { 0,                                        NULL }
 };
 
 static const value_string var_item_area2_names_short[] = {
-    { S7COMMP_VAR_ITEM_AREA2_I,      "I" },
-    { S7COMMP_VAR_ITEM_AREA2_Q,      "Q" },
-    { S7COMMP_VAR_ITEM_AREA2_M,      "M" },
-    { S7COMMP_VAR_ITEM_AREA2_C,      "C" },
-    { S7COMMP_VAR_ITEM_AREA2_T,      "T" },
-    { S7COMMP_VAR_ITEM_AREA2_DB,     "DB" },
-    { 0,                             NULL }
+    { S7COMMP_VAR_ITEM_AREA2_I,                 "I" },
+    { S7COMMP_VAR_ITEM_AREA2_Q,                 "Q" },
+    { S7COMMP_VAR_ITEM_AREA2_M,                 "M" },
+    { S7COMMP_VAR_ITEM_AREA2_C,                 "C" },
+    { S7COMMP_VAR_ITEM_AREA2_T,                 "T" },
+    { S7COMMP_VAR_ITEM_AREA2_DB,                "DB" },
+    { 0,                                        NULL }
 };
 
-#define S7COMMP_VAR_ITEM_BASE_AREA_IQMCT    0x0e98
-#define S7COMMP_VAR_ITEM_BASE_AREA_DB       0x09f6
+#define S7COMMP_VAR_ITEM_BASE_AREA_IQMCT        0x0e98
+#define S7COMMP_VAR_ITEM_BASE_AREA_DB           0x09f6
 static const value_string var_item_base_area_names[] = {
-    { S7COMMP_VAR_ITEM_BASE_AREA_IQMCT, "IQMCT" },
-    { S7COMMP_VAR_ITEM_BASE_AREA_DB,    "DB" },
-    { 0,                                NULL }
+    { S7COMMP_VAR_ITEM_BASE_AREA_IQMCT,         "IQMCT" },
+    { S7COMMP_VAR_ITEM_BASE_AREA_DB,            "DB" },
+    { 0,                                        NULL }
 };
 
 #define S7COMMP_EXPLORE_AREA_DB                 0x00000003
@@ -627,7 +627,7 @@ proto_register_s7commp (void)
           { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
             "Array of values for Item Address via CRC and LID", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_string_spec,
-          { "String/Blob-special", "s7comm-plus.item.val.datatype_flags.stringblock_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL,
+          { "String/Blob-special", "s7comm-plus.item.val.datatype_flags.stringblob_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL,
             "String or blob has a value before length, and terminating null", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
           { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
@@ -825,7 +825,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
-        cont= (octet & 0x80);
+        cont = (octet & 0x80);
         octet &= 0x7f;
         val += octet;
         if (cont == 0) {
@@ -847,7 +847,7 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
-        cont= (octet & 0x80);
+        cont = (octet & 0x80);
         octet &= 0x7f;
         val += octet;
         if (cont == 0) {
@@ -1353,14 +1353,14 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decodes a set of ID / value pairs
+ * Decodes a series of following fields per set: Syntax-ID, ID, datatype-flags, datatype, value
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_id_value_pairs(tvbuff_t *tvb,
-                             proto_tree *tree,
-                             guint32 offset,
-                             const guint32 offsetmax)
+s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     guint32 offset,
+                                     const guint32 offsetmax)
 {
     guint32 start_offset;
     guint32 item_nr = 1;
@@ -1505,7 +1505,7 @@ s7commp_decode_startsession(tvbuff_t *tvb,
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unknown_bytes, tvb_get_ptr(tvb, offset, unknown_bytes));
         offset += unknown_bytes;
     }
-    return s7commp_decode_id_value_pairs(tvb, tree, offset, offsetmax);
+    return s7commp_decode_synid_id_value_series(tvb, tree, offset, offsetmax);
 }
 /*******************************************************************************************************
  *
@@ -1666,24 +1666,25 @@ s7commp_decode_item_value(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decodes a series of item-number and a value, until terminating null and lowest struct level
+ * Internal: Decodes a series of item-number or and a value, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_itemnumber_value_series(tvbuff_t *tvb,
+s7commp_decode_id_or_itemnumber_value_series_(tvbuff_t *tvb,
                                        proto_tree *tree,
-                                       guint32 offset)
+                                       guint32 offset,
+                                       gint hf_of_first_structmember)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    guint32 item_number;
+    guint32 id_or_number;
     guint32 start_offset = offset;
     guint8 octet_count = 0;
     int struct_level = 1;
 
-    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    id_or_number = tvb_get_varuint32(tvb, &octet_count, offset);
     while (struct_level > 0) {
-        if (item_number == 0) {
+        if (id_or_number == 0) {
             struct_level--;
             if (struct_level <= 0) {
                 proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct / Terminating Dataset");
@@ -1694,22 +1695,46 @@ s7commp_decode_itemnumber_value_series(tvbuff_t *tvb,
                 offset += octet_count;
             }
         }
-        if (item_number > 0) {
+        if (id_or_number > 0) {
             start_offset = offset;
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
+            proto_tree_add_uint(data_item_tree, hf_of_first_structmember, tvb, offset, octet_count, id_or_number);
             offset += octet_count;
 
-            proto_item_append_text(data_item_tree, " [%u]:", item_number);
+            proto_item_append_text(data_item_tree, " [%u]:", id_or_number);
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
-        item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+        id_or_number = tvb_get_varuint32(tvb, &octet_count, offset);
     };
     return offset;
 }
 
+/*******************************************************************************************************
+ *
+ * Decodes a series of item-number and a value, until terminating null and lowest struct level
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_itemnumber_value_series(tvbuff_t *tvb,
+                                       proto_tree *tree,
+                                       guint32 offset)
+{
+    return s7commp_decode_id_or_itemnumber_value_series_(tvb, tree, offset, hf_s7commp_itemval_itemnumber);
+}
+/*******************************************************************************************************
+ *
+ * Decodes a series of item-id and a value, until terminating null and lowest struct level
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_id_value_series(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    return s7commp_decode_id_or_itemnumber_value_series_(tvb, tree, offset, hf_s7commp_data_id_number);
+}
 /*******************************************************************************************************
  *
  * Decodes a series of error values, until terminating null and lowest struct level
@@ -1854,8 +1879,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
         }
-        /* TODO: Es ist keine Nummer, sondern eine ID! */
-        offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
+        offset = s7commp_decode_id_value_series(tvb, tree, offset);
     }
     return offset;
 }
@@ -2135,9 +2159,7 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
     /* 1 Byte (or VLQ?) number of items? */
     proto_tree_add_text(tree, tvb, offset , 1, "Number of items following?: %d", tvb_get_guint8(tvb, offset));
     offset += 1;
-    /* TODO: Es ist keine Nummer, sondern eine ID! */
-    offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
-
+    offset = s7commp_decode_id_value_series(tvb, tree, offset);
     return offset;
 }
 /*******************************************************************************************************
@@ -2289,7 +2311,7 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
             proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkown_bytes, tvb_get_ptr(tvb, offset, unkown_bytes));
             offset += unkown_bytes;
         }
-        offset = s7commp_decode_id_value_pairs(tvb, tree, offset, max_offset);
+        offset = s7commp_decode_synid_id_value_series(tvb, tree, offset, max_offset);
     }
     return offset;
 }
@@ -2677,12 +2699,12 @@ dissect_s7commp(tvbuff_t *tvb,
                                              tvb, offset, pinfo,
                                              frag_id,               /* ID for fragments belonging together */
                                              NULL,                  /* void *data */
-                                             //frag_number,           /* fragment sequence number */
+                                             /*frag_number,           /* fragment sequence number */
                                              frag_data_len,         /* fragment length - to the end */
                                              more_frags);           /* More fragments? */
 
             new_tvb = process_reassembled_data(tvb, offset, pinfo,
-                                               "Reassembled S7COMMP", fd_head, &s7commp_frag_items,
+                                               "Reassembled S7COMM-PLUS", fd_head, &s7commp_frag_items,
                                                NULL, s7commp_tree);
 
             if (new_tvb) { /* take it all */
@@ -2708,12 +2730,12 @@ dissect_s7commp(tvbuff_t *tvb,
             /* main dissect data function */
             dlength = tvb_reported_length_remaining(next_tvb, offset) - 4;
             if (first_fragment || inner_fragment) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMMP %s fragment)", first_fragment ? "first" : "inner" );
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
                 proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
                 offset += dlength;
             } else {
                 if (last_fragment) {
-                    col_append_str(pinfo->cinfo, COL_INFO, " (S7COMMP reassembled)");
+                    col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
                 }
                 offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset);
             }
