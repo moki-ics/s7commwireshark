@@ -176,7 +176,7 @@ static const value_string item_datatype_names[] = {
 /* Datatype flags */
 #define S7COMMP_DATATYPE_FLAG_ARRAY         0x10
 #define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY 0x20
-#define S7COMMP_DATATYPE_FLAG_STRINGSPECIAL 0x40
+#define S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL 0x40
 
 /**************************************************************************
  * Item value syntax Ids
@@ -221,6 +221,7 @@ static const value_string id_number_names[] = {
     { 1051,                         "Unsubscribe" },
     { 1053,                         "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
     { 2421,                         "Set CPU clock" },
+    { 2580,                         "MC7plus Code block" },
     { 0,                            NULL }
 };
 #endif
@@ -626,8 +627,8 @@ proto_register_s7commp (void)
           { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
             "Array of values for Item Address via CRC and LID", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_string_spec,
-          { "String special", "s7comm-plus.item.val.datatype_flags.string_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGSPECIAL,
-            "String has a value before length, and terminating null", HFILL }},
+          { "String/Blob-special", "s7comm-plus.item.val.datatype_flags.stringblock_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL,
+            "String or blob has a value before length, and terminating null", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
           { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
             "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
@@ -1172,13 +1173,13 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_WSTRING:       /* 0x15 */
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 length_of_value = 0;
-                if (datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL) {
+                if (datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) {
                     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special length: %u", length_of_value);
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special length or ID: %u", length_of_value);
                     offset += octet_count;
                     if (length_of_value > 0) {
                         length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
+                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u (without trailing end-byte)", length_of_value);
                         offset += octet_count;
                         /* additional terminating null */
                         length_of_value += 1;
@@ -1194,12 +1195,37 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
-                if (!(datatype_flags && S7COMMP_DATATYPE_FLAG_STRINGSPECIAL)) {
+                if ((datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) == 0) {
                     proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x", tvb_get_guint8(tvb, offset));
                     offset += 1;
+                    /* Wenn keine Flags da sind, immer 1 Byte offset.
+                     * Haben wir schonmal beobachtet, dass das Flag nicht gesetzt ist UND die Länge 0 ist??
+                     */
+                } else {
+                    /* special string flag ist gesetzt
+                     * Jetzt kommt es drauf an, ob das erste Byte 0 ist oder nicht
+                     * Ist es null, können wir sofort terminieren
+                     */
+                    if (tvb_get_guint8(tvb,offset) == 0) {
+                        length_of_value = 0;
+                        proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x (empty Blob)", tvb_get_guint8(tvb, offset));
+                        offset += 1;
+                        /* Wir sind fertig hier. */
+                        break;
+                    } else {
+                        /* Sind wir nicht null, so müssen wir ZWEI byte (bedeutung unbekannt) überhüpfen */
+                        proto_tree_add_text(data_item_tree, tvb, offset, 2, "Blob Reserved: %s", tvb_bytes_to_ep_str(tvb, offset, 2));
+                        offset += 2;
+                    }
                 }
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
+                if (datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) {
+                    /* Wenn spezial Flag gesetzt, folgt noch ein Ende-Byte */
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u (without trailing end-byte)", length_of_value);
+                    length_of_value += 1;
+                } else {
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
+                }
                 offset += octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
                 offset += length_of_value;
