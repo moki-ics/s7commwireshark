@@ -300,9 +300,28 @@ static const value_string explore_area_names[] = {
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
 /* Attribute flags in tag description */
-#define S7COMMP_TAGDESCR_ATTRIBUTE_RETAIN           0x02
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE    0x80
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE       0x10
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT       0x8000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERRETAIN  0x2000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERCLASSIC 0x1000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE         0x0800000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIREADONLY        0x0400000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMICACHED          0x0200000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE      0x0100000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISQUALIFIER        0x0040000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_NORMALACCESS       0x0008000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_NEEDSLEGITIMIZATION 0x0004000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CHANGEBLEINRUN     0x0002000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_SERVERONLY         0x0000800
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CLIENTREADRONLY    0x0000400
+#define S7COMMP_TAGDESCR_ATTRIBUTE_SEPLOADMEMFA       0x0000200
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ASEVALREQ          0x0000100
+#define S7COMMP_TAGDESCR_ATTRIBUTE_BL                 0x0000040
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PERSISTENT         0x0000020
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CORE               0x0000010
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISOUT              0x0000008
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISIN               0x0000004
+#define S7COMMP_TAGDESCR_ATTRIBUTE_APPWRITEABLE       0x0000002
+#define S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE        0x0000001
 
 /**************************************************************************
  **************************************************************************/
@@ -395,25 +414,53 @@ static gint hf_s7commp_tagdescr_unknown2 = -1;
 static gint hf_s7commp_tagdescr_datatype = -1;
 static gint hf_s7commp_tagdescr_unknown3 = -1;
 
-static gint hf_s7commp_tagdescr_attributeflags1 = -1;
-static gint hf_s7commp_tagdescr_attributeflags1_retain = -1;
-static gint hf_s7commp_tagdescr_attributeflags1_unknown1 = -1;
-static gint hf_s7commp_tagdescr_attributeflags1_unknown2 = -1;
-static gint ett_s7commp_tagdescr_attributeflags1 = -1;
-static const int *s7commp_tagdescr_attributeflags1_fields[] = {
-    &hf_s7commp_tagdescr_attributeflags1_unknown1,
-    &hf_s7commp_tagdescr_attributeflags1_retain,
-    &hf_s7commp_tagdescr_attributeflags1_unknown2,
-    NULL
-};
-
-static gint hf_s7commp_tagdescr_attributeflags2 = -1;
-static gint hf_s7commp_tagdescr_attributeflags2_hmiaccessible = -1;
-static gint hf_s7commp_tagdescr_attributeflags2_hmivisible = -1;
-static gint ett_s7commp_tagdescr_attributeflags2 = -1;
-static const int *s7commp_tagdescr_attributeflags2_fields[] = {
-    &hf_s7commp_tagdescr_attributeflags2_hmivisible,
-    &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
+static gint hf_s7commp_tagdescr_attributeflags = -1;
+static gint hf_s7commp_tagdescr_attributeflags_hostrelevant = -1;
+static gint hf_s7commp_tagdescr_attributeflags_retain = -1;
+static gint hf_s7commp_tagdescr_attributeflags_classic = -1;
+static gint hf_s7commp_tagdescr_attributeflags_hmivisible = -1;
+static gint hf_s7commp_tagdescr_attributeflags_hmireadonly = -1;
+static gint hf_s7commp_tagdescr_attributeflags_hmicached = -1;
+static gint hf_s7commp_tagdescr_attributeflags_hmiaccessible = -1;
+static gint hf_s7commp_tagdescr_attributeflags_isqualifier = -1;
+static gint hf_s7commp_tagdescr_attributeflags_normalaccess = -1;
+static gint hf_s7commp_tagdescr_attributeflags_needslegitimization = -1;
+static gint hf_s7commp_tagdescr_attributeflags_changeableinrun = -1;
+static gint hf_s7commp_tagdescr_attributeflags_serveronly = -1;
+static gint hf_s7commp_tagdescr_attributeflags_clientreadonly = -1;
+static gint hf_s7commp_tagdescr_attributeflags_seploadmemfa = -1;
+static gint hf_s7commp_tagdescr_attributeflags_asevaluationrequired = -1;
+static gint hf_s7commp_tagdescr_attributeflags_bl = -1;
+static gint hf_s7commp_tagdescr_attributeflags_persistent = -1;
+static gint hf_s7commp_tagdescr_attributeflags_core = -1;
+static gint hf_s7commp_tagdescr_attributeflags_isout = -1;
+static gint hf_s7commp_tagdescr_attributeflags_isin = -1;
+static gint hf_s7commp_tagdescr_attributeflags_appwriteable = -1;
+static gint hf_s7commp_tagdescr_attributeflags_appreadable = -1;
+static gint ett_s7commp_tagdescr_attributeflags = -1;
+static const int *s7commp_tagdescr_attributeflags_fields[] = {
+    &hf_s7commp_tagdescr_attributeflags_hostrelevant,
+    &hf_s7commp_tagdescr_attributeflags_retain,
+    &hf_s7commp_tagdescr_attributeflags_classic,
+    &hf_s7commp_tagdescr_attributeflags_hmivisible,
+    &hf_s7commp_tagdescr_attributeflags_hmireadonly,
+    &hf_s7commp_tagdescr_attributeflags_hmicached,
+    &hf_s7commp_tagdescr_attributeflags_hmiaccessible,
+    &hf_s7commp_tagdescr_attributeflags_isqualifier,
+    &hf_s7commp_tagdescr_attributeflags_normalaccess,
+    &hf_s7commp_tagdescr_attributeflags_needslegitimization,
+    &hf_s7commp_tagdescr_attributeflags_changeableinrun,
+    &hf_s7commp_tagdescr_attributeflags_serveronly,
+    &hf_s7commp_tagdescr_attributeflags_clientreadonly,
+    &hf_s7commp_tagdescr_attributeflags_seploadmemfa,
+    &hf_s7commp_tagdescr_attributeflags_asevaluationrequired,
+    &hf_s7commp_tagdescr_attributeflags_bl,
+    &hf_s7commp_tagdescr_attributeflags_persistent,
+    &hf_s7commp_tagdescr_attributeflags_core,
+    &hf_s7commp_tagdescr_attributeflags_isout,
+    &hf_s7commp_tagdescr_attributeflags_isin,
+    &hf_s7commp_tagdescr_attributeflags_appwriteable,
+    &hf_s7commp_tagdescr_attributeflags_appreadable,
     NULL
 };
 
@@ -656,7 +703,7 @@ proto_register_s7commp (void)
           { "Tag description - Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - Length of name", HFILL }},
         { &hf_s7commp_tagdescr_name,
-          { "Tag description - Name", "s7comm-plus.tagdescr.name", FT_STRING, BASE_NONE, NULL, 0x0,
+          { "Tag description - Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown2,
           { "Tag description - Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -667,26 +714,74 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_unknown3,
           { "Tag description - Unknown 3", "s7comm-plus.tagdescr.unknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags1,
-          { "Tag description - Attributes 1", "s7comm-plus.tagdescr.attributeflags1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_tagdescr_attributeflags,
+          { "Tag description - Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags1_retain,
-          { "Retain", "s7comm-plus.tagdescr.attributeflags1.retain", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_RETAIN,
+        { &hf_s7commp_tagdescr_attributeflags_hostrelevant,
+          { "Hostrelevant", "s7comm-plus.tagdescr.attributeflags.hostrelevant", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags1_unknown1,
-          { "UnknownFlag1", "s7comm-plus.tagdescr.attributeflags1.unknown1", FT_BOOLEAN, 8, NULL, 0x01,
+        { &hf_s7commp_tagdescr_attributeflags_retain,
+          { "Plainmember-Retain", "s7comm-plus.tagdescr.attributeflags.retain", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERRETAIN,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags1_unknown2,
-          { "UnknownFlag2", "s7comm-plus.tagdescr.attributeflags1.unknown2", FT_BOOLEAN, 8, NULL, 0x80,
+        { &hf_s7commp_tagdescr_attributeflags_classic,
+          { "Plainmember-Classic", "s7comm-plus.tagdescr.attributeflags.classic", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERCLASSIC,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags2,
-          { "Tag description - Attributes 2", "s7comm-plus.tagdescr.attributeflags2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_tagdescr_attributeflags_hmivisible,
+          { "HMI-Visible", "s7comm-plus.tagdescr.attributeflags.hmivisible", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
-          { "HMI accessible", "s7comm-plus.tagdescr.attributeflags2.hmiaccessible", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE,
+        { &hf_s7commp_tagdescr_attributeflags_hmireadonly,
+          { "HMI-Readonly", "s7comm-plus.tagdescr.attributeflags.hmireadonly", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIREADONLY,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags2_hmivisible,
-          { "HMI visible", "s7comm-plus.tagdescr.attributeflags2.hmivisible", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE,
+        { &hf_s7commp_tagdescr_attributeflags_hmicached,
+          { "HMI-Cached", "s7comm-plus.tagdescr.attributeflags.hmicached", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMICACHED,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_hmiaccessible,
+          { "HMI-Accessible", "s7comm-plus.tagdescr.attributeflags.hmiaccessible", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_isqualifier,
+          { "Is-Qualifier", "s7comm-plus.tagdescr.attributeflags.isqualifier", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_ISQUALIFIER,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_normalaccess,
+          { "Normal-Access", "s7comm-plus.tagdescr.attributeflags.normalaccess", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_NORMALACCESS,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_needslegitimization,
+          { "Needs-Legitimization", "s7comm-plus.tagdescr.attributeflags.needslegitimization", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_NEEDSLEGITIMIZATION,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_changeableinrun,
+          { "Changeable-In-Run", "s7comm-plus.tagdescr.attributeflags.changeableinrun", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_CHANGEBLEINRUN,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_serveronly,
+          { "Server-Only", "s7comm-plus.tagdescr.attributeflags.serveronly", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_SERVERONLY,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_clientreadonly,
+          { "Client-Read-Only", "s7comm-plus.tagdescr.attributeflags.clientreadonly", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_CLIENTREADRONLY,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_seploadmemfa,
+          { "Separate-Load-Memory-File-Allowed", "s7comm-plus.tagdescr.attributeflags.seploadmemfa", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_SEPLOADMEMFA,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_asevaluationrequired,
+          { "AS-Evaluation-Required", "s7comm-plus.tagdescr.attributeflags.asevaluationrequired", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_ASEVALREQ,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_bl,
+          { "BL", "s7comm-plus.tagdescr.attributeflags.bl", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_BL,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_persistent,
+          { "Persistent", "s7comm-plus.tagdescr.attributeflags.persistent", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_PERSISTENT,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_core,
+          { "Core", "s7comm-plus.tagdescr.attributeflags.core", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_CORE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_isout,
+          { "Is-Out", "s7comm-plus.tagdescr.attributeflags.isout", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_ISOUT,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_isin,
+          { "Is-In", "s7comm-plus.tagdescr.attributeflags.isin", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_ISIN,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_appwriteable,
+          { "App-Writeable", "s7comm-plus.tagdescr.attributeflags.appwriteable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPWRITEABLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags_appreadable,
+          { "App-Readable", "s7comm-plus.tagdescr.attributeflags.appreadable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown4,
           { "Tag description - Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -757,8 +852,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemaddr_area,
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
-        &ett_s7commp_tagdescr_attributeflags1,
-        &ett_s7commp_tagdescr_attributeflags2,
+        &ett_s7commp_tagdescr_attributeflags,
         &ett_s7commp_fragments,
         &ett_s7commp_fragment
     };
@@ -1281,8 +1375,10 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 {
     guint32 lid;
     guint32 length_of_value;
+    guint32 vlq_value;
     guint8 octet_count = 0;
     guint8 syntax_id;
+    int i;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 1, tvb_get_guint8(tvb, offset));
     offset += 1;
@@ -1303,49 +1399,38 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown3, tvb, offset, 1, tvb_get_guint8(tvb, offset));
     offset += 1;
-    /* In 5/6 sind Attribute der Variable gespeichert. Unklar ist ob es ein Dword als VLQ oder
-     * zwei einzelne Bytes mit normalen Flags sind.
-     * Die Option nur sichbar ohne erreichbar ist nicht einstellbar.
+    /* Die Option nur sichbar ohne erreichbar ist nicht einstellbar.
      * Die Option "Einstellwert" findet sich nicht wieder.
      * Typ              ErreichbarHMI   Sichbar in HMI  Remanenz    Byte 5  Byte 6
      * Variable im DB   Ja              Nein            Nicht       0x80    0x10
      * Variable im DB   Ja              Ja              Nicht       0x80    0x90
      * Variable im DB   Ja              Ja              Remanent    0x82    0x90
      */
-    proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags1,
-        ett_s7commp_tagdescr_attributeflags1, s7commp_tagdescr_attributeflags1_fields, ENC_BIG_ENDIAN);
-    offset += 1;
-
-    proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
-        ett_s7commp_tagdescr_attributeflags2, s7commp_tagdescr_attributeflags2_fields, ENC_BIG_ENDIAN);
-    offset += 1;
-
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown4, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-    offset += 1;
-
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown5, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-    offset += 1;
+    proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags,
+        ett_s7commp_tagdescr_attributeflags, s7commp_tagdescr_attributeflags_fields, ENC_BIG_ENDIAN);
+    offset += 4;
 
     lid = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_lid, tvb, offset, octet_count, lid);
     offset += octet_count;
 
-    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 10: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    /* This byte gives the string length, when datatype is S7String, e.g. 0xfe for a STRING[254] */
-    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 11 (if datatype S7String, then this is the length): %d", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 12: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 13: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Unknown 14: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    /* Länge ist nicht fix, ex folgen ggf. noch weitere Bytes bis 0xa8 */
+    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Length (only if type is S7String): %u", length_of_value);
+    offset += octet_count;
+
+    /* 1 word scheint fix, danach eine wie auch immer zu bestimmende Anzahl an VLQ.
+     * Bei Variablen die auch absolut addressiert werden können, scheint hier die Absolutadresse hinterlegt zu sein.
+     * Dann folgen die byteadresse doppelt, und die bitadresse doppelt.
+     * Solange nicht klar ist wie das funktioniert, wird bis zum terminierenden 0xa8 eingelesen
+     */
+    proto_tree_add_text(tree, tvb, offset, 2, "Tag description - Unknown : 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    i = 1;
     syntax_id = tvb_get_guint8(tvb, offset);
     while (syntax_id != S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Tag description - Trailer: 0x%02x", syntax_id);
-        offset += 1;
+        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Unknown-VLQ [%d]: %u", i++, vlq_value);
+        offset += octet_count;
         syntax_id = tvb_get_guint8(tvb, offset);
     }
 
