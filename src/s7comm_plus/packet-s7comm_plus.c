@@ -38,6 +38,15 @@
 //#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
+ /*******************************************************
+ * It's only possible to use this plugin for dissection of hexdumps (user-link-layer),
+ * but only when the dissector isn't registered as heuristic dissector.
+ * See how to use this:
+ * http://wiki.wireshark.org/HowToDissectAnything
+ * https://www.wireshark.org/docs/man-pages/text2pcap.html
+ */
+//#define DONT_ADD_AS_HEURISTIC_DISSECTOR
+
 #include "packet-s7comm_plus.h"
 
 #define PROTO_TAG_S7COMM_PLUS                   "S7COMM-PLUS"
@@ -503,7 +512,7 @@ static const fragment_items s7commp_frag_items = {
     /* Reassembled data field */
     NULL,
     /* Tag */
-    "S7COMMP fragments"
+    "S7COMM-PLUS fragments"
 };
 
 typedef struct {
@@ -542,7 +551,11 @@ proto_reg_handoff_s7commp(void)
 {
     static gboolean initialized = FALSE;
     if (!initialized) {
-        heur_dissector_add("cotp", dissect_s7commp, proto_s7commp);
+        #ifdef DONT_ADD_AS_HEURISTIC_DISSECTOR
+            new_register_dissector("dlt", dissect_s7commp, proto_s7commp);
+        #else
+            heur_dissector_add("cotp", dissect_s7commp, proto_s7commp);
+        #endif
         initialized = TRUE;
     }
 }
@@ -888,12 +901,12 @@ tvb_get_varint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     guint8 octet;
     guint8 cont;
 
-    for (counter = 1; counter <= 4+1; counter++) {        /* große Werte benötigen 5 Bytes */
+    for (counter = 1; counter <= 4+1; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
-        if ((counter == 1) && (octet & 0x40)) {   /* Vorzeichen prüfen */
+        if ((counter == 1) && (octet & 0x40)) {     /* check sign */
             octet &= 0xbf;
-            val = 0xffffffc0; /* pre-load with one complement, excluding first 6 bits, TODO: endianess for other processors? */
+            val = 0xffffffc0;                       /* pre-load with one complement, excluding first 6 bits */
         } else {
             val <<= 7;
         }
@@ -934,13 +947,46 @@ guint64
 tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
-    gint64 val = 0;
+    guint64 val = 0;
     guint8 octet;
     guint8 cont;
     for (counter = 1; counter <= 8; counter++) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
+        cont = (octet & 0x80);
+        octet &= 0x7f;
+        val += octet;
+        if (cont == 0) {
+            break;
+        }
+    }
+    *octet_count = counter;
+    if(cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+        octet = tvb_get_guint8(tvb, offset);
+        offset += 1;
+        val <<= 8;
+        val += octet;
+    }
+    return  val;
+}
+/*******************************************************************************************************/
+gint64
+tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
+{
+    int counter;
+    gint64 val = 0;
+    guint8 octet;
+    guint8 cont;
+    for (counter = 1; counter <= 8; counter++) {  /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+        octet = tvb_get_guint8(tvb, offset);
+        offset += 1;
+        if ((counter == 1) && (octet & 0x40)) {   /* check sign */
+            octet &= 0xbf;
+            val = 0xffffffffffffffc0;             /* pre-load with one complement, excluding first 6 bits */
+        } else {
+            val <<= 7;
+        }
         cont = (octet & 0x80);
         octet &= 0x7f;
         val += octet;
@@ -1113,6 +1159,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint16 int16val = 0;
     gint32 int32val = 0;
     guint8 uint8val = 0;
+    gint64 int64val = 0;
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
@@ -1184,11 +1231,16 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
-            case S7COMMP_ITEM_DATATYPE_LINT: /* maybe we have to add some kind of sign bit handling */
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "0x%016llx", uint64val);
+                g_snprintf(str_val, sizeof(str_val), "%llu", uint64val);
+                break;
+            case S7COMMP_ITEM_DATATYPE_LINT:
+                int64val = tvb_get_varint64(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%lld", int64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
                 uint8val = tvb_get_guint8(tvb, offset);
