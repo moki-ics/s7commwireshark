@@ -2257,13 +2257,26 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
 
+        /* Wenn die erste seqnum == 0, dann folgt ein zusätzliches Byte in dem die eigentliche Sequenznummer eincodiert ist.
+         * Das folgende Füllbyte hat dann entweder 1 oder 2, oder ist auch überhaupt nicht vorhanden, wenn direkt
+         * die Daten folgen. Für die Erkennung ob Daten folgen habe ich >0x10 angenommen, weil ich bei diesem Füllbyte
+         * bisher nur 1 oder 2 gesehen habe. Warum auch immer...
+         */
         seqnum = tvb_get_ntohs(tvb, offset);
+        if (seqnum == 0) {
+            proto_tree_add_text(tree, tvb, offset , 1, "Cyclic unknown fill byte, because first two seqnum-bytes were zero: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset +=1;
+            seqnum = tvb_get_ntohs(tvb, offset);
+        }
         proto_tree_add_text(tree, tvb, offset , 2, "Cyclic sequence number: %u", seqnum);
         col_append_fstr(pinfo->cinfo, COL_INFO, ", CycSeq=%u", seqnum);
         offset += 2;
 
-        proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
+        item_return_value = tvb_get_guint8(tvb, offset);
+        if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
+            proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 3: 0x%02x", item_return_value);
+            offset += 1;
+        }
 
         /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
          * Aufbau aus den anderen Telegrammen.
