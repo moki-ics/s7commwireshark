@@ -197,11 +197,7 @@ static const value_string item_datatype_names[] = {
 #define S7COMMP_ITEMVAL_SYNTAXID_0xA4           0xa4
 #define S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC   0xa7
 #define S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC    0xa8
-#define S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT    0x82
-/* Womöglich bitcodiert?:
- * abcd efgh
- *   c = true wenn im Wurzelknoten, wenn innerhalb einer Struct dann false
- */
+
 static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT,      "Terminating Struct" },
     { S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT,     "Start of Object" },
@@ -210,7 +206,6 @@ static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_0xA4,            "Unknown Id 0xA4" },
     { S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC,    "Start of Tag-Description" },
     { S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC,     "Terminating Tag-Description" },
-    { S7COMMP_ITEMVAL_SYNTAXID_VALINSTRUCT,     "Value inside struct with (id, flags, type, value)" },
     { 0,                                        NULL }
 };
 
@@ -229,8 +224,59 @@ static const value_string id_number_names[] = {
     { 1049,                                     "Cyclic variables update rate (UDInt, in milliseconds)" },
     { 1051,                                     "Unsubscribe" },
     { 1053,                                     "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
+
     { 2421,                                     "Set CPU clock" },
-    { 2580,                                     "MC7plus Code block" },
+    { 2449,                                     "Ident ES" },
+    { 2450,                                     "Designators" },
+    { 2451,                                     "Working Memory Size" },
+    { 2453,                                     "Last modified" },
+    { 2454,                                     "Load Memory Size" },
+
+    { 2521,                                     "Block Number" },
+    { 2522,                                     "Auto Numbering" },
+    { 2523,                                     "Block Language" },
+    { 2524,                                     "Knowhow Protected" },
+    { 2527,                                     "Unlinked" },
+    { 2529,                                     "Runtime Modified" },
+    { 2532,                                     "CRC" },
+    { 2533,                                     "Body Description" },
+    { 2537,                                     "Optimize Info" },
+
+    { 2543,                                     "Interface Modified" },
+    { 2544,                                     "Interface Description" },
+    { 2545,                                     "Compiler Swiches" },
+    { 2546,                                     "Line Comments" },
+    { 2580,                                     "Code block" },
+    { 2581,                                     "Parameter modified" },
+    { 2582,                                     "External Ref Data" },
+    { 2583,                                     "Internal Ref Data" },
+    { 2584,                                     "Network Comment" },
+    { 2585,                                     "Network Title" },
+    { 2586,                                     "Callee List" },
+    { 2587,                                     "Interface Signature" },
+    { 2588,                                     "Display Info" },
+    { 2589,                                     "Debug Info" },
+    { 2590,                                     "Local Error Handling" },
+    { 2591,                                     "Long Constants" },
+    { 2607,                                     "Start Info Type" },
+
+    { 3151,                                     "Binding" },
+    { 3448,                                     "Knowhow Protection Mode" },
+    { 3449,                                     "Knowhow Protection Password" },
+    { 3619,                                     "TO Block Set Number" },
+    { 3634,                                     "Change Counter Copy" },
+
+    { 4287,                                     "Title" },
+    { 4288,                                     "Comment" },
+    { 4294,                                     "Instance DB" },
+    { 4560,                                     "PIP" },
+    { 4578,                                     "Type Info" },
+    { 4615,                                     "Latest Runtime" },
+    { 4616,                                     "Min Runtime" },
+    { 4617,                                     "Max Runtime" },
+    { 4618,                                     "Call Frequency" },
+    { 4619,                                     "Runtime Ratio" },
+
     { 0,                                        NULL }
 };
 #endif
@@ -1011,7 +1057,7 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
  *
  *******************************************************************************************************/
 static void
-s7comm_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
+s7commp_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
 {
     guint16 nanosec, microsec, millisec;
     struct tm *mt;
@@ -1301,7 +1347,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
                 length_of_value = 8;
                 uint64val = tvb_get_ntoh64(tvb, offset);
-                s7comm_get_timestring_from_uint64(uint64val, str_val, sizeof(str_val));
+                s7commp_get_timestring_from_uint64(uint64val, str_val, sizeof(str_val));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
@@ -1507,7 +1553,7 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
 
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    int structLevel = 1;
+    int struct_level = 1;
     guint8 octet_count = 0;
     guint8 syntax_id = 0;
     guint16 data_len = 0;
@@ -1529,60 +1575,72 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
          * a2 = Terminierung eines Objekts, keine weiteren Daten
          * a3 = Strukturierter Wert mit: id, flags, typ, value
          * a4 = Funktion unbekannt, 6 Bytes unbekannter Funktion folgen
-         * 82 = Strukturierter Wert mit: id, flags, typ, value innerhalb einer Struct
          * 00 = Terminierung einer Struktur
+         *
+         * Werte innerhalb einer Struktur haben keine syntax-id mehr!
          */
         syntax_id = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
-        offset += 1;
-        if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {            /* 0xa1 */
-            proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Lvl:%d -> Lvl:%d): 0x%08x / 0x%08x", object_level, object_level+1, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
-            proto_item_append_text(data_item_tree, ": Start of Object (Lvl:%d -> Lvl:%d)", object_level, object_level+1);
-            object_level += 1;
-            offset += 8;
+
+        if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+            offset += 1;
+            proto_item_append_text(data_item_tree, ": Terminating Struct (Lvl:%d <- Lvl:%d)", struct_level-1, struct_level);
             proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {     /* 0xa2 */
-            proto_item_append_text(data_item_tree, ": Terminating Object (Lvl:%d <- Lvl:%d)", object_level-1, object_level);
-            object_level -= 1;
-            proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {        /* 0xa4 */
-            proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
-            proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
-            offset += 6;
-            proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC) {             /* 0xa7 */
-            proto_item_append_text(data_item_tree, ": Start of Tag-Description");
-            offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
-            proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {              /* 0xa8 */
-            proto_item_append_text(data_item_tree, ": Terminating Tag-Description");
-            proto_item_set_len(data_item_tree, offset - start_offset);
-        } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT) {  /* 0x00 */
-            proto_item_append_text(data_item_tree, ": Terminating Struct (Lvl:%d <- Lvl:%d)", structLevel-1, structLevel);
-            proto_item_set_len(data_item_tree, offset - start_offset);
-            structLevel--;
-            if(structLevel <= 0) {
+            struct_level--;
+            if(struct_level <= 0) {
                 break; /* highest structure terminated -> leave */
             }
-        } else {    /* S7COMMP_ITEMVAL_SYNTAXID_IDFLTYPVAL 0xa3  - und alles weitere deren Bedeutung noch nicht bekannt ist. */
-            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-
-            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-            offset += octet_count;
-
-            if (structLevel > 1) {
-                proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, structLevel);
-            } else {
-                proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
-            }
-
-            if (id_number) {    /* assuming that item id = 0 marks end of structure */
-                /* the type and value assigned to the id is coded in the same way as the read response values */
-                offset = s7commp_decode_value(tvb, data_item_tree, offset, &structLevel);
-            }
-            item_nr++;
-            proto_item_set_len(data_item_tree, offset - start_offset);
+            continue;
         }
+        if (struct_level == 1) {
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+            offset += 1;
+            if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {                    /* 0xa1 */
+                proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Lvl:%d -> Lvl:%d): 0x%08x / 0x%08x", object_level, object_level+1, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
+                proto_item_append_text(data_item_tree, ": Start of Object (Lvl:%d -> Lvl:%d)", object_level, object_level+1);
+                object_level += 1;
+                offset += 8;
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {              /* 0xa2 */
+                proto_item_append_text(data_item_tree, ": Terminating Object (Lvl:%d <- Lvl:%d)", object_level-1, object_level);
+                object_level -= 1;
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {                    /* 0xa4 */
+                proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
+                proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
+                offset += 6;
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC) {             /* 0xa7 */
+                proto_item_append_text(data_item_tree, ": Start of Tag-Description");
+                offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {              /* 0xa8 */
+                proto_item_append_text(data_item_tree, ": Terminating Tag-Description");
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            }
+        }
+        id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+
+        proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+        offset += octet_count;
+
+        if (struct_level > 1) {
+            proto_item_append_text(data_item_tree, " [%u]: ID: %u (Struct-Level %d)", item_nr, id_number, struct_level);
+        } else {
+            proto_item_append_text(data_item_tree, " [%u]: ID: %u", item_nr, id_number);
+        }
+
+        if (id_number) {    /* assuming that item id = 0 marks end of structure */
+            /* the type and value assigned to the id is coded in the same way as the read response values */
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+        }
+        item_nr++;
+        proto_item_set_len(data_item_tree, offset - start_offset);
     }
     return offset;
 }
