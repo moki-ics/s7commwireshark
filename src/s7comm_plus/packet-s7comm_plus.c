@@ -282,6 +282,18 @@ static const value_string id_number_names[] = {
 #endif
 static value_string_ext id_number_names_ext = VALUE_STRING_EXT_INIT(id_number_names);
 
+/* Error codes */
+ #ifdef USE_INTERNALS
+    #include "internals/packet-s7comm_plus-errorcodes.h"
+#else
+static const value_string errorcode_names[] = {
+    { 0xFF01,                                   "Invalid LID" },
+    { 0xFF7A,                                   "Service Multi-ES Not Supported" },
+    { 0xFFEF,                                   "Invalid CRC" },
+    { 0,                                        NULL }
+};
+#endif
+
 /* Item access area */
 #define S7COMMP_VAR_ITEM_AREA1_DB               0x8a0e              /* Reading DB, 2 byte DB-Number following */
 #define S7COMMP_VAR_ITEM_AREA1_IQMCT            0x0000              /* Reading I/Q/M/C/T, 2 Byte detail area following */
@@ -390,7 +402,6 @@ static gint hf_s7commp_header_keepaliveseqnum = -1;     /* Sequence number in ke
 static gint hf_s7commp_data = -1;
 static gint hf_s7commp_data_item_address = -1;
 static gint hf_s7commp_data_item_value = -1;
-static gint hf_s7commp_data_item_errorvalue = -1;
 static gint hf_s7commp_data_data = -1;
 static gint hf_s7commp_data_opcode = -1;
 static gint hf_s7commp_data_unknown1 = -1;
@@ -412,6 +423,8 @@ static gint hf_s7commp_data_res_set = -1;
 static gint hf_s7commp_data_id_number = -1;
 
 static gint hf_s7commp_cyclic_set = -1;
+
+static gint hf_s7commp_data_errorcode = -1;
 
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
@@ -632,6 +645,10 @@ proto_register_s7commp (void)
           { "Data", "s7comm-plus.data", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the data part of S7 communication plus", HFILL }},
 
+        { &hf_s7commp_data_errorcode,
+          { "Error code", "s7comm-plus.errorcode", FT_UINT16, BASE_HEX, VALS(errorcode_names), 0x0,
+            NULL, HFILL }},
+
         { &hf_s7commp_data_opcode,
           { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
             NULL, HFILL }},
@@ -660,10 +677,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_item_value,
           { "Item Value", "s7comm-plus.data.item_value", FT_NONE, BASE_NONE, NULL, 0x0,
             "Value of one item", HFILL }},
-
-        { &hf_s7commp_data_item_errorvalue,
-          { "Item Error Value", "s7comm-plus.data.item_errorvalue", FT_NONE, BASE_NONE, NULL, 0x0,
-            "Value for error codes of one item", HFILL }},
 
         { &hf_s7commp_data_data,
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
@@ -1664,6 +1677,9 @@ s7commp_decode_startsession(tvbuff_t *tvb,
     guint8 sessionid_count = 0;
     int i;
     guint32 value = 0;
+    guint8 return_code = 0;
+    gint32 errorvalue;
+    guint16 errorcode;
 
     /* Eine Session-Aufbau wird z.B. für die folgenden Dinge verwendet:
      * - Herstellung einer Verbindung zur SPS. Dann ist der PDU-Typ CONNECT.
@@ -1673,8 +1689,20 @@ s7commp_decode_startsession(tvbuff_t *tvb,
      */
 
     if (opcode == S7COMMP_OPCODE_RES) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Response Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        return_code = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Return code (0xf0 on error): 0x%02x", return_code);
         offset += 1;
+
+        if (return_code == 0xf0) {
+            errorvalue = tvb_get_varint32(tvb, &octet_count, offset);
+            proto_tree_add_text(tree, tvb, offset, octet_count, "Errorvalue (varint32): 0x%08x dez %d", errorvalue, errorvalue);
+            offset += octet_count;
+
+            errorcode = tvb_get_ntohs(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_errorcode, tvb, offset, 2, errorcode);
+            offset += 2;
+        }
+
         sessionid_count = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Number of following Session Ids: %d", sessionid_count);
         offset += 1;
@@ -1946,8 +1974,8 @@ s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
     guint32 item_number;
     guint8 octet_count = 0;
 
-    gint32 errorvalue1 = 0;
-    gint16 errorvalue2 = 0;
+    gint32 errorvalue = 0;
+    guint16 errorcode = 0;
     int struct_level = 1;
     guint32 start_offset = offset;
 
@@ -1975,15 +2003,15 @@ s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
             proto_tree_add_text(data_item_tree, tvb, offset, 1, "Unknown Error value 1: 0x%02x", tvb_get_guint8(tvb, offset));
             offset += 1;
 
-            errorvalue1 = tvb_get_varint32(tvb, &octet_count, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Errorvalue 1 (varint32): 0x%08x dez %d", errorvalue1, errorvalue1);
+            errorvalue = tvb_get_varint32(tvb, &octet_count, offset);
+            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Errorvalue (varint32): 0x%08x dez %d", errorvalue, errorvalue);
             offset += octet_count;
 
-            errorvalue2 = tvb_get_ntohs(tvb, offset);
-            proto_tree_add_text(data_item_tree, tvb, offset, 2, "Errorvalue 2 (fix 2 byte): 0x%04x dez %d", (guint16)errorvalue2, errorvalue2);
+            errorcode = tvb_get_ntohs(tvb, offset);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_data_errorcode, tvb, offset, 2, errorcode);
             offset += 2;
 
-            proto_item_append_text(data_item_tree, " Error values: 0x%08x / %d", errorvalue1, errorvalue2);
+            proto_item_append_text(data_item_tree, " Error value/code: 0x%08x / %d", errorvalue, errorcode);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
         item_number = tvb_get_varuint32(tvb, &octet_count, offset);
