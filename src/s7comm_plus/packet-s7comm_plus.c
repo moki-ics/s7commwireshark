@@ -57,9 +57,6 @@
 /* Protocol identifier */
 #define S7COMM_PLUS_PROT_ID                     0x72
 
-/* Length of trailing block within read and write requests */
-#define RW_REQUEST_TRAILER_LEN 27
-
 /* Max number of array values displays on Item-Value tree. */
 #define S7COMMP_ITEMVAL_ARR_MAX_DISPLAY         10
 
@@ -142,7 +139,7 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_TIMESTAMP         0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
 #define S7COMMP_ITEM_DATATYPE_TIMESPAN          0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varuint64 */
 #define S7COMMP_ITEM_DATATYPE_RID               0x12        /* RID: fix 4 Bytes */
-#define S7COMMP_ITEM_DATATYPE_AID               0x13        /* AID: fix 4 Bytes */
+#define S7COMMP_ITEM_DATATYPE_AID               0x13        /* AID: varuint32*/
 #define S7COMMP_ITEM_DATATYPE_BLOB              0x14
 #define S7COMMP_ITEM_DATATYPE_WSTRING           0x15        /* Wide string with length header, UTF8 encoded */
 /* 0x16 ?? */
@@ -224,6 +221,11 @@ static const value_string id_number_names[] = {
     { 1049,                                     "Cyclic variables update rate (UDInt, in milliseconds)" },
     { 1051,                                     "Unsubscribe" },
     { 1053,                                     "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
+
+    { 1256,                                     "Object Qualifier" },
+    { 1257,                                     "Parent RID" },
+    { 1258,                                     "Composition AID" },
+    { 1259,                                     "Key Qualifier" },
 
     { 2421,                                     "Set CPU clock" },
     { 2449,                                     "Ident ES" },
@@ -1416,10 +1418,15 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%llu ns", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
-            case S7COMMP_ITEM_DATATYPE_AID:
                 length_of_value = 4;
                 g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
+                break;
+            case S7COMMP_ITEM_DATATYPE_AID:
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_WSTRING:       /* 0x15 */
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
@@ -2025,30 +2032,6 @@ s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
     };
     return offset;
 }
-
-/*******************************************************************************************************
- * s7commp_decode_data_rw_request_trail()
- * Read and write requsts contain a 27 byte long part. For the S7-1200 these content is always the same.
- * But for the S7-1500 the last 4 byte are changing within a session.
- *******************************************************************************************************/
-static guint32
-s7commp_decode_data_rw_request_trail(tvbuff_t *tvb,
-                                     proto_tree *tree,
-                                     guint32 offset,
-                                     const guint32 offsetmax)
-{
-    if (offset + RW_REQUEST_TRAILER_LEN <= offsetmax) {
-        /* the first 23 bytes do not change */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, RW_REQUEST_TRAILER_LEN-4,
-                             tvb_get_ptr(tvb, offset, RW_REQUEST_TRAILER_LEN-4));
-        offset += RW_REQUEST_TRAILER_LEN-4;
-        /* the last 4 bytes change for the S7-1500 */
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, 4,
-                             tvb_get_ptr(tvb, offset, 4));
-        offset += 4;
-    }
-    return offset;
-}
 /*******************************************************************************************************
  *
  * Write-Request
@@ -2094,8 +2077,6 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
             /* Eigentlicher Wert */
             offset = s7commp_decode_item_value(tvb, tree, offset);
         }
-        /* 27 byte unbekannt */
-        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x", value);
         item_count = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -2154,8 +2135,6 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
             number_of_fields_in_complete_set -= number_of_fields;
         }
-        /* 27 byte unbekannt */
-        offset = s7commp_decode_data_rw_request_trail(tvb, tree, offset, offsetmax);
     } else {
         proto_tree_add_text(tree, tvb, offset-4, 4, "Different Read Request with first value != 0: 0x%08x. TODO", value);
     }
@@ -2543,6 +2522,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint16 unknown2 = 0;
     guint8 opcode = 0;
     guint32 offset_save = 0;
+    guint32 offsetmax;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -2657,6 +2637,30 @@ s7commp_decode_data(tvbuff_t *tvb,
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
         }
+    }
+    /* Nach Object Qualifier trailer suchen.
+     * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
+     * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
+     */
+    if (dlength > 10) {
+        offset_save = offset;
+        offsetmax = offset + dlength-2;
+        while (offset < offsetmax) {
+            unknown1 = tvb_get_ntohs(tvb, offset);  /* hier kein VLQ! */
+            if (unknown1 == 0x4e8) {    /* gefunden! */
+                /* alles dazwischen mit Dummy-Bytes auffüllen */
+                if ((offset+2 - offset_save) > 0) {
+                    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
+                }
+                proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 2, unknown1);
+                offset += 2;
+                /* Ab hier Standard: ID, Flags, Typ, Wert */
+                offset = s7commp_decode_id_value_series(tvb, tree, offset);
+                break;
+            }
+            offset += 1;    /* byteweise durchgehen */
+        }
+        dlength = dlength - (offset - offset_save);
     }
 
     /* Show undecoded data as raw bytes */
