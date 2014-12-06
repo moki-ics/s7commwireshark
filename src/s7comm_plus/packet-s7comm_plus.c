@@ -430,8 +430,24 @@ static gint hf_s7commp_data_id_number = -1;
 
 static gint hf_s7commp_cyclic_set = -1;
 
+/* Error value and subfields */
 static gint hf_s7commp_data_returnvalue = -1;
 static gint hf_s7commp_data_errorcode = -1;
+static gint hf_s7commp_data_omsline = -1;
+static gint hf_s7commp_data_errorsource = -1;
+static gint hf_s7commp_data_genericerrorcode = -1;
+static gint hf_s7commp_data_servererror = -1;
+static gint hf_s7commp_data_debuginfo = -1;
+static gint hf_s7commp_data_errorextension = -1;
+static const int *s7commp_data_returnvalue_fields[] = {
+    &hf_s7commp_data_errorcode,
+    &hf_s7commp_data_omsline,
+    &hf_s7commp_data_errorsource,
+    &hf_s7commp_data_genericerrorcode,
+    &hf_s7commp_data_servererror,
+    &hf_s7commp_data_debuginfo,
+    NULL
+};
 
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
@@ -656,9 +672,28 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
             "varuint64: Return value", HFILL }},
+        /* The extension for 64 bit Bitmasks was implemented on Oct 2014, so don't use it yet to support older Wireshark versions */
         { &hf_s7commp_data_errorcode,
-          { "Error code", "s7comm-plus.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x0,
-            "Right 16 Bits from Return value: Error code", HFILL }},
+          { "Bitmask 0x000000000000ffff - Error code", "s7comm-plus.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x0, /* 0x000000000000ffff */
+            NULL, HFILL }},
+        { &hf_s7commp_data_omsline,
+          { "Bitmask 0x00000000ffff0000 - OMS line", "s7comm-plus.omsline", FT_UINT16, BASE_DEC, NULL, 0x0, /*0x00000000ffff0000 */
+            NULL, HFILL }},
+        { &hf_s7commp_data_errorsource,
+          { "Bitmask 0x000000ff00000000 - Error source", "s7comm-plus.errorsource", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x000000ff00000000 */
+            NULL, HFILL }},
+        { &hf_s7commp_data_genericerrorcode,
+          { "Bitmask 0x0000ef0000000000 - Generic error code", "s7comm-plus.genericerrorcode", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x0000ef0000000000 */
+            NULL, HFILL }},
+        { &hf_s7commp_data_servererror,
+          { "Bitmask 0x0000800000000000 - Server error", "s7comm-plus.servererror", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x0000800000000000 */
+            NULL, HFILL }},
+        { &hf_s7commp_data_debuginfo,
+          { "Bitmask 0x3fff000000000000 - Debug info", "s7comm-plus.debuginfo", FT_UINT16, BASE_DEC, NULL, 0x0, /* 0x3fff000000000000 */
+            NULL, HFILL }},
+        { &hf_s7commp_data_errorextension,
+          { "Bitmask 0x4000000000000000 - Error extension", "s7comm-plus.errorextension", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x4000000000000000 */
+            NULL, HFILL }},
 
         { &hf_s7commp_data_opcode,
           { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
@@ -1114,9 +1149,6 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
                            guint32 offset,
                            gint16 *errorcode_out)
 {
-    /* Die Darstellung ist nicht ganz optimal, da durch die VLQ Codierung die Anzahl der Bytes bei markierten Errorcode Feld
-     * nicht mit der wirklichen Belegung übereinstimmt.
-     */
     guint64 return_value;
     guint8 octet_count = 0;
     gint16 errorcode;
@@ -1124,14 +1156,19 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
     proto_tree *ret_tree = NULL;
 
     return_value = tvb_get_varuint64(tvb, &octet_count, offset);
-    ret_item = proto_tree_add_uint64(tree, hf_s7commp_data_returnvalue, tvb, offset, octet_count, return_value);
-    ret_tree = proto_item_add_subtree(ret_item, ett_s7commp_data_returnvalue);
-    proto_tree_add_text(ret_tree, tvb, offset, octet_count, "Unknown Flags?: 0x%012llx", return_value >> 16);
-    /* In den rechten 16 Bit des decodierten 64 Bit Wertes liegt der Errorcode.
-     * Die restlichen Bits sehen nach Flags / Bitmaske aus.
-     */
     errorcode = (gint16)return_value;
-    proto_tree_add_int(ret_tree, hf_s7commp_data_errorcode, tvb, offset, octet_count, errorcode);   /* über octet_count alle Bytes markieren */
+    ret_item = proto_tree_add_uint64(tree, hf_s7commp_data_returnvalue, tvb, offset, octet_count, return_value);
+    /* add errocdode to main item */
+    proto_item_append_text(ret_item, " - Error code: %s (%d)", val_to_str(errorcode, errorcode_names, "%d"), errorcode);
+    ret_tree = proto_item_add_subtree(ret_item, ett_s7commp_data_returnvalue);
+    proto_tree_add_int(ret_tree, hf_s7commp_data_errorcode, tvb, offset, octet_count, errorcode);
+    proto_tree_add_uint(ret_tree, hf_s7commp_data_omsline, tvb, offset, octet_count, (guint16)(return_value >> 16));
+    proto_tree_add_uint(ret_tree, hf_s7commp_data_errorsource, tvb, offset, octet_count, (guint8)(return_value >> 32));
+    proto_tree_add_uint(ret_tree, hf_s7commp_data_genericerrorcode, tvb, offset, octet_count, (guint8)(return_value >> 40) & 0xef);
+    proto_tree_add_boolean(ret_tree, hf_s7commp_data_servererror, tvb, offset, octet_count, (gboolean)(return_value & 0x0000800000000000));
+    proto_tree_add_uint(ret_tree, hf_s7commp_data_debuginfo, tvb, offset, octet_count, (guint16)(return_value >> 48) & 0x3fff);
+    proto_tree_add_boolean(ret_tree, hf_s7commp_data_errorextension, tvb, offset, octet_count, (gboolean)(return_value & 0x4000000000000000));
+
     offset += octet_count;
     if (errorcode_out != NULL) {        /* return errorcode if needed outside */
         *errorcode_out = errorcode;
@@ -2025,7 +2062,7 @@ s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
             offset += octet_count;
             offset = s7commp_decode_returnvalue(tvb, data_item_tree, offset, &errorcode);
-            proto_item_append_text(data_item_tree, " [%u]: %s", item_number, val_to_str(errorcode, errorcode_names, "Error code: %d"));
+            proto_item_append_text(data_item_tree, " [%u]: Error code: %s (%d)", item_number, val_to_str(errorcode, errorcode_names, "%d"), errorcode);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
         item_number = tvb_get_varuint32(tvb, &octet_count, offset);
