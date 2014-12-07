@@ -353,8 +353,8 @@ static const value_string var_item_base_area_names[] = {
 #define S7COMMP_EXPLORE_AREA_OUTPUT             0x90020000
 #define S7COMMP_EXPLORE_AREA_BITMEM             0x90030000
 #define S7COMMP_EXPLORE_AREA_9004               0x90040000
-#define S7COMMP_EXPLORE_AREA_9005               0x90050000
-#define S7COMMP_EXPLORE_AREA_9006               0x90060000
+#define S7COMMP_EXPLORE_AREA_TIMER              0x90050000
+#define S7COMMP_EXPLORE_AREA_COUNTER            0x90060000
 
 static const value_string explore_area_names[] = {
     { S7COMMP_EXPLORE_AREA_DB,                  "DB" },
@@ -365,8 +365,8 @@ static const value_string explore_area_names[] = {
     { S7COMMP_EXPLORE_AREA_OUTPUT,              "Output area" },
     { S7COMMP_EXPLORE_AREA_BITMEM,              "M Bit memory" },
     { S7COMMP_EXPLORE_AREA_9004,                "Unknown area 9004" },
-    { S7COMMP_EXPLORE_AREA_9005,                "Unknown area 9005" },
-    { S7COMMP_EXPLORE_AREA_9006,                "Unknown area 9006" },
+    { S7COMMP_EXPLORE_AREA_TIMER,               "S7-Timer" },
+    { S7COMMP_EXPLORE_AREA_COUNTER,             "S7-Counter" },
     { 0,                                        NULL }
 };
 
@@ -2212,13 +2212,8 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
      * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestätigt zu werden.
      */
-    gint16 errorcode;
 
-    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
-
-    if (errorcode == 0) {
-        offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
-    }
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
     offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
     return offset;
 }
