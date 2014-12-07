@@ -2107,11 +2107,14 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         number_of_fields_in_complete_set = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(tree, hf_s7commp_item_no_of_fields, tvb, offset, octet_count, number_of_fields_in_complete_set);
         offset += octet_count;
-
+        /* Es lassen sich mehrere Variablen mit einem write schreiben.
+         * Dann folgen erst die Adressen und dann die Werte.
+         */
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, tree, &number_of_fields, offset);
             number_of_fields_in_complete_set -= number_of_fields;
-            /* Eigentlicher Wert */
+        }
+        for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_value(tvb, tree, offset);
         }
     } else {
