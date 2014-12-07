@@ -35,7 +35,7 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
-#define USE_INTERNALS
+//#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
@@ -2091,7 +2091,6 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
     guint8 octet_count = 0;
 
     guint32 item_address_count;
-    guint32 item_address_read;
     guint32 id_number;
 
     /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl
@@ -2127,7 +2126,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
         item_address_count = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Item address count: %d", item_address_count);
         offset += octet_count;
-        for (item_address_read = 1; item_address_read <= item_address_count; item_address_read++) {
+        for (i = 1; i <= item_address_count; i++) {
             id_number = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
@@ -2154,6 +2153,8 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     guint32 value;
     guint32 offsetmax = offset + dlength;
     guint8 octet_count = 0;
+    guint32 id_number;
+    guint32 item_address_count;
 
     /* für Variablen-Lesen müssen die ersten 4 Bytes 0 sein
      * Bei einer Variablentabelle steht dort z.b. 0x00000020
@@ -2161,11 +2162,10 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
     value = tvb_get_ntohl(tvb, offset);
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown: 0x%08x", value);
     offset += 4;
+    item_count = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_item_count, tvb, offset, octet_count, item_count);
+    offset += octet_count;
     if (value == 0x0) {
-        item_count = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(tree, hf_s7commp_item_count, tvb, offset, octet_count, item_count);
-        offset += 1;
-
         /* as sequence 62 of S7-1511-opc-request-all-types.pcap, shows
          * number_of_fields_in_complete_set is a varuint
          */
@@ -2178,7 +2178,14 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
             number_of_fields_in_complete_set -= number_of_fields;
         }
     } else {
-        proto_tree_add_text(tree, tvb, offset-4, 4, "Different Read Request with first value != 0: 0x%08x. TODO", value);
+        item_address_count = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Item address count: %d", item_address_count);
+        offset += octet_count;
+        for (i = 1; i <= item_address_count; i++) {
+            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+            offset += octet_count;
+        }
     }
 
     return offset;
