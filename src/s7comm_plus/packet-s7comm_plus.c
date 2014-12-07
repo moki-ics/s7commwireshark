@@ -35,7 +35,7 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
-//#define USE_INTERNALS
+#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
@@ -217,6 +217,7 @@ static const value_string itemval_syntaxid_names[] = {
 #else
 static const value_string id_number_names[] = {
     { 233,                                      "Subscription name (String)" },
+    { 537,                                      "Object OMS Type-Info-Container" },
     { 1048,                                     "Cyclic variables update set of addresses (UDInt, Addressarray)" },
     { 1049,                                     "Cyclic variables update rate (UDInt, in milliseconds)" },
     { 1051,                                     "Unsubscribe" },
@@ -293,6 +294,7 @@ static const value_string errorcode_names[] = {
     { 17,                                       "Message Session Pre-Legitimated" },
     { 19,                                       "Warning Service Executed With Partial Error" },
     { 22,                                       "Service Session Delegitimated" },
+    { -12,                                      "Object not found" },
     { -17,                                      "Invalid CRC" },
     { -134,                                     "Service Multi-ES Not Supported" },
     { -255,                                     "Invalid LID" },
@@ -2502,36 +2504,17 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
                                guint16 dlength,
                                guint32 offset)
 {
-    /* 6 Bytes unbekannt. Zumindest das erste word sollte 0x0000 sein, sonst Fehler? */
-    guint16 ret1, ret2;
     guint32 max_offset = offset + dlength;
-    int unkown_bytes = 0;
-    guint8 scanned_byte = 0;
+    guint32 id_number;
+    gint16 errorcode = 0;
 
-    ret1 = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 1: 0x%04x", ret1);
-    offset += 2;
-    ret2 = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", ret2);
-    offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 1, "Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
 
-    /* maybe the first word is a kind of error code */
-    if (ret1 == 0x0000) {
-        /* possible that other bytes are following. Search for valid id */
-        while ((offset + unkown_bytes) < max_offset) {
-            scanned_byte = tvb_get_guint8(tvb, offset + unkown_bytes);
-            if (scanned_byte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
-                break;
-            } else {
-                unkown_bytes++;
-            }
-        }
-        if (unkown_bytes > 0) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unkown_bytes, tvb_get_ptr(tvb, offset, unkown_bytes));
-            offset += unkown_bytes;
-        }
+    id_number = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
+    offset += 4;
+
+    if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen */
         offset = s7commp_decode_synid_id_value_series(tvb, tree, offset, max_offset);
     }
     return offset;
