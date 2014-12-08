@@ -104,7 +104,7 @@ static const value_string opcode_names[] = {
 #define S7COMMP_FUNCTIONCODE_MODSESSION         0x04f2
 #define S7COMMP_FUNCTIONCODE_WRITE              0x0542
 #define S7COMMP_FUNCTIONCODE_READ               0x054c
-#define S7COMMP_FUNCTIONCODE_0x0586             0x0586
+#define S7COMMP_FUNCTIONCODE_READCPUDATA        0x0586
 #define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 
 static const value_string data_functioncode_names[] = {
@@ -113,7 +113,7 @@ static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_MODSESSION,          "Modify session" },
     { S7COMMP_FUNCTIONCODE_WRITE,               "Write" },
     { S7COMMP_FUNCTIONCODE_READ,                "Read" },
-    { S7COMMP_FUNCTIONCODE_0x0586,              "Unknown read/write?" },
+    { S7COMMP_FUNCTIONCODE_READCPUDATA,         "Read-CPU-Data" },
     { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
     { 0,                                        NULL }
 };
@@ -2404,11 +2404,47 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode telegram with function 0x0586, used for authentication any anything else (unknown yet)
+ * Decode request read cpu data
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_func0x0586_response(tvbuff_t *tvb,
+s7commp_decode_request_readcpudata(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint32 id_number;
+    guint32 start_offset;
+    int struct_level = 0;
+
+    do {
+        id_number = tvb_get_ntohl(tvb, offset);
+        if (id_number == 0) {
+            struct_level--;
+            proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
+            offset += 4;
+        } else {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
+            proto_item_append_text(data_item_tree, " [%u]:", id_number);
+            offset += 4;
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
+    } while (struct_level > 0);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode response read cpu data
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_readcpudata(tvbuff_t *tvb,
                                    proto_tree *tree,
                                    guint32 offset)
 {
@@ -2416,14 +2452,13 @@ s7commp_decode_func0x0586_response(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     int struct_level = 0;
     guint32 start_offset;
-    /* It seems that there is more than one valid data-structure.
-     * When the first two bytes are 0x0000, and then a value other than 0x00 is following, the data is coded
-     * in usual value format (datatype, flags, value).
-     */
-    if (tvb_get_ntohs(tvb, offset) == 0x0000) {
-        proto_tree_add_text(tree, tvb, offset , 2, "Response unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        while (tvb_get_guint8(tvb, offset) != 0x00) {       /* loop as long a valid datatype follows */
+    guint16 errorcode;
+
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    if (errorcode == 0) {
+        if (tvb_get_guint8(tvb, offset) == 0x00) {
+            proto_tree_add_text(tree, tvb, offset , 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
             start_offset = offset;
@@ -2631,6 +2666,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
                     break;
+                case S7COMMP_FUNCTIONCODE_READCPUDATA:
+                    offset = s7commp_decode_request_readcpudata(tvb, item_tree, offset);
+                    break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
             }
@@ -2662,8 +2700,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0586:
-                    offset = s7commp_decode_func0x0586_response(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_READCPUDATA:
+                    offset = s7commp_decode_response_readcpudata(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
