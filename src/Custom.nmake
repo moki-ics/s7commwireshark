@@ -4,13 +4,14 @@
 
 include ..\config.nmake
 
-all: s7comm
-	s7comm_plus
+all: s7comm s7comm_plus
 
-echo::
+s7comm::
 	cd s7comm
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
 	cd ..
+
+s7comm_plus::
 	cd s7comm_plus
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
 	cd ..
