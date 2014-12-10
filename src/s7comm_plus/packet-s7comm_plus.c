@@ -2262,6 +2262,7 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
     guint32 item_number;
     guint32 start_offset;
     int struct_level;
+    guint8 octet_count = 0;
     gboolean add_data_info_column = FALSE;
 
     /* Bei zyklischen Daten ist die Funktionsnummer nicht so wie bei anderen Telegrammen. Dieses ist eine
@@ -2319,7 +2320,7 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
          *  0x13 -> Fehler bei einer Adresse (S7-1200)
          *  0x92 -> Erfolg (S7-1200)
          *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-         *
+         *  0x9b -> Bei 1500 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
          * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
          */
         struct_level = 1;
@@ -2350,7 +2351,12 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
                     item_number = tvb_get_ntohl(tvb, offset);
                     proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
                     offset += 4;
-
+                    proto_item_append_text(data_item_tree, " [%u]:", item_number);
+                    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+                } else if (item_return_value == 0x9b) {
+                    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
+                    offset += octet_count;
                     proto_item_append_text(data_item_tree, " [%u]:", item_number);
                     offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
                 } else if (item_return_value == 0x9c) {
