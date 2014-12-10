@@ -1710,7 +1710,9 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
                 object_level--;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 if(object_level <= 0) {
-                    break; /* highest object terminated -> leave */
+                    if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+                        break; /* highest object terminated, and no object following -> leave */
+                    }
                 }
                 continue;
             } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {                    /* 0xa4 */
@@ -2559,14 +2561,22 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
     guint32 max_offset = offset + dlength;
     guint32 id_number;
     gint16 errorcode = 0;
+    guint8 octet_count = 0;
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
 
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
     offset += 4;
-
-    if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen */
+    if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen? */
+        /* Es kann sein dass hier noch ein Wert VLQ , wenn nicht ein STARTOBJECT (0xa1) folgt.
+         * Welche Logik dahinterstecken mag. Das macht auch nur die 1500.
+         */
+        if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+            offset += octet_count;
+        }
         offset = s7commp_decode_synid_id_value_series(tvb, tree, offset, max_offset);
     }
     return offset;
