@@ -85,13 +85,13 @@ static const value_string pdutype_names[] = {
  */
 #define S7COMMP_OPCODE_REQ                      0x31
 #define S7COMMP_OPCODE_RES                      0x32
-#define S7COMMP_OPCODE_CYC                      0x33
+#define S7COMMP_OPCODE_NOTIFICATION             0x33
 #define S7COMMP_OPCODE_RES2                     0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
 
 static const value_string opcode_names[] = {
-    { S7COMMP_OPCODE_REQ,                       "Request " },
+    { S7COMMP_OPCODE_REQ,                       "Request" },
     { S7COMMP_OPCODE_RES,                       "Response" },
-    { S7COMMP_OPCODE_CYC,                       "Cyclic  " },
+    { S7COMMP_OPCODE_NOTIFICATION,              "Notification" },
     { S7COMMP_OPCODE_RES2,                      "Response2" },
     { 0,                                        NULL }
 };
@@ -99,22 +99,28 @@ static const value_string opcode_names[] = {
 /**************************************************************************
  * Function codes in data part
  */
+#define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 #define S7COMMP_FUNCTIONCODE_STARTSESSION       0x04ca
 #define S7COMMP_FUNCTIONCODE_ENDSESSION         0x04d4
 #define S7COMMP_FUNCTIONCODE_MODSESSION         0x04f2
+#define S7COMMP_FUNCTIONCODE_0x0524             0x0524
 #define S7COMMP_FUNCTIONCODE_WRITE              0x0542
 #define S7COMMP_FUNCTIONCODE_READ               0x054c
-#define S7COMMP_FUNCTIONCODE_READCPUDATA        0x0586
-#define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
+#define S7COMMP_FUNCTIONCODE_0x0556             0x0556
+#define S7COMMP_FUNCTIONCODE_0x0560             0x0560
+#define S7COMMP_FUNCTIONCODE_READOBJECT         0x0586
 
 static const value_string data_functioncode_names[] = {
+    { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
     { S7COMMP_FUNCTIONCODE_STARTSESSION,        "Start session" },
     { S7COMMP_FUNCTIONCODE_ENDSESSION,          "End session" },
     { S7COMMP_FUNCTIONCODE_MODSESSION,          "Modify session" },
+    { S7COMMP_FUNCTIONCODE_0x0524,              "0x0524 - Unknown" },
     { S7COMMP_FUNCTIONCODE_WRITE,               "Write" },
     { S7COMMP_FUNCTIONCODE_READ,                "Read" },
-    { S7COMMP_FUNCTIONCODE_READCPUDATA,         "Read-CPU-Data" },
-    { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
+    { S7COMMP_FUNCTIONCODE_0x0556,              "0x0556 - Unknown" },
+    { S7COMMP_FUNCTIONCODE_0x0560,              "0x0560 - Unknown" },
+    { S7COMMP_FUNCTIONCODE_READOBJECT,          "Read object" },
     { 0,                                        NULL }
 };
 /**************************************************************************
@@ -430,7 +436,7 @@ static gint hf_s7commp_data_res_set = -1;
 
 static gint hf_s7commp_data_id_number = -1;
 
-static gint hf_s7commp_cyclic_set = -1;
+static gint hf_s7commp_notification_set = -1;
 
 /* Error value and subfields */
 static gint hf_s7commp_data_returnvalue = -1;
@@ -461,7 +467,7 @@ static gint ett_s7commp_trailer = -1;                   /* Subtree for trailer b
 
 static gint ett_s7commp_data_req_set = -1;              /* Subtree for data request set*/
 static gint ett_s7commp_data_res_set = -1;              /* Subtree for data response set*/
-static gint ett_s7commp_cyclic_set = -1;                /* Subtree for cyclic data set */
+static gint ett_s7commp_notification_set = -1;          /* Subtree for notification data set */
 
 static gint ett_s7commp_itemaddr_area = -1;             /* Subtree for item address area */
 static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value is an array */
@@ -702,13 +708,13 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_data_unknown1,
           { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 1, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
+            "Unknown 1, Reserved?", HFILL }},
         { &hf_s7commp_data_function,
           { "Function", "s7comm-plus.data.function", FT_UINT16, BASE_HEX, VALS(data_functioncode_names), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_data_unknown2,
           { "Unknown 2", "s7comm-plus.data.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 2, Reserved? Seems that this is always 0x0000, but not in 'cyclic' telegrams", HFILL }},
+            "Unknown 2, Reserved?", HFILL }},
         { &hf_s7commp_data_seqnum,
           { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number (for reference)", HFILL }},
@@ -736,9 +742,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_res_set,
           { "Response Set", "s7comm-plus.data.res_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a response telegram", HFILL }},
-        { &hf_s7commp_cyclic_set,
-          { "Cyclic Data Set", "s7comm-plus.cyclic_dataset", FT_NONE, BASE_NONE, NULL, 0x0,
-            "This is a set of data in a cyclic data telegram", HFILL }},
+        { &hf_s7commp_notification_set,
+          { "Notification Data Set", "s7comm-plus.notification_dataset", FT_NONE, BASE_NONE, NULL, 0x0,
+            "This is a set of data in a notification data telegram", HFILL }},
 
         { &hf_s7commp_data_id_number,
           { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
@@ -969,7 +975,7 @@ proto_register_s7commp (void)
         &ett_s7commp_trailer,
         &ett_s7commp_data_req_set,
         &ett_s7commp_data_res_set,
-        &ett_s7commp_cyclic_set,
+        &ett_s7commp_notification_set,
         &ett_s7commp_itemaddr_area,
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
@@ -1180,7 +1186,7 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decoding of an Address-Array, used to subscribe cyclic variables from HMI
+ * Decoding of an Address-Array, used to subscribe variables from HMI
  *
  *******************************************************************************************************/
  /* Funktion wird z.Zt. nicht mehr benötigt, da das Adressarray wie ein "normales" Array
@@ -2241,18 +2247,18 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Cyclic data
+ * Notification data
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_cyclic(tvbuff_t *tvb,
-                      packet_info *pinfo,
-                      proto_tree *tree,
-                      guint16 dlength,
-                      guint32 offset)
+s7commp_decode_notification(tvbuff_t *tvb,
+                            packet_info *pinfo,
+                            proto_tree *tree,
+                            guint16 dlength,
+                            guint32 offset)
 {
     guint16 unknown2;
-    guint32 cyclic_session_id;
+    guint32 notification_subscr_id;
 
     guint16 seqnum;
     guint8 item_return_value;
@@ -2269,10 +2275,10 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
      * Nummer die vorher über ein 0x04ca Telegramm von der SPS zurückkommt.
      */
 
-    /* 4 Bytes Session Id */
-    cyclic_session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Cyclic Session Id: 0x%08x", cyclic_session_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " CycId=0x%08x", cyclic_session_id);
+    /* 4 Bytes Subscription Id */
+    notification_subscr_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset , 4, "Notification Id: 0x%08x", notification_subscr_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " NSubscrId=0x%08x", notification_subscr_id);
     offset += 4;
 
     /* 6/7: Unbekannt */
@@ -2280,8 +2286,8 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
     offset += 2;
 
-    /* Sequenz-nummer bei "normalen", bei cyclic steht hier immer Null */
-    proto_tree_add_text(tree, tvb, offset , 2, "Cyclic Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    /* Sequenz-nummer bei "normalen", bei notification steht hier immer Null */
+    proto_tree_add_text(tree, tvb, offset , 2, "Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
     if (unknown2 == 0x0400) {
@@ -2289,7 +2295,7 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
          * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
          * Sonst gibt es ein verkürztes (Status?)-Telegramm.
          */
-        proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+        proto_tree_add_text(tree, tvb, offset , 1, "Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
 
         /* Wenn die erste seqnum == 0, dann folgt ein zusätzliches Byte in dem die eigentliche Sequenznummer eincodiert ist.
@@ -2299,17 +2305,17 @@ s7commp_decode_cyclic(tvbuff_t *tvb,
          */
         seqnum = tvb_get_ntohs(tvb, offset);
         if (seqnum == 0) {
-            proto_tree_add_text(tree, tvb, offset , 1, "Cyclic unknown fill byte, because first two seqnum-bytes were zero: 0x%02x", tvb_get_guint8(tvb, offset));
+            proto_tree_add_text(tree, tvb, offset , 1, "Unknown fill byte, because first two seqnum-bytes were zero: 0x%02x", tvb_get_guint8(tvb, offset));
             offset +=1;
             seqnum = tvb_get_ntohs(tvb, offset);
         }
-        proto_tree_add_text(tree, tvb, offset , 2, "Cyclic sequence number: %u", seqnum);
-        col_append_fstr(pinfo->cinfo, COL_INFO, ", CycSeq=%u", seqnum);
+        proto_tree_add_text(tree, tvb, offset , 2, "Notification sequence number: %u", seqnum);
+        col_append_fstr(pinfo->cinfo, COL_INFO, ", NSeq=%u", seqnum);
         offset += 2;
 
         item_return_value = tvb_get_guint8(tvb, offset);
         if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
-            proto_tree_add_text(tree, tvb, offset , 1, "Cyclic Unknown 3: 0x%02x", item_return_value);
+            proto_tree_add_text(tree, tvb, offset , 1, "Unknown 3: 0x%02x", item_return_value);
             offset += 1;
         }
 
@@ -2396,12 +2402,12 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
                                   guint16 dlength _U_,
                                   guint32 offset)
 {
-    guint32 cyclic_session_id;
+    guint32 session_id;
 
     /* 4 Bytes Session Id */
-    cyclic_session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Session Id to modify: 0x%08x", cyclic_session_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ModSessId=0x%08x", cyclic_session_id);
+    session_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset , 4, "Session Id to modify: 0x%08x", session_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ModSessId=0x%08x", session_id);
     offset += 4;
 
     /* 1 Byte (or VLQ?) number of items? */
@@ -2412,13 +2418,13 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode request read cpu data
+ * Decode request read object
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_readcpudata(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset)
+s7commp_decode_request_readobject(tvbuff_t *tvb,
+                                  proto_tree *tree,
+                                  guint32 offset)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -2448,11 +2454,11 @@ s7commp_decode_request_readcpudata(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response read cpu data
+ * Decode response read object
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_readcpudata(tvbuff_t *tvb,
+s7commp_decode_response_readobject(tvbuff_t *tvb,
                                    proto_tree *tree,
                                    guint32 offset)
 {
@@ -2618,11 +2624,11 @@ s7commp_decode_data(tvbuff_t *tvb,
     offset += 1;
     dlength -= 1;
 
-    if (opcode == S7COMMP_OPCODE_CYC) {
-        item = proto_tree_add_item(tree, hf_s7commp_cyclic_set, tvb, offset, -1, FALSE);
-        item_tree = proto_item_add_subtree(item, ett_s7commp_cyclic_set);
+    if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
+        item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
+        item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
         offset_save = offset;
-        offset = s7commp_decode_cyclic(tvb, pinfo, item_tree, dlength, offset);
+        offset = s7commp_decode_notification(tvb, pinfo, item_tree, dlength, offset);
         dlength = dlength - (offset - offset_save);
     } else {
         /* 2/3: Unknown */
@@ -2634,7 +2640,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         /* 4/5: Functioncode */
         functioncode = tvb_get_ntohs(tvb, offset);
         proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [0x%04x - %s]", functioncode,
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Function: [%s]",
                         val_to_str(functioncode, data_functioncode_names, "?"));
         offset += 2;
         dlength -= 2;
@@ -2682,8 +2688,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
                     break;
-                case S7COMMP_FUNCTIONCODE_READCPUDATA:
-                    offset = s7commp_decode_request_readcpudata(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_READOBJECT:
+                    offset = s7commp_decode_request_readobject(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
@@ -2716,8 +2722,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
                     break;
-                case S7COMMP_FUNCTIONCODE_READCPUDATA:
-                    offset = s7commp_decode_response_readcpudata(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_READOBJECT:
+                    offset = s7commp_decode_response_readobject(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
