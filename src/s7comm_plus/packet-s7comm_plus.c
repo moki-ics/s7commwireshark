@@ -97,7 +97,8 @@ static const value_string opcode_names[] = {
 };
 
 /**************************************************************************
- * Function codes in data part
+ * Function codes in data part.
+ * All codes which have been seen in captures are listed as hex-codes.
  */
 #define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 #define S7COMMP_FUNCTIONCODE_STARTSESSION       0x04ca
@@ -108,6 +109,7 @@ static const value_string opcode_names[] = {
 #define S7COMMP_FUNCTIONCODE_READ               0x054c
 #define S7COMMP_FUNCTIONCODE_0x0556             0x0556
 #define S7COMMP_FUNCTIONCODE_0x0560             0x0560
+#define S7COMMP_FUNCTIONCODE_0x056b             0x056b
 #define S7COMMP_FUNCTIONCODE_READOBJECT         0x0586
 
 static const value_string data_functioncode_names[] = {
@@ -120,6 +122,7 @@ static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_READ,                "Read" },
     { S7COMMP_FUNCTIONCODE_0x0556,              "0x0556 - Unknown" },
     { S7COMMP_FUNCTIONCODE_0x0560,              "0x0560 - Unknown" },
+    { S7COMMP_FUNCTIONCODE_0x056b,              "0x056b - Unknown" },
     { S7COMMP_FUNCTIONCODE_READOBJECT,          "Read object" },
     { 0,                                        NULL }
 };
@@ -2260,7 +2263,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint16 unknown2;
     guint32 notification_subscr_id;
 
-    guint16 seqnum;
+    guint8 credit_tick;
+    guint8 seqnum;
     guint8 item_return_value;
 
     proto_item *data_item = NULL;
@@ -2277,7 +2281,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
 
     /* 4 Bytes Subscription Id */
     notification_subscr_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Notification Id: 0x%08x", notification_subscr_id);
+    proto_tree_add_text(tree, tvb, offset, 4, "Notification Id: 0x%08x", notification_subscr_id);
     col_append_fstr(pinfo->cinfo, COL_INFO, " NSubscrId=0x%08x", notification_subscr_id);
     offset += 4;
 
@@ -2287,7 +2291,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     offset += 2;
 
     /* Sequenz-nummer bei "normalen", bei notification steht hier immer Null */
-    proto_tree_add_text(tree, tvb, offset , 2, "Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
     if (unknown2 == 0x0400) {
@@ -2295,30 +2299,34 @@ s7commp_decode_notification(tvbuff_t *tvb,
          * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
          * Sonst gibt es ein verkürztes (Status?)-Telegramm.
          */
-        proto_tree_add_text(tree, tvb, offset , 1, "Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-
-        /* Wenn die erste seqnum == 0, dann folgt ein zusätzliches Byte in dem die eigentliche Sequenznummer eincodiert ist.
-         * Das folgende Füllbyte hat dann entweder 1 oder 2, oder ist auch überhaupt nicht vorhanden, wenn direkt
-         * die Daten folgen. Für die Erkennung ob Daten folgen habe ich >0x10 angenommen, weil ich bei diesem Füllbyte
-         * bisher nur 1 oder 2 gesehen habe. Warum auch immer...
-         */
-        seqnum = tvb_get_ntohs(tvb, offset);
-        if (seqnum == 0) {
-            proto_tree_add_text(tree, tvb, offset , 1, "Unknown fill byte, because first two seqnum-bytes were zero: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset +=1;
-            seqnum = tvb_get_ntohs(tvb, offset);
-        }
-        proto_tree_add_text(tree, tvb, offset , 2, "Notification sequence number: %u", seqnum);
-        col_append_fstr(pinfo->cinfo, COL_INFO, ", NSeq=%u", seqnum);
+        proto_tree_add_text(tree, tvb, offset, 2, "Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
         offset += 2;
+
+        /* Es gibt zwei Nummern:
+         * 1) Nummerierung für Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die Übertragung
+         *                                  bis zur in modifiy-session angegebenen Limit.
+         * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
+         *
+         * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben. Bei der 1200 ist diese immer nur 1 Byte.
+         * Bei der 1500 wurde es schon mal als VLQ gesichtet! Es ist unbekannt wie Siemens das handhabt, da alle Bytes davor bei beiden Telegrammen identisch sind.
+         * Es kann auch nicht auf den Wert des folgenden Bytes geprüft werden, da z.B. 0x13 durchaus ein gültiger VLQ wäre (dann 0x8113 = 147).
+         * Bei der 1500 folgt dann auch nochmal ein eingeschobenes einzelnes Byte.
+         * Z.Zt wird dieses kaputte Konstrukt ignoriert, und für beide 1 Byte angenommen. So funktioniert es zumindest für eine 1200.
+         */
+        credit_tick = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Notification Credit tickcount: %u", credit_tick);
+        offset += 1;
+        seqnum = tvb_get_guint8(tvb, offset);
+        proto_tree_add_text(tree, tvb, offset, 1, "Notification sequence number: %u", seqnum);
+        offset += 1;
+        col_append_fstr(pinfo->cinfo, COL_INFO, ", Ctick=%u", credit_tick);
+        col_append_fstr(pinfo->cinfo, COL_INFO, ", NSeq=%u", seqnum);
 
         item_return_value = tvb_get_guint8(tvb, offset);
         if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
-            proto_tree_add_text(tree, tvb, offset , 1, "Unknown 3: 0x%02x", item_return_value);
+            proto_tree_add_text(tree, tvb, offset , 1, "Unknown 5: 0x%02x", item_return_value);
             offset += 1;
         }
-
         /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
          * Aufbau aus den anderen Telegrammen.
          * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
