@@ -35,7 +35,7 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
-//#define USE_INTERNALS
+#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
@@ -356,30 +356,66 @@ static const value_string var_item_base_area_names[] = {
     { 0,                                        NULL }
 };
 
-#define S7COMMP_EXPLORE_AREA_DB                 0x00000003
-#define S7COMMP_EXPLORE_AREA_TONINSTANCE        0x0200001f
-#define S7COMMP_EXPLORE_AREA_GLOBALDB_NO        0x92000000
-#define S7COMMP_EXPLORE_AREA_INSTANCEDB         0x93000000
-#define S7COMMP_EXPLORE_AREA_INPUT              0x90010000
-#define S7COMMP_EXPLORE_AREA_OUTPUT             0x90020000
-#define S7COMMP_EXPLORE_AREA_BITMEM             0x90030000
-#define S7COMMP_EXPLORE_AREA_9004               0x90040000
-#define S7COMMP_EXPLORE_AREA_TIMER              0x90050000
-#define S7COMMP_EXPLORE_AREA_COUNTER            0x90060000
-
-static const value_string explore_area_names[] = {
-    { S7COMMP_EXPLORE_AREA_DB,                  "DB" },
-    { S7COMMP_EXPLORE_AREA_TONINSTANCE,         "TON Instance" },
-    { S7COMMP_EXPLORE_AREA_GLOBALDB_NO,         "Specific Global-DB" },
-    { S7COMMP_EXPLORE_AREA_INSTANCEDB,          "Specific Instance-DB" },
-    { S7COMMP_EXPLORE_AREA_INPUT,               "Input area" },
-    { S7COMMP_EXPLORE_AREA_OUTPUT,              "Output area" },
-    { S7COMMP_EXPLORE_AREA_BITMEM,              "M Bit memory" },
-    { S7COMMP_EXPLORE_AREA_9004,                "Unknown area 9004" },
-    { S7COMMP_EXPLORE_AREA_TIMER,               "S7-Timer" },
-    { S7COMMP_EXPLORE_AREA_COUNTER,             "S7-Counter" },
+/* Explore areas */
+#define S7COMMP_EXPLORE_CLASS_IQMCT             0x90
+#define S7COMMP_EXPLORE_CLASS_UDT               0x91
+#define S7COMMP_EXPLORE_CLASS_DB                0x92
+#define S7COMMP_EXPLORE_CLASS_FB                0x93
+#define S7COMMP_EXPLORE_CLASS_FC                0x94
+#define S7COMMP_EXPLORE_CLASS_OB                0x95
+#define S7COMMP_EXPLORE_CLASS_FBT               0x96
+#define S7COMMP_EXPLORE_CLASS_LIB               0x02
+static const value_string explore_class_names[] = {
+    { S7COMMP_EXPLORE_CLASS_IQMCT,              "IQMCT" },
+    { S7COMMP_EXPLORE_CLASS_UDT,                "UDT" },
+    { S7COMMP_EXPLORE_CLASS_DB,                 "DB" },
+    { S7COMMP_EXPLORE_CLASS_FB,                 "FB" },
+    { S7COMMP_EXPLORE_CLASS_FC,                 "FC" },
+    { S7COMMP_EXPLORE_CLASS_OB,                 "OB" },
+    { S7COMMP_EXPLORE_CLASS_FBT,                "FBT" },
+    { S7COMMP_EXPLORE_CLASS_LIB,                "LIB" },
     { 0,                                        NULL }
 };
+#define S7COMMP_EXPLORE_CLASS_IQMCT_INPUT       0x01
+#define S7COMMP_EXPLORE_CLASS_IQMCT_OUTPUT      0x02
+#define S7COMMP_EXPLORE_CLASS_IQMCT_BITMEM      0x03
+#define S7COMMP_EXPLORE_CLASS_IQMCT_04          0x04
+#define S7COMMP_EXPLORE_CLASS_IQMCT_TIMER       0x05
+#define S7COMMP_EXPLORE_CLASS_IQMCT_COUNTER     0x06
+static const value_string explore_class_iqmct_names[] = {
+    { S7COMMP_EXPLORE_CLASS_IQMCT_INPUT,        "Input area" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_OUTPUT,       "Output area" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_BITMEM,       "M Bit memory" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_04,           "Unknown area 04" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_TIMER,        "S7-Timer" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_COUNTER,      "S7-Counter" },
+    { 0,                                        NULL }
+};
+
+#define S7COMMP_EXPLORE_CLASS_LIB_STYPE         0x00
+#define S7COMMP_EXPLORE_CLASS_LIB_STYPEARR      0x01
+#define S7COMMP_EXPLORE_CLASS_LIB_SFC           0x02
+#define S7COMMP_EXPLORE_CLASS_LIB_SFB           0x03
+#define S7COMMP_EXPLORE_CLASS_LIB_FBT           0x04
+#define S7COMMP_EXPLORE_CLASS_LIB_FB            0x05
+#define S7COMMP_EXPLORE_CLASS_LIB_FC            0x06
+#define S7COMMP_EXPLORE_CLASS_LIB_FCT           0x07
+#define S7COMMP_EXPLORE_CLASS_LIB_UDT           0x08
+#define S7COMMP_EXPLORE_CLASS_LIB_STRUCT        0x09
+static const value_string explore_class_lib_names[] = {
+    { S7COMMP_EXPLORE_CLASS_LIB_STYPE,          "SimpleType" },
+    { S7COMMP_EXPLORE_CLASS_LIB_STYPEARR,       "SimpleTypeArray" },
+    { S7COMMP_EXPLORE_CLASS_LIB_SFC,            "SFC" },
+    { S7COMMP_EXPLORE_CLASS_LIB_SFB,            "SFB" },
+    { S7COMMP_EXPLORE_CLASS_LIB_FBT,            "FBT" },
+    { S7COMMP_EXPLORE_CLASS_LIB_FB,             "FB" },
+    { S7COMMP_EXPLORE_CLASS_LIB_FC,             "FC" },
+    { S7COMMP_EXPLORE_CLASS_LIB_FCT,            "FCT" },
+    { S7COMMP_EXPLORE_CLASS_LIB_UDT,            "UDT" },
+    { S7COMMP_EXPLORE_CLASS_LIB_STRUCT,         "STRUCT" },
+    { 0,                                        NULL }
+};
+
 
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -507,7 +543,13 @@ static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
 
-static gint hf_s7commp_explore_req_area1 = -1;
+static gint ett_s7commp_explore_req_area = -1;
+static gint hf_s7commp_explore_req_area = -1;
+static gint hf_s7commp_explore_req_area_class = -1;
+static gint hf_s7commp_explore_req_area_class_iqmct = -1;
+static gint hf_s7commp_explore_req_area_class_lib = -1;
+static gint hf_s7commp_explore_req_area_structindex = -1;
+static gint hf_s7commp_explore_req_area_section = -1;
 
 /* Explore result, variable (tag) description */
 static gint hf_s7commp_tagdescr_unknown1 = -1;
@@ -820,8 +862,23 @@ proto_register_s7commp (void)
             NULL, HFILL }},
 
         /* Exploring plc */
-        { &hf_s7commp_explore_req_area1,
-          { "Data area to explore", "s7comm-plus.explore.req_area1", FT_UINT32, BASE_HEX, VALS(explore_area_names), 0x0,
+        { &hf_s7commp_explore_req_area,
+          { "Data area to explore", "s7comm-plus.explore.req_area", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_explore_req_area_class,
+          { "Class", "s7comm-plus.explore.req_area.class", FT_UINT32, BASE_HEX, VALS(explore_class_names), 0xff000000,
+            NULL, HFILL }},
+        { &hf_s7commp_explore_req_area_class_iqmct,
+          { "Class IQMCT", "s7comm-plus.explore.req_area.class.iqmct", FT_UINT32, BASE_HEX, VALS(explore_class_iqmct_names), 0x00ff0000,
+            NULL, HFILL }},
+        { &hf_s7commp_explore_req_area_class_lib,
+          { "Class Lib", "s7comm-plus.explore.req_area.class.lib", FT_UINT32, BASE_HEX, VALS(explore_class_lib_names), 0x00ff0000,
+            NULL, HFILL }},
+        { &hf_s7commp_explore_req_area_section,
+          { "Section", "s7comm-plus.explore.req_area.section", FT_UINT32, BASE_DEC, NULL, 0x0000ffff,
+            "Section or DB number", HFILL }},
+        { &hf_s7commp_explore_req_area_structindex,
+          { "Struct index", "s7comm-plus.explore.req_area.structindex", FT_UINT32, BASE_DEC, NULL, 0x00ff0000,
             NULL, HFILL }},
 
          /* Explore result, variable (tag) description */
@@ -983,6 +1040,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
         &ett_s7commp_tagdescr_attributeflags,
+        &ett_s7commp_explore_req_area,
         &ett_s7commp_fragments,
         &ett_s7commp_fragment
     };
@@ -2518,35 +2576,65 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
      *  9005 0000 = ?
      *  9006 0000 = ?
      */
-    guint32 area, area_masked;
+    proto_item *item = NULL;
+    proto_tree *item_tree = NULL;
+    guint32 area;
     guint16 db1 = 0;
     guint16 db2 = 0;
+    guint8 exp_class;
+    guint8 sub_class;
+    guint16 section;
 
     area = tvb_get_ntohl(tvb, offset);
-    area_masked = area & 0xff000000;    /* unmask DB and structure number */
-    if ((area_masked != S7COMMP_EXPLORE_AREA_GLOBALDB_NO) &&
-        (area_masked != S7COMMP_EXPLORE_AREA_INSTANCEDB)) {   /* specific DB or FB instance */
-        /* use without mask */
-        area_masked = area;
-    }
+    exp_class = tvb_get_guint8(tvb, offset);
+    sub_class = tvb_get_guint8(tvb, offset + 1);
+    section = tvb_get_ntohs(tvb, offset + 2);
 
-    proto_tree_add_uint(tree, hf_s7commp_explore_req_area1, tvb, offset, 4, area_masked);
-
-    if ((area & 0xff000000) == S7COMMP_EXPLORE_AREA_GLOBALDB_NO) {
-        db1 = (area >> 16) & 0x00ff;
-        db2 = area & 0x0000ffff;
-        proto_tree_add_text(tree, tvb, offset, 2, "Global-DB Sub-Structure-Element: %d", db1);
-        proto_tree_add_text(tree, tvb, offset + 2, 2, "Global-DB Number: %d", db2);
-        if (pinfo != NULL)
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s No:%d]", val_to_str(area_masked, explore_area_names, "0x%08x"), db2);
-    } else if ((area & 0xff000000) == S7COMMP_EXPLORE_AREA_INSTANCEDB) {
-        db1 = area & 0x0000ffff;
-        proto_tree_add_text(tree, tvb, offset + 2, 2, "Instance-DB of FB number: %d", (area & 0x0000ffff));
-        if (pinfo != NULL)
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s of FB No:%d]", val_to_str(area_masked, explore_area_names, "0x%08x"), db1);
+    item = proto_tree_add_uint(tree, hf_s7commp_explore_req_area, tvb, offset, 4, area);
+    /* wenn die beiden ersten Bytes 0, dann ist das Format ein komplett anderes */
+    if (exp_class == 0) {
+        proto_item_append_text(item, " Area:[Objects]");
+        if (pinfo != NULL) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[Objects]");
+        }
     } else {
-        if (pinfo != NULL)
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s]", val_to_str(area_masked, explore_area_names, "0x%08x"));
+        item_tree = proto_item_add_subtree(item, ett_s7commp_explore_req_area);
+        proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class, tvb, offset, 4, area);
+        
+        switch (exp_class) {
+            case S7COMMP_EXPLORE_CLASS_IQMCT:
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class_iqmct, tvb, offset, 4, area);
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);
+                proto_item_append_text(item, " Area:[%s %s]", val_to_str(exp_class, explore_class_names, "0x%02x"), val_to_str(sub_class, explore_class_iqmct_names, "%d"));
+                if (pinfo != NULL) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s %s]", val_to_str(exp_class, explore_class_names, "0x%02x"), val_to_str(sub_class, explore_class_iqmct_names, "%d"));
+                }
+                break;
+            case S7COMMP_EXPLORE_CLASS_LIB:
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class_lib, tvb, offset, 4, area);
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);
+                proto_item_append_text(item, " Area:[%s %s %d]", val_to_str(exp_class, explore_class_names, "0x%02x"), val_to_str(sub_class, explore_class_lib_names, "%d"), section);
+                if (pinfo != NULL) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s %s %d]", val_to_str(exp_class, explore_class_names, "0x%02x"), val_to_str(sub_class, explore_class_lib_names, "%d"), section);
+                }
+                break;
+            case S7COMMP_EXPLORE_CLASS_DB:
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_structindex, tvb, offset, 4, area);
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);
+                proto_item_append_text(item, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                if (pinfo != NULL) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                }
+                break;
+            default:
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_structindex, tvb, offset, 4, area);
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);
+                proto_item_append_text(item, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                if (pinfo != NULL) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                }
+                break;
+        }
     }
     offset += 4;
     return offset;
@@ -2563,7 +2651,22 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
                                guint32 offset)
 {
     offset = s7commp_decode_explore_area(tvb, pinfo, tree, offset);
-    /* 4 oder 5 weitere Bytes unbekannter Funktion */
+    /* 4 oder 5 weitere Bytes unbekannter Funktion
+     * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
+     */
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    /* in manchen Telegrammen passt es, dass hier die Anzahl der folgenden Objekt-IDs steht */
+    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
     return offset;
 }
 /*******************************************************************************************************
