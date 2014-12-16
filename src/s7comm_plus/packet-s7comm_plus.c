@@ -35,7 +35,7 @@
 #include <time.h>
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
-#define USE_INTERNALS
+//#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
