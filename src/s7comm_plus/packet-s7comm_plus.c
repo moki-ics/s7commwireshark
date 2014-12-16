@@ -1380,7 +1380,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 
     guint8 string_actlength = 0;
 
-    guint32 start_offset;
+    guint32 start_offset = 0;
     guint32 length_of_value = 0;
 
     memset(str_val, 0, sizeof(str_val));
