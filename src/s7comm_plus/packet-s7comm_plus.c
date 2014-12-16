@@ -2912,7 +2912,7 @@ dissect_s7commp(tvbuff_t *tvb,
     guint32 frag_id;
     frame_state_t *packet_state;
     conversation_t *conversation;
-    conv_state_t *conversation_state;
+    conv_state_t *conversation_state = NULL;
     gboolean no_fragment = FALSE;
     gboolean first_fragment = FALSE;
     gboolean inner_fragment = FALSE;
