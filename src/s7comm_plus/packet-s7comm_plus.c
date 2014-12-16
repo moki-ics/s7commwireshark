@@ -3089,9 +3089,9 @@ dissect_s7commp(tvbuff_t *tvb,
             packet_state->inner_fragment = inner_fragment;
             packet_state->last_fragment = last_fragment;
             packet_state->start_frame = conversation_state->start_frame;
-            #ifdef DEBUG_REASSEMBLING
+#ifdef DEBUG_REASSEMBLING
             col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
-            #endif
+#endif
         } else {
             first_fragment = packet_state->first_fragment;
             inner_fragment = packet_state->inner_fragment;
@@ -3104,9 +3104,9 @@ dissect_s7commp(tvbuff_t *tvb,
             guint32 frag_data_len;
             /* guint32 frag_number; */
             gboolean more_frags;
-            #ifdef DEBUG_REASSEMBLING
+#ifdef DEBUG_REASSEMBLING
             col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
-            #endif*/
+#endif
 
             frag_id       = packet_state->start_frame;
             frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
