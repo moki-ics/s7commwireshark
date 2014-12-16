@@ -1376,7 +1376,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
-    const gchar *str_arr_prefix;
+    const gchar *str_arr_prefix = "Unknown";
 
     guint8 string_actlength = 0;
 
