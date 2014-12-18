@@ -2726,6 +2726,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint8 opcode = 0;
     guint32 offset_save = 0;
     guint32 offsetmax;
+    guint8 octet_count = 0;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -2875,14 +2876,16 @@ s7commp_decode_data(tvbuff_t *tvb,
      * followed by one byte length (0x20) and 32 bytes of data.
      */
     if (dlength > 0) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Request/Response Id: 0x%02x", tvb_get_guint8(tvb, offset));
-        dlength--;
-        offset++;
+        unsigned int requestResponseId = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Request/Response Id: %d", requestResponseId);
+        dlength -= octet_count;
+        offset += octet_count;
     }
     if (dlength > 0) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Len: %d", tvb_get_guint8(tvb, offset));
-        dlength--;
-        offset++;
+        unsigned int hashLen = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Len: %d", hashLen);
+        dlength -= octet_count;
+        offset += octet_count;
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
