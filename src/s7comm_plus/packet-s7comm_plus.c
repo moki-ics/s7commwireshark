@@ -2156,7 +2156,7 @@ s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
 static guint32
 s7commp_decode_data_request_write(tvbuff_t *tvb,
                                   proto_tree *tree,
-                                  guint16 dlength,
+                                  gint16 dlength,
                                   guint32 offset)
 {
     guint32 item_count = 0;
@@ -2222,7 +2222,7 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
 static guint32
 s7commp_decode_data_request_read(tvbuff_t *tvb,
                                  proto_tree *tree,
-                                 guint16 dlength,
+                                 gint16 dlength,
                                  guint32 offset)
 {
     guint32 item_count = 0;
@@ -2277,7 +2277,7 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
 static guint32
 s7commp_decode_data_response_read(tvbuff_t *tvb,
                                   proto_tree *tree,
-                                  guint16 dlength,
+                                  gint16 dlength,
                                   guint32 offset)
 {
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
@@ -2294,7 +2294,7 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
 static guint32
 s7commp_decode_data_response_write(tvbuff_t *tvb,
                                   proto_tree *tree,
-                                  guint16 dlength,
+                                  gint16 dlength,
                                   guint32 offset)
 {
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
@@ -2315,7 +2315,7 @@ static guint32
 s7commp_decode_notification(tvbuff_t *tvb,
                             packet_info *pinfo,
                             proto_tree *tree,
-                            guint16 dlength,
+                            gint16 dlength,
                             guint32 offset)
 {
     guint16 unknown2;
@@ -2465,7 +2465,7 @@ static guint32
 s7commp_decode_data_modify_session(tvbuff_t *tvb,
                                   packet_info *pinfo,
                                   proto_tree *tree,
-                                  guint16 dlength _U_,
+                                  gint16 dlength _U_,
                                   guint32 offset)
 {
     guint32 session_id;
@@ -2678,7 +2678,7 @@ static guint32
 s7commp_decode_explore_response(tvbuff_t *tvb,
                                packet_info *pinfo,
                                proto_tree *tree,
-                               guint16 dlength,
+                               gint16 dlength,
                                guint32 offset)
 {
     guint32 max_offset = offset + dlength;
@@ -2713,7 +2713,7 @@ static guint32
 s7commp_decode_data(tvbuff_t *tvb,
                     packet_info *pinfo,
                     proto_tree *tree,
-                    guint dlength,
+                    gint dlength,
                     guint32 offset)
 {
     proto_item *item = NULL;
@@ -2919,7 +2919,7 @@ dissect_s7commp(tvbuff_t *tvb,
 
     guint8 pdutype = 0;
     guint8 hlength = 4;
-    guint dlength = 0;
+    gint dlength = 0;
     guint8 keepaliveseqnum = 0;
 
     gboolean has_trailer = FALSE;
@@ -2989,7 +2989,7 @@ dissect_s7commp(tvbuff_t *tvb,
         offset += 2;
 
         /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
-        has_trailer = packetlength > (dlength + 4);
+        has_trailer = ((signed) packetlength) > (dlength + 4);
 
         /************************************************** START REASSEMBLING *************************************************************************/
         /*
