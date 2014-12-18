@@ -510,6 +510,7 @@ static gint ett_s7commp_notification_set = -1;          /* Subtree for notificat
 
 static gint ett_s7commp_itemaddr_area = -1;             /* Subtree for item address area */
 static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value is an array */
+static gint ett_s7commp_integrity = -1;                 /* Subtree for integrity block */
 
 /* Item Address */
 static gint hf_s7commp_item_count = -1;
@@ -613,6 +614,11 @@ static gint hf_s7commp_tagdescr_unknown4 = -1;
 static gint hf_s7commp_tagdescr_unknown5 = -1;
 static gint hf_s7commp_tagdescr_lid = -1;
 
+/* Integrity part, for 1500 */
+static gint hf_s7commp_integrity = -1;
+static gint hf_s7commp_integrity_id = -1;
+static gint hf_s7commp_integrity_len = -1;
+static gint hf_s7commp_integrity_block = -1;
 
 /* These fields used when reassembling S7COMMP fragments */
 static gint hf_s7commp_fragments = -1;
@@ -979,6 +985,20 @@ proto_register_s7commp (void)
           { "Tag description - LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
 
+        /* Integrity part for 1500 */
+        { &hf_s7commp_integrity,
+          { "Integrity part", "s7comm-plus.integrity", FT_NONE, BASE_NONE, NULL, 0x0,
+            "Integrity part for 1500", HFILL }},
+        { &hf_s7commp_integrity_id,
+          { "Integrity Id", "s7comm-plus.integrity.id", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_integrity_len,
+          { "Integrity Length", "s7comm-plus.integrity.len", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_integrity_block,
+          { "Integrity Block", "s7comm-plus.integrity.block", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
         /*** Trailer fields ***/
         { &hf_s7commp_trailer,
           { "Trailer", "s7comm-plus.trailer", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -1041,6 +1061,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemval_array,
         &ett_s7commp_tagdescr_attributeflags,
         &ett_s7commp_explore_req_area,
+        &ett_s7commp_integrity,
         &ett_s7commp_fragments,
         &ett_s7commp_fragment
     };
@@ -2740,6 +2761,8 @@ s7commp_decode_data(tvbuff_t *tvb,
 {
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
+    proto_item *integrity_item = NULL;
+    proto_tree *integrity_tree = NULL;
 
     guint16 seqnum = 0;
     guint16 functioncode = 0;
@@ -2749,6 +2772,8 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint32 offset_save = 0;
     guint32 offsetmax;
     guint8 octet_count = 0;
+    guint32 integrity_id = 0;
+    guint8 integrity_len = 0;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -2894,20 +2919,33 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset = offset_save; /* zurücksetzen wenn nicht gefunden */
         }
     }
-    /* The trailing undecoded data of the S7-1500 seems to start with 1 byte id,
+    /* The trailing undecoded data of the S7-1500 seems to start with 1 byte / VLQ id,
      * followed by one byte length (0x20) and 32 bytes of data.
      */
-    if (dlength > 0) {
-        unsigned int requestResponseId = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Request/Response Id: %d", requestResponseId);
+    if (dlength >= 34) {
+        offset_save = offset;
+        integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
+        integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
+
+        integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
         dlength -= octet_count;
         offset += octet_count;
-    }
-    if (dlength > 0) {
-        unsigned int hashLen = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Len: %d", hashLen);
-        dlength -= octet_count;
-        offset += octet_count;
+
+        integrity_len = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_len, tvb, offset, 1, integrity_len);
+        dlength -= 1;
+        offset += 1;
+        /* Length should always be 32. If not, then the previous decoding was not correct.
+         * To prevent malformed packet errors, check this.
+         */
+        if (integrity_len == 32) {
+            proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_block, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+            dlength -= integrity_len;
+            offset += integrity_len;
+        } else {
+            proto_tree_add_text(integrity_tree, tvb, offset-1 , 1, "Error in dissector: Integrity length should be 32!");
+        }
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
