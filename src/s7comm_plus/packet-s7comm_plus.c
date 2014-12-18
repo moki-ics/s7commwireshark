@@ -1731,6 +1731,7 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
     guint16 data_len = 0;
     int object_level = 0;
     guint32 length_of_value = 0;
+    guint32 uint32_value = 0;
 
     /* Einlesen bis offset == maxoffset */
     while ((unknown_type_occured == FALSE) && (offset + 1 < offsetmax))
@@ -1741,10 +1742,10 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
         data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
         /* Syntax Id:
-         * a1 = Start eines Objekts + 8 Bytes unbekannter Funktion
+         * a1 = Start eines Objekts, mit Class-Id und optionaler Attribut-Id
          * a2 = Terminierung eines Objekts, keine weiteren Daten
          * a3 = Strukturierter Wert mit: id, flags, typ, value
-         * a4 = Funktion unbekannt, 6 Bytes unbekannter Funktion folgen
+         * a4 = Enthält wahrscheinlich eine Relation-Id
          * 00 = Terminierung einer Struktur
          *
          * Werte innerhalb einer Struktur haben keine syntax-id mehr!
@@ -1766,10 +1767,27 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
             offset += 1;
             if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {                    /* 0xa1 */
-                proto_tree_add_text(data_item_tree, tvb, offset, 8, "Start of Object (Lvl:%d -> Lvl:%d): 0x%08x / 0x%08x", object_level, object_level+1, tvb_get_ntohl(tvb, offset), tvb_get_ntohl(tvb, offset+4));
                 proto_item_append_text(data_item_tree, ": Start of Object (Lvl:%d -> Lvl:%d)", object_level, object_level+1);
                 object_level++;
-                offset += 8;
+                uint32_value = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Value 1: %u", uint32_value);
+                offset += 4;
+                uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Class Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
+                offset += octet_count;
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Class Id Flags: 0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                if (uint32_value != 0) {
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
+                    offset += octet_count;
+                    /* Es folgen nur Flags, wenn eine Attribut-Id ungleich 0 vorhanden ist */
+                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Attribute Id Flags: 0x%02x", tvb_get_guint8(tvb, offset));
+                    offset += 1;
+                } else {
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id: None (%u)", uint32_value);
+                    offset += octet_count;
+                }
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 continue;
             } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT) {              /* 0xa2 */
@@ -1783,9 +1801,13 @@ s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
                 }
                 continue;
             } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xA4) {                    /* 0xa4 */
-                proto_tree_add_text(data_item_tree, tvb, offset, 6, "Unknown Function of Syntax-Id 0xa4: 0x%08x / 0x%04x", tvb_get_ntohl(tvb, offset), tvb_get_ntohs(tvb, offset+4));
-                proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4");
-                offset += 6;
+                proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xa4 (Relation?)");
+                /* Der erste Wert ist ein VLQ mit einer Relation-Id. Danach folgen fix 4 Byte */
+                uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Relation Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
+                offset += octet_count;
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+                offset += 4;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 continue;
             } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC) {             /* 0xa7 */
@@ -2600,7 +2622,7 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
     } else {
         item_tree = proto_item_add_subtree(item, ett_s7commp_explore_req_area);
         proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class, tvb, offset, 4, area);
-        
+
         switch (exp_class) {
             case S7COMMP_EXPLORE_CLASS_IQMCT:
                 proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class_iqmct, tvb, offset, 4, area);
