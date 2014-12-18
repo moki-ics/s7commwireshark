@@ -2871,8 +2871,20 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset = offset_save; /* zurücksetzen wenn nicht gefunden */
         }
     }
-
-    /* Show undecoded data as raw bytes */
+    /* The trailing undecoded data of the S7-1500 seems to start with 1 byte id,
+     * followed by one byte length (0x20) and 32 bytes of data.
+     */
+    if (dlength > 0) {
+        proto_tree_add_text(tree, tvb, offset, 1, "Request/Response Id: 0x%02x", tvb_get_guint8(tvb, offset));
+        dlength--;
+        offset++;
+    }
+    if (dlength > 0) {
+        proto_tree_add_text(tree, tvb, offset, 1, "Len: %d", tvb_get_guint8(tvb, offset));
+        dlength--;
+        offset++;
+    }
+    /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
         offset += dlength;
