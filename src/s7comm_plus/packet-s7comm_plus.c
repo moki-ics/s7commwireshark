@@ -2425,7 +2425,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
 
         item_return_value = tvb_get_guint8(tvb, offset);
         if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
-            proto_tree_add_text(tree, tvb, offset , 1, "Unknown 5: 0x%02x", item_return_value);
+            proto_tree_add_text(tree, tvb, offset, 1, "Unknown 5: 0x%02x", item_return_value);
             offset += 1;
         }
         /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
@@ -2459,7 +2459,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
 
-                proto_tree_add_text(data_item_tree, tvb, offset , 1, "Return value: 0x%02x", item_return_value);
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Return value: 0x%02x", item_return_value);
                 offset += 1;
                 if (item_return_value == 0x92) {
                     /* Item reference number. Is sent to plc on the subscription-telegram for the addresses. */
@@ -2515,12 +2515,12 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
 
     /* 4 Bytes Session Id */
     session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset , 4, "Session Id to modify: 0x%08x", session_id);
+    proto_tree_add_text(tree, tvb, offset, 4, "Session Id to modify: 0x%08x", session_id);
     col_append_fstr(pinfo->cinfo, COL_INFO, " ModSessId=0x%08x", session_id);
     offset += 4;
 
     /* 1 Byte (or VLQ?) number of items? */
-    proto_tree_add_text(tree, tvb, offset , 1, "Number of items following?: %d", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of items following?: %d", tvb_get_guint8(tvb, offset));
     offset += 1;
     offset = s7commp_decode_id_value_series(tvb, tree, offset);
     return offset;
@@ -2578,16 +2578,19 @@ s7commp_decode_response_readobject(tvbuff_t *tvb,
     guint16 errorcode;
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
-    if (errorcode == 0) {
-        if (tvb_get_guint8(tvb, offset) == 0x00) {
-            proto_tree_add_text(tree, tvb, offset , 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
-            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-            start_offset = offset;
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
-            proto_item_set_len(data_item_tree, offset - start_offset);
+    if (tvb_get_guint8(tvb, offset) == 0x00) {
+        proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+        start_offset = offset;
+        /* This function should be possible to handle a Null-Value */
+        offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+        /* when a struct was entered, then id, flag, type follows until terminating null */
+        if (struct_level > 0) {
+            offset = s7commp_decode_id_value_series(tvb, data_item_tree, offset);
         }
+        proto_item_set_len(data_item_tree, offset - start_offset);
     }
     return offset;
 }
@@ -2697,18 +2700,18 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
     /* 4 oder 5 weitere Bytes unbekannter Funktion
      * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
      */
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
     /* in manchen Telegrammen passt es, dass hier die Anzahl der folgenden Objekt-IDs steht */
-    proto_tree_add_text(tree, tvb, offset , 1, "Explore request unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
     return offset;
 }
@@ -2735,7 +2738,7 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
     offset += 4;
     if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen? */
-        /* Es kann sein dass hier noch ein Wert VLQ , wenn nicht ein STARTOBJECT (0xa1) folgt.
+        /* Es kann sein dass hier noch ein Wert VLQ, wenn nicht ein STARTOBJECT (0xa1) folgt.
          * Welche Logik dahinterstecken mag. Das macht auch nur die 1500.
          */
         if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
@@ -2954,7 +2957,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             dlength -= integrity_len;
             offset += integrity_len;
         } else {
-            proto_tree_add_text(integrity_tree, tvb, offset-1 , 1, "Error in dissector: Integrity length should be 32!");
+            proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity length should be 32!");
         }
     }
     /* Show remaining undecoded data as raw bytes */
@@ -3050,7 +3053,7 @@ dissect_s7commp(tvbuff_t *tvb,
         col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", keepaliveseqnum);
         offset += 1;
         /* dann noch ein Byte, noch nicht klar wozu */
-        proto_tree_add_text(s7commp_header_tree, tvb, offset , 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
+        proto_tree_add_text(s7commp_header_tree, tvb, offset, 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
     } else {
         /* 3/4: Data length */
