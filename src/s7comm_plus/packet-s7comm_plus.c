@@ -2696,6 +2696,17 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
                                proto_tree *tree,
                                guint32 offset)
 {
+    int number_of_objects = 0;
+    int number_of_ids = 0;
+    int i, j;
+    guint32 start_offset;
+    guint32 id_number = 0;
+    guint8 octet_count = 0;
+    guint8 datatype;
+    int id_count = 0;
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+
     offset = s7commp_decode_explore_area(tvb, pinfo, tree, offset);
     /* 4 oder 5 weitere Bytes unbekannter Funktion
      * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
@@ -2708,11 +2719,57 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
     offset += 1;
     proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
+    number_of_objects = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of following objects with (type, val): %d", number_of_objects);
     offset += 1;
-    /* in manchen Telegrammen passt es, dass hier die Anzahl der folgenden Objekt-IDs steht */
-    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 6: 0x%02x", tvb_get_guint8(tvb, offset));
+    number_of_ids = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of following ID Numbers: %d", number_of_ids);
     offset += 1;
+
+    if (number_of_objects > 0) {
+        start_offset = offset;
+        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+        proto_item_append_text(data_item_tree, " (Objects with (type, value))");
+        for (i = 0; i < number_of_objects; i++) {
+            /* Hier gibt es nur eine Typ-Kennung und den Wert, ohne Flags. Meistens (immer?) ist es eine Struct */
+            datatype = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
+            offset += 1;
+            if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: %d", tvb_get_ntohl(tvb, offset));
+                offset += 4;
+                offset = s7commp_decode_id_value_series(tvb, data_item_tree, offset);
+                /* Dann folgt nochmal eine Anzahl an IDs, 2 Bytes */
+                id_count = tvb_get_ntohs(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Number of following Sub-Ids: %d", id_count);
+                offset += 2;
+                for (j = 0; j < id_count; j++) {
+                    id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+                    offset += octet_count;
+                }
+            } else {
+                proto_tree_add_text(data_item_tree, tvb, offset, 0, "TODO, don't know how to handle this.");
+                break;
+            }
+        }
+        proto_item_set_len(data_item_tree, offset - start_offset);
+    }
+
+    if (number_of_ids > 0) {
+        start_offset = offset;
+        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+        proto_item_append_text(data_item_tree, " (ID Numbers)");
+        for (i = 0; i < number_of_ids; i++) {
+            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+            offset += octet_count;
+        }
+        proto_item_set_len(data_item_tree, offset - start_offset);
+    }
+
     return offset;
 }
 /*******************************************************************************************************
