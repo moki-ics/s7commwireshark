@@ -2919,18 +2919,28 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset = offset_save; /* zurücksetzen wenn nicht gefunden */
         }
     }
+
+    /* Request ReadObject has two bytes of unknown meaning */
+    if (opcode == S7COMMP_OPCODE_REQ && functioncode == S7COMMP_FUNCTIONCODE_READOBJECT) {
+        proto_tree_add_text(tree, tvb, offset, 2, "Request ReadObject unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
+        dlength -= 2;
+    }
+
     /* The trailing undecoded data of the S7-1500 seems to start with 1 byte / VLQ id,
      * followed by one byte length (0x20) and 32 bytes of data.
      */
-    if (dlength >= 34) {
+    if (dlength >= 32) {
         offset_save = offset;
         integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
         integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
-
-        integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-        dlength -= octet_count;
-        offset += octet_count;
+        /* In EndSession-Response, the Id is missing! */
+        if (!(opcode == S7COMMP_OPCODE_RES && functioncode == S7COMMP_FUNCTIONCODE_ENDSESSION)) {
+            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+            dlength -= octet_count;
+            offset += octet_count;
+        }
 
         integrity_len = tvb_get_guint8(tvb, offset);
         proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_len, tvb, offset, 1, integrity_len);
