@@ -1791,7 +1791,7 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, ": Start of Object (Lvl:%d -> Lvl:%d)", object_level, object_level+1);
                 object_level++;
                 uint32_value = tvb_get_ntohl(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Value 1: %u", uint32_value);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Relation Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
                 offset += 4;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Class Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
