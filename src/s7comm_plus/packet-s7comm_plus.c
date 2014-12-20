@@ -2705,6 +2705,36 @@ s7commp_decode_response_0x0556(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decode request of function 0x0560
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_0x0560(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              guint32 offset)
+{
+    proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode response of function 0x0560
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_0x0560(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    guint16 errorcode;
+
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Exploration areas
  *
  *******************************************************************************************************/
@@ -3028,6 +3058,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_0x0556:
                     offset = s7commp_decode_request_0x0556(tvb, item_tree, dlength, offset);
                     break;
+                case S7COMMP_FUNCTIONCODE_0x0560:
+                    offset = s7commp_decode_request_0x0560(tvb, item_tree, offset);
+                    break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
@@ -3068,6 +3101,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     break;
                 case S7COMMP_FUNCTIONCODE_0x0556:
                     offset = s7commp_decode_response_0x0556(tvb, item_tree, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_0x0560:
+                    offset = s7commp_decode_response_0x0560(tvb, item_tree, offset);
                     break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
