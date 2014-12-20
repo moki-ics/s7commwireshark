@@ -1729,14 +1729,14 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decodes a series of following fields per set: Syntax-ID, ID, datatype-flags, datatype, value
+ * Decodes a list of following fields per set: Syntax-ID, ID, datatype-flags, datatype, value
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_synid_id_value_series(tvbuff_t *tvb,
-                                     proto_tree *tree,
-                                     guint32 offset,
-                                     const guint32 offsetmax)
+s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset,
+                                   const guint32 offsetmax)
 {
     guint32 start_offset;
     guint32 item_nr = 1;
@@ -1910,7 +1910,7 @@ s7commp_decode_startsession(tvbuff_t *tvb,
         proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unknown_bytes, tvb_get_ptr(tvb, offset, unknown_bytes));
         offset += unknown_bytes;
     }
-    return s7commp_decode_synid_id_value_series(tvb, tree, offset, offsetmax);
+    return s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
 }
 /*******************************************************************************************************
  *
@@ -2077,14 +2077,14 @@ s7commp_decode_item_value(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Internal: Decodes a series of item-number or and a value, until terminating null and lowest struct level
+ * Internal: Decodes a list of item-number or and a value, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_id_or_itemnumber_value_series_(tvbuff_t *tvb,
-                                       proto_tree *tree,
-                                       guint32 offset,
-                                       gint hf_of_first_structmember)
+s7commp_decode_id_or_itemnumber_value_list_(tvbuff_t *tvb,
+                                            proto_tree *tree,
+                                            guint32 offset,
+                                            gint hf_of_first_structmember)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -2122,37 +2122,37 @@ s7commp_decode_id_or_itemnumber_value_series_(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Decodes a series of item-number and a value, until terminating null and lowest struct level
+ * Decodes a list of item-number and a value, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_itemnumber_value_series(tvbuff_t *tvb,
-                                       proto_tree *tree,
-                                       guint32 offset)
+s7commp_decode_itemnumber_value_list(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     guint32 offset)
 {
-    return s7commp_decode_id_or_itemnumber_value_series_(tvb, tree, offset, hf_s7commp_itemval_itemnumber);
+    return s7commp_decode_id_or_itemnumber_value_list_(tvb, tree, offset, hf_s7commp_itemval_itemnumber);
 }
 /*******************************************************************************************************
  *
- * Decodes a series of item-id and a value, until terminating null and lowest struct level
+ * Decodes a list of item-id and a value, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_id_value_series(tvbuff_t *tvb,
-                               proto_tree *tree,
-                               guint32 offset)
+s7commp_decode_id_value_list(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset)
 {
-    return s7commp_decode_id_or_itemnumber_value_series_(tvb, tree, offset, hf_s7commp_data_id_number);
+    return s7commp_decode_id_or_itemnumber_value_list_(tvb, tree, offset, hf_s7commp_data_id_number);
 }
 /*******************************************************************************************************
  *
- * Decodes a series of error values, until terminating null and lowest struct level
+ * Decodes a list of error values, until terminating null and lowest struct level
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_itemnumber_errorvalue_series(tvbuff_t *tvb,
-                                            proto_tree *tree,
-                                            guint32 offset)
+s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
+                                          proto_tree *tree,
+                                          guint32 offset)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -2324,8 +2324,8 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
                                   guint32 offset)
 {
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    offset = s7commp_decode_itemnumber_value_series(tvb, tree, offset);
-    offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
+    offset = s7commp_decode_itemnumber_value_list(tvb, tree, offset);
+    offset = s7commp_decode_itemnumber_errorvalue_list(tvb, tree, offset);
 
     return offset;
 }
@@ -2345,7 +2345,7 @@ s7commp_decode_data_response_write(tvbuff_t *tvb,
      */
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    offset = s7commp_decode_itemnumber_errorvalue_series(tvb, tree, offset);
+    offset = s7commp_decode_itemnumber_errorvalue_list(tvb, tree, offset);
     return offset;
 }
 
@@ -2522,7 +2522,7 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
     /* 1 Byte (or VLQ?) number of items? */
     proto_tree_add_text(tree, tvb, offset, 1, "Number of items following?: %d", tvb_get_guint8(tvb, offset));
     offset += 1;
-    offset = s7commp_decode_id_value_series(tvb, tree, offset);
+    offset = s7commp_decode_id_value_list(tvb, tree, offset);
     return offset;
 }
 /*******************************************************************************************************
@@ -2588,9 +2588,66 @@ s7commp_decode_response_readobject(tvbuff_t *tvb,
         offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
         /* when a struct was entered, then id, flag, type follows until terminating null */
         if (struct_level > 0) {
-            offset = s7commp_decode_id_value_series(tvb, data_item_tree, offset);
+            offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset);
         }
         proto_item_set_len(data_item_tree, offset - start_offset);
+    }
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode request of function 0x0524
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_0x0524(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              guint32 offset)
+{
+    guint8 octet_count = 0;
+    guint32 item_number = 0;
+
+    /* Ein Datensatz wurde bisher nur mit 12 Bytes Länge gesichtet. Minus 4 Null-Bytes am Ende bleiben 8 Bytes
+     * - 4 Bytes fix
+     * - 1 VLQ
+     * - 2 Nullbytes?
+     */
+    proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+
+    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
+    offset += octet_count;
+
+    proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode response of function 0x0524
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_0x0524(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    guint16 errorcode;
+    guint8 number_of_items;
+    int i;
+
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+
+    number_of_items = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of following values: %d", number_of_items);
+    offset += 1;
+
+    for (i = 1; i <= number_of_items; i++) {
+        /* Bisher ist unbekannt was dieses für Werte sind */
+        proto_tree_add_text(tree, tvb, offset, 4, "Unknown Value[%d]: 0x%08x", i, tvb_get_ntohl(tvb, offset));
+        offset += 4;
     }
     return offset;
 }
@@ -2739,7 +2796,7 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
             if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
                 proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: %d", tvb_get_ntohl(tvb, offset));
                 offset += 4;
-                offset = s7commp_decode_id_value_series(tvb, data_item_tree, offset);
+                offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset);
                 /* Dann folgt nochmal eine Anzahl an IDs, 2 Bytes */
                 id_count = tvb_get_ntohs(tvb, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, 2, "Number of following Sub-Ids: %d", id_count);
@@ -2803,7 +2860,7 @@ s7commp_decode_explore_response(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
         }
-        offset = s7commp_decode_synid_id_value_series(tvb, tree, offset, max_offset);
+        offset = s7commp_decode_synid_id_value_list(tvb, tree, offset, max_offset);
     }
     return offset;
 }
@@ -2912,6 +2969,10 @@ s7commp_decode_data(tvbuff_t *tvb,
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_0x0524:
+                    offset = s7commp_decode_request_0x0524(tvb, item_tree, offset);
+                    break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
@@ -2947,6 +3008,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
                     break;
+                case S7COMMP_FUNCTIONCODE_0x0524:
+                    offset = s7commp_decode_response_0x0524(tvb, item_tree, offset);
+                    break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
@@ -2969,7 +3033,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                 proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 2, unknown1);
                 offset += 2;
                 /* Ab hier Standard: ID, Flags, Typ, Wert */
-                offset = s7commp_decode_id_value_series(tvb, tree, offset);
+                offset = s7commp_decode_id_value_list(tvb, tree, offset);
                 dlength = dlength - (offset - offset_save);
                 break;
             }
