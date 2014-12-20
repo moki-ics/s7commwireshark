@@ -2698,7 +2698,7 @@ s7commp_decode_response_0x0556(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
 
     return offset;
@@ -2731,6 +2731,46 @@ s7commp_decode_response_0x0560(tvbuff_t *tvb,
     guint16 errorcode;
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode request of function 0x056b
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_0x056b(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              guint32 offset)
+{
+    proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+    proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+    offset = s7commp_decode_itemnumber_value_list(tvb, tree, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode response of function 0x056b
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_0x056b(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    guint16 errorcode;
+
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
+    offset = s7commp_decode_itemnumber_value_list(tvb, tree, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
     return offset;
 }
 /*******************************************************************************************************
@@ -3061,6 +3101,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_0x0560:
                     offset = s7commp_decode_request_0x0560(tvb, item_tree, offset);
                     break;
+                case S7COMMP_FUNCTIONCODE_0x056b:
+                    offset = s7commp_decode_request_0x056b(tvb, item_tree, offset);
+                    break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
@@ -3104,6 +3147,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     break;
                 case S7COMMP_FUNCTIONCODE_0x0560:
                     offset = s7commp_decode_response_0x0560(tvb, item_tree, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_0x056b:
+                    offset = s7commp_decode_response_0x056b(tvb, item_tree, offset);
                     break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
