@@ -1865,29 +1865,59 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Start session
+ * Request Start session
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_startsession(tvbuff_t *tvb,
-                            proto_tree *tree,
-                            guint32 offset,
-                            const guint32 offsetmax,
-                            guint8 opcode)
+s7commp_decode_request_startsession(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    const guint32 offsetmax,
+                                    guint8 pdutype)
+{
+    int struct_level = 1;
+    guint32 start_offset;
+    guint32 id_number;
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+
+    start_offset = offset;
+    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+    id_number = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
+    proto_item_append_text(data_item_tree, " [%u]:", id_number);
+    offset += 4;
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    proto_item_set_len(data_item_tree, offset - start_offset);
+    /* es folgen noch 4 Null-Bytes */
+    proto_tree_add_text(tree, tvb, offset, 4, "Unknown value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+
+    /* Bei DATA folgt noch ein einzelnes Byte unbekannter Funktion */
+    if (pdutype == S7COMMP_PDUTYPE_DATA) {
+        proto_tree_add_text(tree, tvb, offset, 1, "Unknown value in Data-StartSession: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+    }
+    return s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
+}
+/*******************************************************************************************************
+ *
+ * Response Start session
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_startsession(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    const guint32 offsetmax,
+                                    guint8 pdutype)
 {
     guint32 unknown_bytes = 0;  /* einige Bytes unbekannt */
-    guint8 scanned_byte = 0;
     guint8 sessionid_count = 0;
     guint8 octet_count = 0;
     guint32 value = 0;
     int i;
-
-    /* Eine Session-Aufbau wird z.B. für die folgenden Dinge verwendet:
-     * - Herstellung einer Verbindung zur SPS. Dann ist der PDU-Typ CONNECT.
-     * - Herstellung einer Verbindung zur Abfrage von zyklischen Daten, wie Variablendiensten oder Baugruppenzustand.
-     * - Aufbau einer Upload-Session, in deren Folge ein Baustein über mehrere PDUs in die SPS hochgeladen werden kann.
-     *
-     */
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
     sessionid_count = tvb_get_guint8(tvb, offset);
@@ -1898,19 +1928,11 @@ s7commp_decode_startsession(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset, octet_count, "Result Session Id[%i]: 0x%08x", i, value);
         offset += octet_count;
     }
-
-    while ((offset + unknown_bytes) < offsetmax) {    /* as long as we don't know how to find the first position for the following decode, we use this wile as workaround */
-        scanned_byte = tvb_get_guint8(tvb, offset + unknown_bytes);
-        if (scanned_byte == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
-            break; /* found some known good ID */
-        }
-        else unknown_bytes++;
+    /* Ein Daten-Objekt gibt es nur beim Connect */
+    if (pdutype == S7COMMP_PDUTYPE_CONNECT) {
+        offset = s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
     }
-    if (unknown_bytes > 0) {
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, unknown_bytes, tvb_get_ptr(tvb, offset, unknown_bytes));
-        offset += unknown_bytes;
-    }
-    return s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
+    return offset;
 }
 /*******************************************************************************************************
  *
@@ -2743,7 +2765,7 @@ s7commp_decode_request_0x056b(tvbuff_t *tvb,
                               proto_tree *tree,
                               guint32 offset)
 {
-    proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    proto_tree_add_text(tree, tvb, offset, 4, "Sub Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
     proto_tree_add_text(tree, tvb, offset, 4, "Request unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
@@ -2996,7 +3018,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                     packet_info *pinfo,
                     proto_tree *tree,
                     gint dlength,
-                    guint32 offset)
+                    guint32 offset,
+                    guint8 pdutype)
 {
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
@@ -3081,7 +3104,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_data_modify_session(tvb, pinfo, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                    offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode);
+                    offset = s7commp_decode_request_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
@@ -3128,7 +3151,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_returnvalue(tvb, item_tree, offset, NULL);
                     break;
                 case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                    offset = s7commp_decode_startsession(tvb, item_tree, offset, offset + dlength, opcode);
+                    offset = s7commp_decode_response_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
                     offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
@@ -3509,7 +3532,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 if (last_fragment) {
                     col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
                 }
-                offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset);
+                offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, pdutype);
             }
             /******************************************************
              * Trailer
