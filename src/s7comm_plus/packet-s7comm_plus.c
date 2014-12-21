@@ -617,8 +617,8 @@ static gint hf_s7commp_tagdescr_lid = -1;
 /* Integrity part, for 1500 */
 static gint hf_s7commp_integrity = -1;
 static gint hf_s7commp_integrity_id = -1;
-static gint hf_s7commp_integrity_len = -1;
-static gint hf_s7commp_integrity_block = -1;
+static gint hf_s7commp_integrity_digestlen = -1;
+static gint hf_s7commp_integrity_digest = -1;
 
 /* These fields used when reassembling S7COMMP fragments */
 static gint hf_s7commp_fragments = -1;
@@ -992,11 +992,11 @@ proto_register_s7commp (void)
         { &hf_s7commp_integrity_id,
           { "Integrity Id", "s7comm-plus.integrity.id", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_integrity_len,
-          { "Integrity Length", "s7comm-plus.integrity.len", FT_UINT8, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_integrity_digestlen,
+          { "Digest Length", "s7comm-plus.integrity.digestlen", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_integrity_block,
-          { "Integrity Block", "s7comm-plus.integrity.block", FT_BYTES, BASE_NONE, NULL, 0x0,
+        { &hf_s7commp_integrity_digest,
+          { "Packet Digest", "s7comm-plus.integrity.digest", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
         /*** Trailer fields ***/
@@ -3230,18 +3230,18 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
 
         integrity_len = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_len, tvb, offset, 1, integrity_len);
+        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_digestlen, tvb, offset, 1, integrity_len);
         dlength -= 1;
         offset += 1;
         /* Length should always be 32. If not, then the previous decoding was not correct.
          * To prevent malformed packet errors, check this.
          */
         if (integrity_len == 32) {
-            proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_block, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+            proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
             dlength -= integrity_len;
             offset += integrity_len;
         } else {
-            proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity length should be 32!");
+            proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
         }
     }
     /* Show remaining undecoded data as raw bytes */
