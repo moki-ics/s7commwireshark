@@ -2953,6 +2953,7 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     int i, j;
     guint32 start_offset;
     guint32 id_number = 0;
+    guint32 uint32value;
     guint8 octet_count = 0;
     guint8 datatype;
     int id_count = 0;
@@ -2963,8 +2964,9 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     /* 4 oder 5 weitere Bytes unbekannter Funktion
      * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
      */
-    proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
+    uint32value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_text(tree, tvb, offset, octet_count, "Explore request unknown 1 (ID?): %u", uint32value);
+    offset += octet_count;
     proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
     proto_tree_add_text(tree, tvb, offset, 1, "Explore request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
