@@ -1880,6 +1880,9 @@ s7commp_decode_request_startsession(tvbuff_t *tvb,
     guint32 id_number;
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
+    guint8 next_byte;
+    guint8 octet_count = 0;
+    guint32 value = 0;
 
     start_offset = offset;
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
@@ -1894,10 +1897,16 @@ s7commp_decode_request_startsession(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
 
-    /* Bei DATA folgt noch ein einzelnes Byte unbekannter Funktion */
-    if (pdutype == S7COMMP_PDUTYPE_DATA) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Unknown value in Data-StartSession: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
+    /* Es gibt keine bekannte Möglichkeit anhand der vorigen Werte festzustellen, ob hier noch ein eingeschobener Wert (VLQ) folgt.
+     * Dieser zusätzliche Wert ist so wie es aussieht nur bei einer 1500 vorhanden.
+     * Darum wird geprüft, ob der nächste Wert nicht ein Objekt-Anfang darstellt.
+     * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
+     */
+    next_byte = tvb_get_guint8(tvb, offset);
+    if (pdutype == S7COMMP_PDUTYPE_DATA && next_byte != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+        value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-StartSession: %u", value);
+        offset += octet_count;
     }
     return s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
 }
