@@ -98,32 +98,31 @@ static const value_string opcode_names[] = {
 
 /**************************************************************************
  * Function codes in data part.
- * All codes which have been seen in captures are listed as hex-codes.
  */
 #define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
-#define S7COMMP_FUNCTIONCODE_STARTSESSION       0x04ca
-#define S7COMMP_FUNCTIONCODE_ENDSESSION         0x04d4
-#define S7COMMP_FUNCTIONCODE_MODSESSION         0x04f2
-#define S7COMMP_FUNCTIONCODE_0x0524             0x0524
-#define S7COMMP_FUNCTIONCODE_WRITE              0x0542
-#define S7COMMP_FUNCTIONCODE_READ               0x054c
-#define S7COMMP_FUNCTIONCODE_0x0556             0x0556
-#define S7COMMP_FUNCTIONCODE_0x0560             0x0560
-#define S7COMMP_FUNCTIONCODE_0x056b             0x056b
-#define S7COMMP_FUNCTIONCODE_READOBJECT         0x0586
+#define S7COMMP_FUNCTIONCODE_CREATEOBJECT       0x04ca
+#define S7COMMP_FUNCTIONCODE_DELETEOBJECT       0x04d4
+#define S7COMMP_FUNCTIONCODE_SETVARIABLE        0x04f2
+#define S7COMMP_FUNCTIONCODE_GETLINK            0x0524
+#define S7COMMP_FUNCTIONCODE_SETMULTIVAR        0x0542
+#define S7COMMP_FUNCTIONCODE_GETMULTIVAR        0x054c
+#define S7COMMP_FUNCTIONCODE_BEGINSEQUENCE      0x0556
+#define S7COMMP_FUNCTIONCODE_ENDSEQUENCE        0x0560
+#define S7COMMP_FUNCTIONCODE_INVOKE             0x056b
+#define S7COMMP_FUNCTIONCODE_GETVARSUBSTR       0x0586
 
 static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
-    { S7COMMP_FUNCTIONCODE_STARTSESSION,        "Start session" },
-    { S7COMMP_FUNCTIONCODE_ENDSESSION,          "End session" },
-    { S7COMMP_FUNCTIONCODE_MODSESSION,          "Modify session" },
-    { S7COMMP_FUNCTIONCODE_0x0524,              "0x0524 - Unknown" },
-    { S7COMMP_FUNCTIONCODE_WRITE,               "Write" },
-    { S7COMMP_FUNCTIONCODE_READ,                "Read" },
-    { S7COMMP_FUNCTIONCODE_0x0556,              "0x0556 - Unknown" },
-    { S7COMMP_FUNCTIONCODE_0x0560,              "0x0560 - Unknown" },
-    { S7COMMP_FUNCTIONCODE_0x056b,              "0x056b - Unknown" },
-    { S7COMMP_FUNCTIONCODE_READOBJECT,          "Read object" },
+    { S7COMMP_FUNCTIONCODE_CREATEOBJECT,        "CreateObject" },
+    { S7COMMP_FUNCTIONCODE_DELETEOBJECT,        "DeleteObject" },
+    { S7COMMP_FUNCTIONCODE_SETVARIABLE,         "SetVariable" },
+    { S7COMMP_FUNCTIONCODE_GETLINK,             "GetLink" },
+    { S7COMMP_FUNCTIONCODE_SETMULTIVAR,         "SetMultiVariables" },
+    { S7COMMP_FUNCTIONCODE_GETMULTIVAR,         "GetMultiVariables" },
+    { S7COMMP_FUNCTIONCODE_BEGINSEQUENCE,       "BeginSequence" },
+    { S7COMMP_FUNCTIONCODE_ENDSEQUENCE,         "EndSequence" },
+    { S7COMMP_FUNCTIONCODE_INVOKE,              "Invoke" },
+    { S7COMMP_FUNCTIONCODE_GETVARSUBSTR,        "GetVarSubStreamed" },
     { 0,                                        NULL }
 };
 /**************************************************************************
@@ -1865,11 +1864,11 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Request Start session
+ * Request CreateObject
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_startsession(tvbuff_t *tvb,
+s7commp_decode_request_createobject(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset,
                                     const guint32 offsetmax,
@@ -1905,18 +1904,18 @@ s7commp_decode_request_startsession(tvbuff_t *tvb,
     next_byte = tvb_get_guint8(tvb, offset);
     if (pdutype == S7COMMP_PDUTYPE_DATA && next_byte != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
         value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-StartSession: %u", value);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
     }
     return s7commp_decode_synid_id_value_list(tvb, tree, offset, offsetmax);
 }
 /*******************************************************************************************************
  *
- * Response Start session
+ * Response CreateObject
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_startsession(tvbuff_t *tvb,
+s7commp_decode_response_createobject(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset,
                                     const guint32 offsetmax,
@@ -1945,11 +1944,11 @@ s7commp_decode_response_startsession(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * End session request
+ * Request DeleteObject
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_endsession(tvbuff_t *tvb,
+s7commp_decode_request_deleteobject(tvbuff_t *tvb,
                                   proto_tree *tree,
                                   guint32 offset)
 {
@@ -1960,11 +1959,11 @@ s7commp_decode_request_endsession(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * End session response
+ * Response DeleteObject
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_endsession(tvbuff_t *tvb,
+s7commp_decode_response_deleteobject(tvbuff_t *tvb,
                                    proto_tree *tree,
                                    guint32 offset)
 {
@@ -2235,14 +2234,14 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Write-Request
+ * Request SetMultiVariables
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_write(tvbuff_t *tvb,
-                             proto_tree *tree,
-                             gint16 dlength,
-                             guint32 offset)
+s7commp_decode_request_setmultivar(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   gint16 dlength,
+                                   guint32 offset)
 {
     guint32 item_count = 0;
     guint32 number_of_fields_in_complete_set = 0;
@@ -2301,14 +2300,14 @@ s7commp_decode_request_write(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Read-Request
+ * Request GetMultiVariables
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_read(tvbuff_t *tvb,
-                            proto_tree *tree,
-                            gint16 dlength,
-                            guint32 offset)
+s7commp_decode_request_getmultivar(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   gint16 dlength,
+                                   guint32 offset)
 {
     guint32 item_count = 0;
     guint32 number_of_fields_in_complete_set = 0;
@@ -2356,14 +2355,14 @@ s7commp_decode_request_read(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Read-Response
+ * Response GetMultiVariables
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_read(tvbuff_t *tvb,
-                             proto_tree *tree,
-                             gint16 dlength,
-                             guint32 offset)
+s7commp_decode_response_getmultivar(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    gint16 dlength,
+                                    guint32 offset)
 {
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
     offset = s7commp_decode_itemnumber_value_list(tvb, tree, offset);
@@ -2373,14 +2372,14 @@ s7commp_decode_response_read(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Write-Response
+ * Response SetMultiVariables
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_write(tvbuff_t *tvb,
-                              proto_tree *tree,
-                              gint16 dlength,
-                              guint32 offset)
+s7commp_decode_response_setmultivar(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    gint16 dlength,
+                                    guint32 offset)
 {
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
      * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestätigt zu werden.
@@ -2393,7 +2392,7 @@ s7commp_decode_response_write(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * Notification data
+ * Notification
  *
  *******************************************************************************************************/
 static guint32
@@ -2543,14 +2542,14 @@ s7commp_decode_notification(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Modify session request
+ * Request SetVariable
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_modifysession(tvbuff_t *tvb,
-                                     packet_info *pinfo,
-                                     proto_tree *tree,
-                                     guint32 offset)
+s7commp_decode_request_setvariable(tvbuff_t *tvb,
+                                   packet_info *pinfo,
+                                   proto_tree *tree,
+                                   guint32 offset)
 {
     guint32 session_id;
 
@@ -2568,25 +2567,25 @@ s7commp_decode_request_modifysession(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Modify session response
+ * Response SetVariable
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_modifysession(tvbuff_t *tvb,
-                                     proto_tree *tree,
-                                     guint32 offset)
+s7commp_decode_response_setvariable(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset)
 {
     return s7commp_decode_returnvalue(tvb, tree, offset, NULL);
 }
 /*******************************************************************************************************
  *
- * Decode request read object
+ * Request GetVarSubStreamed
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_readobject(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  guint32 offset)
+s7commp_decode_request_getvarsubstr(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -2616,13 +2615,13 @@ s7commp_decode_request_readobject(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response read object
+ * Response GetVarSubStreamed
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_readobject(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset)
+s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     guint32 offset)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -2649,13 +2648,13 @@ s7commp_decode_response_readobject(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode request of function 0x0524
+ * Request GetLink
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_0x0524(tvbuff_t *tvb,
-                              proto_tree *tree,
-                              guint32 offset)
+s7commp_decode_request_getlink(tvbuff_t *tvb,
+                               proto_tree *tree,
+                               guint32 offset)
 {
     guint8 octet_count = 0;
     guint32 item_number = 0;
@@ -2679,13 +2678,13 @@ s7commp_decode_request_0x0524(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response of function 0x0524
+ * Response GetLink
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_0x0524(tvbuff_t *tvb,
-                               proto_tree *tree,
-                               guint32 offset)
+s7commp_decode_response_getlink(tvbuff_t *tvb,
+                                proto_tree *tree,
+                                guint32 offset)
 {
     guint16 errorcode;
     guint8 number_of_items;
@@ -2706,14 +2705,14 @@ s7commp_decode_response_0x0524(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode request of function 0x0556
+ * Request BeginSequence
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_0x0556(tvbuff_t *tvb,
-                              proto_tree *tree,
-                              gint16 dlength,
-                              guint32 offset)
+s7commp_decode_request_beginsequence(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     gint16 dlength,
+                                     guint32 offset)
 {
     guint32 max_offset = offset + dlength;
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
@@ -2738,13 +2737,13 @@ s7commp_decode_request_0x0556(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response of function 0x0556
+ * Response BeginSequence
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_0x0556(tvbuff_t *tvb,
-                               proto_tree *tree,
-                               guint32 offset)
+s7commp_decode_response_beginsequence(tvbuff_t *tvb,
+                                      proto_tree *tree,
+                                      guint32 offset)
 {
     guint16 errorcode;
 
@@ -2758,13 +2757,13 @@ s7commp_decode_response_0x0556(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode request of function 0x0560
+ * Request EndSequence
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_0x0560(tvbuff_t *tvb,
-                              proto_tree *tree,
-                              guint32 offset)
+s7commp_decode_request_endsequence(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset)
 {
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
@@ -2773,13 +2772,13 @@ s7commp_decode_request_0x0560(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response of function 0x0560
+ * Response EndSequence
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_0x0560(tvbuff_t *tvb,
-                               proto_tree *tree,
-                               guint32 offset)
+s7commp_decode_response_endsequence(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset)
 {
     guint16 errorcode;
 
@@ -2788,11 +2787,11 @@ s7commp_decode_response_0x0560(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode request of function 0x056b
+ * Request Invoke
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_request_0x056b(tvbuff_t *tvb,
+s7commp_decode_request_invoke(tvbuff_t *tvb,
                               proto_tree *tree,
                               guint32 offset)
 {
@@ -2808,11 +2807,11 @@ s7commp_decode_request_0x056b(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode response of function 0x056b
+ * Response Invoke
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_response_0x056b(tvbuff_t *tvb,
+s7commp_decode_response_invoke(tvbuff_t *tvb,
                                proto_tree *tree,
                                guint32 offset)
 {
@@ -2833,9 +2832,9 @@ s7commp_decode_response_0x056b(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_explore_area(tvbuff_t *tvb,
-                               packet_info *pinfo,
-                               proto_tree *tree,
-                               guint32 offset)
+                            packet_info *pinfo,
+                            proto_tree *tree,
+                            guint32 offset)
 {
     /* Speicherbereich der durchsucht werden soll:
      * Linke 2 (1) Bytes        Rechte 2 (3) Bytes                                                  Antwort Kopf
@@ -3125,38 +3124,38 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset_save = offset;
 
             switch (functioncode) {
-                case S7COMMP_FUNCTIONCODE_READ:
-                    offset = s7commp_decode_request_read(tvb, item_tree, dlength, offset);
+                case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
+                    offset = s7commp_decode_request_getmultivar(tvb, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_WRITE:
-                    offset = s7commp_decode_request_write(tvb, item_tree, dlength, offset);
+                case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
+                    offset = s7commp_decode_request_setmultivar(tvb, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_MODSESSION:
-                    offset = s7commp_decode_request_modifysession(tvb, pinfo, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_SETVARIABLE:
+                    offset = s7commp_decode_request_setvariable(tvb, pinfo, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                    offset = s7commp_decode_request_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
+                case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
+                    offset = s7commp_decode_request_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
-                case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                    offset = s7commp_decode_request_endsession(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
+                    offset = s7commp_decode_request_deleteobject(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_READOBJECT:
-                    offset = s7commp_decode_request_readobject(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
+                    offset = s7commp_decode_request_getvarsubstr(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0524:
-                    offset = s7commp_decode_request_0x0524(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_GETLINK:
+                    offset = s7commp_decode_request_getlink(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0556:
-                    offset = s7commp_decode_request_0x0556(tvb, item_tree, dlength, offset);
+                case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
+                    offset = s7commp_decode_request_beginsequence(tvb, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0560:
-                    offset = s7commp_decode_request_0x0560(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
+                    offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x056b:
-                    offset = s7commp_decode_request_0x056b(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_INVOKE:
+                    offset = s7commp_decode_request_invoke(tvb, item_tree, offset);
                     break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
@@ -3172,38 +3171,38 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset_save = offset;
 
             switch (functioncode) {
-                case S7COMMP_FUNCTIONCODE_READ:
-                    offset = s7commp_decode_response_read(tvb, item_tree, dlength, offset);
+                case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
+                    offset = s7commp_decode_response_getmultivar(tvb, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_WRITE:
-                    offset = s7commp_decode_response_write(tvb, item_tree, dlength, offset);
+                case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
+                    offset = s7commp_decode_response_setmultivar(tvb, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_MODSESSION:
-                    offset = s7commp_decode_response_modifysession(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_SETVARIABLE:
+                    offset = s7commp_decode_response_setvariable(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_STARTSESSION:
-                    offset = s7commp_decode_response_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
+                case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
+                    offset = s7commp_decode_response_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
-                case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                    offset = s7commp_decode_response_endsession(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
+                    offset = s7commp_decode_response_deleteobject(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_READOBJECT:
-                    offset = s7commp_decode_response_readobject(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
+                    offset = s7commp_decode_response_getvarsubstr(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, dlength, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0524:
-                    offset = s7commp_decode_response_0x0524(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_GETLINK:
+                    offset = s7commp_decode_response_getlink(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0556:
-                    offset = s7commp_decode_response_0x0556(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
+                    offset = s7commp_decode_response_beginsequence(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x0560:
-                    offset = s7commp_decode_response_0x0560(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
+                    offset = s7commp_decode_response_endsequence(tvb, item_tree, offset);
                     break;
-                case S7COMMP_FUNCTIONCODE_0x056b:
-                    offset = s7commp_decode_response_0x056b(tvb, item_tree, offset);
+                case S7COMMP_FUNCTIONCODE_INVOKE:
+                    offset = s7commp_decode_response_invoke(tvb, item_tree, offset);
                     break;
             }
             proto_item_set_len(item_tree, offset - offset_save);
@@ -3238,14 +3237,14 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
     }
 
-    /* Request ReadObject has two bytes of unknown meaning, request Modify session one single byte */
+    /* Request GetVarSubStreamed has two bytes of unknown meaning, request SetVariable session one single byte */
     if (opcode == S7COMMP_OPCODE_REQ) {
-        if (functioncode == S7COMMP_FUNCTIONCODE_READOBJECT) {
-            proto_tree_add_text(tree, tvb, offset, 2, "Request ReadObject unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+        if (functioncode == S7COMMP_FUNCTIONCODE_GETVARSUBSTR) {
+            proto_tree_add_text(tree, tvb, offset, 2, "Request GetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
             offset += 2;
             dlength -= 2;
-        } else if (functioncode == S7COMMP_FUNCTIONCODE_MODSESSION) {
-            proto_tree_add_text(tree, tvb, offset, 1, "Request Modify-Session unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
+        } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARIABLE) {
+            proto_tree_add_text(tree, tvb, offset, 1, "Request SetVariable unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
             offset += 1;
             dlength -= 1;
         }
@@ -3258,8 +3257,8 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset_save = offset;
         integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
         integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
-        /* In EndSession-Response, the Id is missing! */
-        if (!(opcode == S7COMMP_OPCODE_RES && functioncode == S7COMMP_FUNCTIONCODE_ENDSESSION)) {
+        /* In DeleteObject-Response, the Id is missing! */
+        if (!(opcode == S7COMMP_OPCODE_RES && functioncode == S7COMMP_FUNCTIONCODE_DELETEOBJECT)) {
             integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
             dlength -= octet_count;
