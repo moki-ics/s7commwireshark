@@ -2415,7 +2415,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint32 notification_subscr_id;
 
     guint8 credit_tick;
-    guint8 seqnum;
+    guint32 seqnum;
     guint8 item_return_value;
 
     proto_item *data_item = NULL;
@@ -2458,18 +2458,24 @@ s7commp_decode_notification(tvbuff_t *tvb,
          *                                  bis zur in modifiy-session angegebenen Limit.
          * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
          *
-         * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben. Bei der 1200 ist diese immer nur 1 Byte.
-         * Bei der 1500 wurde es schon mal als VLQ gesichtet! Es ist unbekannt wie Siemens das handhabt, da alle Bytes davor bei beiden Telegrammen identisch sind.
-         * Es kann auch nicht auf den Wert des folgenden Bytes geprüft werden, da z.B. 0x13 durchaus ein gültiger VLQ wäre (dann 0x8113 = 147).
-         * Bei der 1500 folgt dann auch nochmal ein eingeschobenes einzelnes Byte.
-         * Z.Zt wird dieses kaputte Konstrukt ignoriert, und für beide 1 Byte angenommen. So funktioniert es zumindest für eine 1200.
+         * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben.
+         * Bei der 1200 ist diese immer nur 1 Byte., bei der 1500 ist es ein VLQ!
+         * Es scheint abhängig von der ersten ID zu sein. Ist diese größer 0x7000000 dann ist es ein VLQ und zusätzlich
+         * gibt es noch drei eingeschobene Bytes am Ende.
+         * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
          */
         credit_tick = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Notification Credit tickcount: %u", credit_tick);
         offset += 1;
-        seqnum = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(tree, tvb, offset, 1, "Notification sequence number: %u", seqnum);
-        offset += 1;
+        if (notification_subscr_id > 0x70000000) {
+            seqnum = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(tree, tvb, offset, octet_count, "Notification sequence number (VLQ): %u", seqnum);
+            offset += octet_count;
+        } else {
+            seqnum = tvb_get_guint8(tvb, offset);
+            proto_tree_add_text(tree, tvb, offset, 1, "Notification sequence number: %u", seqnum);
+            offset += 1;
+        }
         col_append_fstr(pinfo->cinfo, COL_INFO, ", Ctick=%u", credit_tick);
         col_append_fstr(pinfo->cinfo, COL_INFO, ", NSeq=%u", seqnum);
 
@@ -2544,6 +2550,11 @@ s7commp_decode_notification(tvbuff_t *tvb,
         }
         if (add_data_info_column) {
             col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
+        }
+
+        if (notification_subscr_id > 0x70000000) {
+            proto_tree_add_text(tree, tvb, offset, 3, "Unknown additional 3 bytes, because first ID > 0x70000000");
+            offset += 3;
         }
     }
 
