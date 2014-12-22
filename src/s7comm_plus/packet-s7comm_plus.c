@@ -1802,8 +1802,9 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
                     proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
                     offset += octet_count;
                     /* Es folgen nur Flags, wenn eine Attribut-Id ungleich 0 vorhanden ist */
-                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Attribute Id Flags: 0x%02x", tvb_get_guint8(tvb, offset));
-                    offset += 1;
+                    uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id Flags: 0x%08x", uint32_value);
+                    offset += octet_count;
                 } else {
                     proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id: None (%u)", uint32_value);
                     offset += octet_count;
