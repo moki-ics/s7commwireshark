@@ -1965,10 +1965,19 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
 static guint32
 s7commp_decode_response_deleteobject(tvbuff_t *tvb,
                                    proto_tree *tree,
-                                   guint32 offset)
+                                   guint32 offset,
+                                   gboolean *has_integrity_id)
 {
+    guint32 id;
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
+    id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", id);
+    /* If the id is < 0x7000000 there is no integrity-id in integrity dataset at the end (only for 1500) */
+    if (id > 0x70000000) {
+        *has_integrity_id = TRUE;
+    } else {
+        *has_integrity_id = FALSE;
+    }
     offset += 4;
     return offset;
 }
@@ -3066,6 +3075,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint32 integrity_id = 0;
     guint8 integrity_len = 0;
+    gboolean has_integrity_id = TRUE;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -3184,7 +3194,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
-                    offset = s7commp_decode_response_deleteobject(tvb, item_tree, offset);
+                    offset = s7commp_decode_response_deleteobject(tvb, item_tree, offset, &has_integrity_id);
                     break;
                 case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
                     offset = s7commp_decode_response_getvarsubstr(tvb, item_tree, offset);
@@ -3257,8 +3267,10 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset_save = offset;
         integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
         integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
-        /* In DeleteObject-Response, the Id is missing! */
-        if (!(opcode == S7COMMP_OPCODE_RES && functioncode == S7COMMP_FUNCTIONCODE_DELETEOBJECT)) {
+        /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
+         * This check is done by the decoding function for deleteobject. By default there is an Id.
+         */
+        if (has_integrity_id) {
             integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
             dlength -= octet_count;
