@@ -3087,6 +3087,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint32 integrity_id = 0;
     guint8 integrity_len = 0;
     gboolean has_integrity_id = TRUE;
+    gboolean has_objectqualifier = FALSE;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -3135,7 +3136,6 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 4;
             dlength -= 4;
 
-            /* unknown byte */
             proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
             offset += 1;
             dlength -= 1;
@@ -3147,21 +3147,26 @@ s7commp_decode_data(tvbuff_t *tvb,
             switch (functioncode) {
                 case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
                     offset = s7commp_decode_request_getmultivar(tvb, item_tree, dlength, offset);
+                    has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
                     offset = s7commp_decode_request_setmultivar(tvb, item_tree, dlength, offset);
+                    has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_SETVARIABLE:
                     offset = s7commp_decode_request_setvariable(tvb, pinfo, item_tree, offset);
+                    has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
                     offset = s7commp_decode_request_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_request_deleteobject(tvb, item_tree, offset);
+                    has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
                     offset = s7commp_decode_request_getvarsubstr(tvb, item_tree, offset);
+                    has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
@@ -3181,8 +3186,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             }
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
-        } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {      /* Response */
-            /* unknown byte */
+        } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
             proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
             offset += 1;
             dlength -= 1;
@@ -3234,7 +3238,7 @@ s7commp_decode_data(tvbuff_t *tvb,
      * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
      * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
      */
-    if (dlength > 10) {
+    if (has_objectqualifier && dlength > 10) {
         offset_save = offset;
         offsetmax = offset + dlength-2;
         while (offset < offsetmax) {
@@ -3301,6 +3305,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += integrity_len;
         } else {
             proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
+            col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that somthing went wrong */
         }
     }
     /* Show remaining undecoded data as raw bytes */
