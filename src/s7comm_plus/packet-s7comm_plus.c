@@ -1945,21 +1945,32 @@ s7commp_decode_response_startsession(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * End session
+ * End session request
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_endsession(tvbuff_t *tvb,
-                            proto_tree *tree,
-                            guint32 offset,
-                            guint8 opcode)
+s7commp_decode_request_endsession(tvbuff_t *tvb,
+                                  proto_tree *tree,
+                                  guint32 offset)
 {
-    if (opcode == S7COMMP_OPCODE_RES) {
-        offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    }
     proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
 
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * End session response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_endsession(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset)
+{
+    offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
+    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
     return offset;
 }
 /*******************************************************************************************************
@@ -2228,10 +2239,10 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_request_write(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  gint16 dlength,
-                                  guint32 offset)
+s7commp_decode_request_write(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             gint16 dlength,
+                             guint32 offset)
 {
     guint32 item_count = 0;
     guint32 number_of_fields_in_complete_set = 0;
@@ -2294,10 +2305,10 @@ s7commp_decode_data_request_write(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_request_read(tvbuff_t *tvb,
-                                 proto_tree *tree,
-                                 gint16 dlength,
-                                 guint32 offset)
+s7commp_decode_request_read(tvbuff_t *tvb,
+                            proto_tree *tree,
+                            gint16 dlength,
+                            guint32 offset)
 {
     guint32 item_count = 0;
     guint32 number_of_fields_in_complete_set = 0;
@@ -2349,10 +2360,10 @@ s7commp_decode_data_request_read(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_response_read(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  gint16 dlength,
-                                  guint32 offset)
+s7commp_decode_response_read(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             gint16 dlength,
+                             guint32 offset)
 {
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
     offset = s7commp_decode_itemnumber_value_list(tvb, tree, offset);
@@ -2366,10 +2377,10 @@ s7commp_decode_data_response_read(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_response_write(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  gint16 dlength,
-                                  guint32 offset)
+s7commp_decode_response_write(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              gint16 dlength,
+                              guint32 offset)
 {
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
      * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestätigt zu werden.
@@ -2536,11 +2547,10 @@ s7commp_decode_notification(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_data_modify_session(tvbuff_t *tvb,
-                                  packet_info *pinfo,
-                                  proto_tree *tree,
-                                  gint16 dlength _U_,
-                                  guint32 offset)
+s7commp_decode_request_modifysession(tvbuff_t *tvb,
+                                     packet_info *pinfo,
+                                     proto_tree *tree,
+                                     guint32 offset)
 {
     guint32 session_id;
 
@@ -2555,6 +2565,18 @@ s7commp_decode_data_modify_session(tvbuff_t *tvb,
     offset += 1;
     offset = s7commp_decode_id_value_list(tvb, tree, offset);
     return offset;
+}
+/*******************************************************************************************************
+ *
+ * Modify session response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_modifysession(tvbuff_t *tvb,
+                                     proto_tree *tree,
+                                     guint32 offset)
+{
+    return s7commp_decode_returnvalue(tvb, tree, offset, NULL);
 }
 /*******************************************************************************************************
  *
@@ -2901,7 +2923,7 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_explore_request(tvbuff_t *tvb,
+s7commp_decode_request_explore(tvbuff_t *tvb,
                                packet_info *pinfo,
                                proto_tree *tree,
                                guint32 offset)
@@ -2988,11 +3010,11 @@ s7commp_decode_explore_request(tvbuff_t *tvb,
  *
  *******************************************************************************************************/
 static guint32
-s7commp_decode_explore_response(tvbuff_t *tvb,
-                               packet_info *pinfo,
-                               proto_tree *tree,
-                               gint16 dlength,
-                               guint32 offset)
+s7commp_decode_response_explore(tvbuff_t *tvb,
+                                packet_info *pinfo,
+                                proto_tree *tree,
+                                gint16 dlength,
+                                guint32 offset)
 {
     guint32 max_offset = offset + dlength;
     guint32 id_number;
@@ -3104,25 +3126,25 @@ s7commp_decode_data(tvbuff_t *tvb,
 
             switch (functioncode) {
                 case S7COMMP_FUNCTIONCODE_READ:
-                    offset = s7commp_decode_data_request_read(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_read(tvb, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_WRITE:
-                    offset = s7commp_decode_data_request_write(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_write(tvb, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_MODSESSION:
-                    offset = s7commp_decode_data_modify_session(tvb, pinfo, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_modifysession(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_STARTSESSION:
                     offset = s7commp_decode_request_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                    offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
+                    offset = s7commp_decode_request_endsession(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_READOBJECT:
                     offset = s7commp_decode_request_readobject(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_explore_request(tvb, pinfo, item_tree, offset);
+                    offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_0x0524:
                     offset = s7commp_decode_request_0x0524(tvb, item_tree, offset);
@@ -3151,25 +3173,25 @@ s7commp_decode_data(tvbuff_t *tvb,
 
             switch (functioncode) {
                 case S7COMMP_FUNCTIONCODE_READ:
-                    offset = s7commp_decode_data_response_read(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_read(tvb, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_WRITE:
-                    offset = s7commp_decode_data_response_write(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_write(tvb, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_MODSESSION:
-                    offset = s7commp_decode_returnvalue(tvb, item_tree, offset, NULL);
+                    offset = s7commp_decode_response_modifysession(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_STARTSESSION:
                     offset = s7commp_decode_response_startsession(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_ENDSESSION:
-                    offset = s7commp_decode_endsession(tvb, item_tree, offset, opcode);
+                    offset = s7commp_decode_response_endsession(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_READOBJECT:
                     offset = s7commp_decode_response_readobject(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_explore_response(tvb, pinfo, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_0x0524:
                     offset = s7commp_decode_response_0x0524(tvb, item_tree, offset);
