@@ -3238,11 +3238,17 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
     }
 
-    /* Request ReadObject has two bytes of unknown meaning */
-    if (opcode == S7COMMP_OPCODE_REQ && functioncode == S7COMMP_FUNCTIONCODE_READOBJECT) {
-        proto_tree_add_text(tree, tvb, offset, 2, "Request ReadObject unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        dlength -= 2;
+    /* Request ReadObject has two bytes of unknown meaning, request Modify session one single byte */
+    if (opcode == S7COMMP_OPCODE_REQ) {
+        if (functioncode == S7COMMP_FUNCTIONCODE_READOBJECT) {
+            proto_tree_add_text(tree, tvb, offset, 2, "Request ReadObject unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+            offset += 2;
+            dlength -= 2;
+        } else if (functioncode == S7COMMP_FUNCTIONCODE_MODSESSION) {
+            proto_tree_add_text(tree, tvb, offset, 1, "Request Modify-Session unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
+            offset += 1;
+            dlength -= 1;
+        }
     }
 
     /* The trailing undecoded data of the S7-1500 seems to start with 1 byte / VLQ id,
