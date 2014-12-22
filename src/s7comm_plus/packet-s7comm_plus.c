@@ -3057,7 +3057,12 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
         }
-        offset = s7commp_decode_synid_id_value_list(tvb, tree, offset, max_offset);
+        /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
+         * zur Terminierung der Liste eingefügt werden.
+         */
+        if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+            offset = s7commp_decode_synid_id_value_list(tvb, tree, offset, max_offset);
+        }
     }
     return offset;
 }
