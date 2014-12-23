@@ -202,6 +202,8 @@ static const value_string item_datatype_names[] = {
 #define S7COMMP_ITEMVAL_SYNTAXID_0xA4           0xa4
 #define S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC   0xa7
 #define S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC    0xa8
+#define S7COMMP_ITEMVAL_SYNTAXID_0xAB           0xab
+#define S7COMMP_ITEMVAL_SYNTAXID_0xAC           0xac
 
 static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT,      "Terminating Struct" },
@@ -211,6 +213,8 @@ static const value_string itemval_syntaxid_names[] = {
     { S7COMMP_ITEMVAL_SYNTAXID_0xA4,            "Unknown Id 0xA4" },
     { S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC,    "Start of Tag-Description" },
     { S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC,     "Terminating Tag-Description" },
+    { S7COMMP_ITEMVAL_SYNTAXID_0xAB,            "Unknown Id 0xAB" },
+    { S7COMMP_ITEMVAL_SYNTAXID_0xAC,            "Unknown Id 0xAC" },
     { 0,                                        NULL }
 };
 
@@ -1839,6 +1843,21 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
                 continue;
             } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {              /* 0xa8 */
                 proto_item_append_text(data_item_tree, ": Terminating Tag-Description");
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                continue;
+            } else if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xAB || syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xAC) {
+                if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_0xAB) {
+                    proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xab");
+                } else {
+                    proto_item_append_text(data_item_tree, ": Unknown Function of Syntax-Id 0xac");
+                }
+                data_len = tvb_get_ntohs(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Block length: %d", data_len);
+                offset += 2;
+                proto_tree_add_bytes(data_item_tree, hf_s7commp_data_data, tvb, offset, data_len, tvb_get_ptr(tvb, offset, data_len));
+                offset += data_len;
+                proto_tree_add_text(data_item_tree, tvb, offset, 2, "Unknown 2 trailing bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+                offset += 2;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 continue;
             }
