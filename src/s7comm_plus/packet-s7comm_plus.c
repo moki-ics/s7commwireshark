@@ -1795,8 +1795,9 @@ s7commp_decode_synid_id_value_list(tvbuff_t *tvb,
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Class Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
                 offset += octet_count;
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Class Id Flags: 0x%02x", tvb_get_guint8(tvb, offset));
-                offset += 1;
+                uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Class Id Flags: 0x%08x", uint32_value);
+                offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 if (uint32_value != 0) {
                     proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Attribute Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
@@ -2549,13 +2550,27 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 proto_item_set_len(data_item_tree, offset - start_offset);
             }
         }
-        if (add_data_info_column) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
-        }
 
+        /* Nur wenn die id > 0x70000000 dann folgt optional noch ein weiterer Datensatz, wenn die nächsten 4 Bytes nicht Null sind. */
         if (notification_subscr_id > 0x70000000) {
+            notification_subscr_id = tvb_get_ntohl(tvb, offset);
+            if (notification_subscr_id != 0) {
+                proto_tree_add_text(tree, tvb, offset, 4, "Part 2 - Notification Id?: 0x%08x", notification_subscr_id);
+                offset += 4;
+                proto_tree_add_text(tree, tvb, offset, 2, "Part 2 - Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tree, tvb, offset, 1, "Part 2 - Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+                    offset =  s7commp_decode_synid_id_value_list(tvb, tree, offset, offset + dlength);
+                    add_data_info_column = TRUE;
+                }
+            }
             proto_tree_add_text(tree, tvb, offset, 3, "Unknown additional 3 bytes, because first ID > 0x70000000");
             offset += 3;
+        }
+        if (add_data_info_column) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
         }
     }
 
