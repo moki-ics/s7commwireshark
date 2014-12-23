@@ -1923,19 +1923,18 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
                                     const guint32 offsetmax,
                                     guint8 pdutype)
 {
-    guint32 unknown_bytes = 0;  /* einige Bytes unbekannt */
-    guint8 sessionid_count = 0;
+    guint8 object_id_count = 0;
     guint8 octet_count = 0;
-    guint32 value = 0;
+    guint32 object_id = 0;
     int i;
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    sessionid_count = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Number of following Session Ids: %d", sessionid_count);
+    object_id_count = tvb_get_guint8(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of following Object Ids: %d", object_id_count);
     offset += 1;
-    for (i = 1; i <= sessionid_count; i++) {
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Result Session Id[%i]: 0x%08x", i, value);
+    for (i = 1; i <= object_id_count; i++) {
+        object_id = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Object Id [%i]: 0x%08x", i, object_id);
         offset += octet_count;
     }
     /* Ein Daten-Objekt gibt es nur beim Connect */
@@ -1951,10 +1950,14 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_request_deleteobject(tvbuff_t *tvb,
-                                  proto_tree *tree,
-                                  guint32 offset)
+                                    packet_info *pinfo,
+                                    proto_tree *tree,
+                                    guint32 offset)
 {
-    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", tvb_get_ntohl(tvb, offset));
+    guint32 object_id;
+    object_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 4, "Delete Object Id: 0x%08x", object_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
     offset += 4;
 
     return offset;
@@ -1966,16 +1969,18 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_response_deleteobject(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset,
-                                   gboolean *has_integrity_id)
+                                     packet_info *pinfo,
+                                     proto_tree *tree,
+                                     guint32 offset,
+                                     gboolean *has_integrity_id)
 {
-    guint32 id;
+    guint32 object_id;
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
-    id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "End Session Id: 0x%08x", id);
+    object_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 4, "Delete Object Id: 0x%08x", object_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
     /* If the id is < 0x7000000 there is no integrity-id in integrity dataset at the end (only for 1500) */
-    if (id > 0x70000000) {
+    if (object_id > 0x70000000) {
         *has_integrity_id = TRUE;
     } else {
         *has_integrity_id = FALSE;
@@ -2250,6 +2255,7 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_request_setmultivar(tvbuff_t *tvb,
+                                   packet_info *pinfo,
                                    proto_tree *tree,
                                    gint16 dlength,
                                    guint32 offset)
@@ -2291,7 +2297,8 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
             offset = s7commp_decode_item_value(tvb, tree, offset);
         }
     } else {
-        proto_tree_add_text(tree, tvb, offset-4, 4, "Write Request of Session settings for Session Id : 0x%08x", value);
+        proto_tree_add_text(tree, tvb, offset-4, 4, "Set Variables in Object Id : 0x%08x", value);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", value);
         item_count = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Item count: %u", item_count);
         offset += octet_count;
@@ -2330,19 +2337,15 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     guint32 id_number;
     guint32 item_address_count;
 
-    /* für Variablen-Lesen müssen die ersten 4 Bytes 0 sein
-     * Bei einer Variablentabelle steht dort z.b. 0x00000020
+    /* Für Variablen-Lesen müssen die ersten 4 Bytes 0 sein. Ansonsten ist es eine Link-Id.
      */
     value = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown: 0x%08x", value);
+    proto_tree_add_text(tree, tvb, offset, 4, "%s: 0x%08x", (value == 0) ? "Unknown" : "Link-Id", value);
     offset += 4;
     item_count = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_item_count, tvb, offset, octet_count, item_count);
     offset += octet_count;
     if (value == 0x0) {
-        /* as sequence 62 of S7-1511-opc-request-all-types.pcap, shows
-         * number_of_fields_in_complete_set is a varuint
-         */
         number_of_fields_in_complete_set = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(tree, hf_s7commp_item_no_of_fields, tvb, offset, octet_count, number_of_fields_in_complete_set);
         offset += octet_count;
@@ -2414,7 +2417,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                             guint32 offset)
 {
     guint16 unknown2;
-    guint32 notification_subscr_id;
+    guint32 subscr_object_id;
 
     guint8 credit_tick;
     guint32 seqnum;
@@ -2428,14 +2431,10 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint8 octet_count = 0;
     gboolean add_data_info_column = FALSE;
 
-    /* Bei zyklischen Daten ist die Funktionsnummer nicht so wie bei anderen Telegrammen. Dieses ist eine
-     * Nummer die vorher über ein 0x04ca Telegramm von der SPS zurückkommt.
-     */
-
-    /* 4 Bytes Subscription Id */
-    notification_subscr_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Notification Id: 0x%08x", notification_subscr_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " NSubscrId=0x%08x", notification_subscr_id);
+    /* 4 Bytes Subscription Object Id */
+    subscr_object_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 4, "Subscription Object Id: 0x%08x", subscr_object_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
     offset += 4;
 
     /* 6/7: Unbekannt */
@@ -2469,7 +2468,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
         credit_tick = tvb_get_guint8(tvb, offset);
         proto_tree_add_text(tree, tvb, offset, 1, "Notification Credit tickcount: %u", credit_tick);
         offset += 1;
-        if (notification_subscr_id > 0x70000000) {
+        if (subscr_object_id > 0x70000000) {
             seqnum = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_text(tree, tvb, offset, octet_count, "Notification sequence number (VLQ): %u", seqnum);
             offset += octet_count;
@@ -2552,10 +2551,10 @@ s7commp_decode_notification(tvbuff_t *tvb,
         }
 
         /* Nur wenn die id > 0x70000000 dann folgt optional noch ein weiterer Datensatz, wenn die nächsten 4 Bytes nicht Null sind. */
-        if (notification_subscr_id > 0x70000000) {
-            notification_subscr_id = tvb_get_ntohl(tvb, offset);
-            if (notification_subscr_id != 0) {
-                proto_tree_add_text(tree, tvb, offset, 4, "Part 2 - Notification Id?: 0x%08x", notification_subscr_id);
+        if (subscr_object_id > 0x70000000) {
+            subscr_object_id = tvb_get_ntohl(tvb, offset);
+            if (subscr_object_id != 0) {
+                proto_tree_add_text(tree, tvb, offset, 4, "Part 2 - Subscription Object Id: 0x%08x", subscr_object_id);
                 offset += 4;
                 proto_tree_add_text(tree, tvb, offset, 2, "Part 2 - Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
@@ -2566,7 +2565,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                     add_data_info_column = TRUE;
                 }
             }
-            proto_tree_add_text(tree, tvb, offset, 3, "Unknown additional 3 bytes, because first ID > 0x70000000");
+            proto_tree_add_text(tree, tvb, offset, 3, "Unknown additional 3 bytes, because 1st Object ID > 0x70000000");
             offset += 3;
         }
         if (add_data_info_column) {
@@ -2587,17 +2586,18 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
                                    proto_tree *tree,
                                    guint32 offset)
 {
-    guint32 session_id;
+    guint32 object_id;
+    guint8 octet_count;
+    guint32 item_count;
 
-    /* 4 Bytes Session Id */
-    session_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Session Id to modify: 0x%08x", session_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ModSessId=0x%08x", session_id);
+    object_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_text(tree, tvb, offset, 4, "In Object Id: 0x%08x", object_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
     offset += 4;
 
-    /* 1 Byte (or VLQ?) number of items? */
-    proto_tree_add_text(tree, tvb, offset, 1, "Number of items following?: %d", tvb_get_guint8(tvb, offset));
-    offset += 1;
+    item_count = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_text(tree, tvb, offset, octet_count, "Number of items following: %u", octet_count);
+    offset += octet_count;
     offset = s7commp_decode_id_value_list(tvb, tree, offset);
     return offset;
 }
@@ -2729,12 +2729,12 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
 
     number_of_items = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Number of following values: %d", number_of_items);
+    proto_tree_add_text(tree, tvb, offset, 1, "Number of following Link-Ids: %d", number_of_items);
     offset += 1;
 
     for (i = 1; i <= number_of_items; i++) {
-        /* Bisher ist unbekannt was dieses für Werte sind */
-        proto_tree_add_text(tree, tvb, offset, 4, "Unknown Value[%d]: 0x%08x", i, tvb_get_ntohl(tvb, offset));
+        /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id für getmultivar */
+        proto_tree_add_text(tree, tvb, offset, 4, "Link-Id [%d]: 0x%08x", i, tvb_get_ntohl(tvb, offset));
         offset += 4;
     }
     return offset;
@@ -3173,7 +3173,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
-                    offset = s7commp_decode_request_setmultivar(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_setmultivar(tvb, pinfo, item_tree, dlength, offset);
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_SETVARIABLE:
@@ -3184,7 +3184,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_request_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
-                    offset = s7commp_decode_request_deleteobject(tvb, item_tree, offset);
+                    offset = s7commp_decode_request_deleteobject(tvb, pinfo, item_tree, offset);
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
@@ -3232,7 +3232,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
-                    offset = s7commp_decode_response_deleteobject(tvb, item_tree, offset, &has_integrity_id);
+                    offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);
                     break;
                 case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
                     offset = s7commp_decode_response_getvarsubstr(tvb, item_tree, offset);
