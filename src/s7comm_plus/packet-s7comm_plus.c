@@ -2666,20 +2666,19 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
     guint16 errorcode;
 
     offset = s7commp_decode_returnvalue(tvb, tree, offset, &errorcode);
-    if (tvb_get_guint8(tvb, offset) == 0x00) {
-        proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
-        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-        start_offset = offset;
-        /* This function should be possible to handle a Null-Value */
-        offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
-        /* when a struct was entered, then id, flag, type follows until terminating null */
-        if (struct_level > 0) {
-            offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset);
-        }
-        proto_item_set_len(data_item_tree, offset - start_offset);
+    proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+    start_offset = offset;
+    /* This function should be possible to handle a Null-Value */
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    /* when a struct was entered, then id, flag, type follows until terminating null */
+    if (struct_level > 0) {
+        offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset);
     }
+    proto_item_set_len(data_item_tree, offset - start_offset);
+
     return offset;
 }
 /*******************************************************************************************************
