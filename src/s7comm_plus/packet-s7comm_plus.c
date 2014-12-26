@@ -150,15 +150,11 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_AID               0x13        /* AID: varuint32*/
 #define S7COMMP_ITEM_DATATYPE_BLOB              0x14
 #define S7COMMP_ITEM_DATATYPE_WSTRING           0x15        /* Wide string with length header, UTF8 encoded */
-/* 0x16 ?? */
+#define S7COMMP_ITEM_DATATYPE_VARIANT           0x16
 #define S7COMMP_ITEM_DATATYPE_STRUCT            0x17
 /* 0x18 ?? */
 #define S7COMMP_ITEM_DATATYPE_S7STRING          0x19        /* S7 String with maximum length of 254 characters, only for tag-description */
 
-/* Theoretical missing types:
- * - Variant
- * - Enumerations
- */
 static const value_string item_datatype_names[] = {
     { S7COMMP_ITEM_DATATYPE_NULL,               "Null" },
     { S7COMMP_ITEM_DATATYPE_BOOL,               "Bool" },
@@ -182,6 +178,7 @@ static const value_string item_datatype_names[] = {
     { S7COMMP_ITEM_DATATYPE_AID,                "AID" },
     { S7COMMP_ITEM_DATATYPE_BLOB,               "Blob" },
     { S7COMMP_ITEM_DATATYPE_WSTRING,            "WString" },
+    { S7COMMP_ITEM_DATATYPE_VARIANT,            "Variant" },
     { S7COMMP_ITEM_DATATYPE_STRUCT,             "Struct" },
     { S7COMMP_ITEM_DATATYPE_S7STRING,           "S7String" },
     { 0,                                        NULL }
@@ -1581,6 +1578,23 @@ s7commp_decode_value(tvbuff_t *tvb,
                            tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
+            case S7COMMP_ITEM_DATATYPE_VARIANT:
+                /* Dieser Typ wurde bisher erst einmal in Kombination mit den S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL flags gesehen.
+                 * Es folgt eine Typkennung und ein Wert immer? als VLQ, bis Typkennung 0 als Endekennung folgt. Ob die Typkennung mit den anderen Typen übereinstimmt ist nicht sicher.
+                 * Die Dokumentation des Variant-Typs im SPS verwendet andere Typkennungen (identisch mit denen des ANY-Pointers aus den S7-300/400).
+                 */
+                uint8val = tvb_get_guint8(tvb, offset);
+                while (uint8val != 0) {
+                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Variant Datatype-ID: 0x%02x", uint8val);
+                    offset += 1;
+                    uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Variant Value: %u", uint32val);
+                    offset += octet_count;
+                    uint8val = tvb_get_guint8(tvb, offset);
+                };
+                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Variant Value-List", uint8val);
+                offset += 1;
+                break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
                 if ((datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) == 0) {
@@ -2773,18 +2787,18 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
+    proto_tree_add_text(tree, tvb, offset, 1, "Request unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
 
-    /* Es gibt zwei Formate. Die ersten 4 bytes scheinen zumindest fix zu sein. Wie man daran erkennen kann ob
+    /* Es gibt zwei Formate. Die ersten 5 bytes scheinen zumindest fix zu sein. Wie man daran erkennen kann ob
      * wie die nachfolgenden Bytes interpretiert werden sollen ist unklar. So wird erstmal geprüft ob eine entsprechende
      * Object-Start-ID folgt. Das funktioniert zumindest soweit, dass es für weitere Analysen verwendet werden kann.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
         offset = s7commp_decode_synid_id_value_list(tvb, tree, offset, max_offset);
     } else {
-        proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
+        proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
         offset += 2;
-        proto_tree_add_text(tree, tvb, offset, 1, "Request unknown 4: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
     }
 
     return offset;
