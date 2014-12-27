@@ -455,9 +455,9 @@ static gint hf_s7commp_data_item_address = -1;
 static gint hf_s7commp_data_item_value = -1;
 static gint hf_s7commp_data_data = -1;
 static gint hf_s7commp_data_opcode = -1;
+static gint hf_s7commp_data_reserved1 = -1;
+static gint hf_s7commp_data_reserved2 = -1;
 static gint hf_s7commp_data_unknown1 = -1;
-static gint hf_s7commp_data_unknown2 = -1;
-static gint hf_s7commp_data_unknown3 = -1;
 static gint hf_s7commp_data_function = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
@@ -769,21 +769,21 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_opcode,
           { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_data_unknown1,
-          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 1, Reserved?", HFILL }},
+        { &hf_s7commp_data_reserved1,
+          { "Reserved", "s7comm-plus.data.reserved1", FT_UINT16, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_data_function,
           { "Function", "s7comm-plus.data.function", FT_UINT16, BASE_HEX, VALS(data_functioncode_names), 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_data_unknown2,
-          { "Unknown 2", "s7comm-plus.data.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
-            "Unknown 2, Reserved?", HFILL }},
+        { &hf_s7commp_data_reserved2,
+          { "Reserved", "s7comm-plus.data.reserved2", FT_UINT16, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_data_seqnum,
           { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number (for reference)", HFILL }},
-        { &hf_s7commp_data_unknown3,
-          { "Unknown 3", "s7comm-plus.data.unknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
-            "Unknown 3. Maybe flags or split into nibbles", HFILL }},
+        { &hf_s7commp_data_unknown1,
+          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+            "Unknown 1. Maybe flags or split into nibbles", HFILL }},
         { &hf_s7commp_data_sessionid,
           { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
@@ -2440,10 +2440,9 @@ s7commp_decode_notification(tvbuff_t *tvb,
 
     /* 6/7: Unbekannt */
     unknown2 = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
+    proto_tree_add_text(tree, tvb, offset, 2, "Unknown 2: 0x%04x", unknown2);
     offset += 2;
 
-    /* Sequenz-nummer bei "normalen", bei notification steht hier immer Null */
     proto_tree_add_text(tree, tvb, offset, 2, "Unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
 
@@ -3145,8 +3144,6 @@ s7commp_decode_data(tvbuff_t *tvb,
 
     guint16 seqnum = 0;
     guint16 functioncode = 0;
-    guint16 unknown1 = 0;
-    guint16 unknown2 = 0;
     guint8 opcode = 0;
     guint32 offset_save = 0;
     guint8 octet_count = 0;
@@ -3170,9 +3167,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset = s7commp_decode_notification(tvb, pinfo, item_tree, dlength, offset);
         dlength = dlength - (offset - offset_save);
     } else {
-        /* 2/3: Unknown */
-        unknown1 = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(tree, hf_s7commp_data_unknown1, tvb, offset, 2, unknown1);
+        proto_tree_add_uint(tree, hf_s7commp_data_reserved1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
         offset += 2;
         dlength -= 2;
 
@@ -3184,9 +3179,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset += 2;
         dlength -= 2;
 
-        /* 6/7: Unknown */
-        unknown2 = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(tree, hf_s7commp_data_unknown2, tvb, offset, 2, unknown2);
+        proto_tree_add_uint(tree, hf_s7commp_data_reserved2, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
         offset += 2;
         dlength -= 2;
 
@@ -3202,7 +3195,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 4;
             dlength -= 4;
 
-            proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+            proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
             offset += 1;
             dlength -= 1;
 
@@ -3253,7 +3246,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
         } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
-            proto_tree_add_item(tree, hf_s7commp_data_unknown3, tvb, offset, 1, FALSE);
+            proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
             offset += 1;
             dlength -= 1;
 
