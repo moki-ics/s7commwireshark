@@ -190,28 +190,26 @@ static const value_string item_datatype_names[] = {
 #define S7COMMP_DATATYPE_FLAG_SPARSEARRAY       0x40
 
 /**************************************************************************
- * Item value syntax Ids
+ * Element-IDs
  */
-#define S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT     0x00
-#define S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT    0xa1
-#define S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT     0xa2
-#define S7COMMP_ITEMVAL_SYNTAXID_ATTRIBUTE      0xa3
-#define S7COMMP_ITEMVAL_SYNTAXID_RELATION       0xa4
-#define S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC   0xa7
-#define S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC    0xa8
-#define S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAB      0xab
-#define S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAC      0xac
+#define S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT   0xa1
+#define S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT    0xa2
+#define S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE     0xa3
+#define S7COMMP_ITEMVAL_ELEMENTID_RELATION      0xa4
+#define S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC  0xa7
+#define S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC   0xa8
+#define S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAB     0xab
+#define S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAC     0xac
 
-static const value_string itemval_syntaxid_names[] = {
-    { S7COMMP_ITEMVAL_SYNTAXID_TERMSTRUCT,      "Terminating Struct" },
-    { S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT,     "Start of Object" },
-    { S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT,      "Terminating Object" },
-    { S7COMMP_ITEMVAL_SYNTAXID_ATTRIBUTE,       "Attribute" },
-    { S7COMMP_ITEMVAL_SYNTAXID_RELATION,        "Relation" },
-    { S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC,    "Start of Tag-Description" },
-    { S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC,     "Terminating Tag-Description" },
-    { S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAB,       "Block0xAB" },
-    { S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAC,       "Block0xAC" },
+static const value_string itemval_elementid_names[] = {
+    { S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT,    "Start of Object" },
+    { S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT,     "Terminating Object" },
+    { S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE,      "Attribute" },
+    { S7COMMP_ITEMVAL_ELEMENTID_RELATION,       "Relation" },
+    { S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC,   "Start of Tag-Description" },
+    { S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC,    "Terminating Tag-Description" },
+    { S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAB,      "Block0xAB" },
+    { S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAC,      "Block0xAC" },
     { 0,                                        NULL }
 };
 
@@ -538,7 +536,7 @@ static gint hf_s7commp_itemaddr_lid_value = -1;
 
 /* Item Value */
 static gint hf_s7commp_itemval_itemnumber = -1;
-static gint hf_s7commp_itemval_syntaxid = -1;
+static gint hf_s7commp_itemval_elementid = -1;
 static gint hf_s7commp_itemval_datatype_flags = -1;
 static gint hf_s7commp_itemval_datatype_flags_array = -1;               /* 0x10 for array */
 static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 for address-array */
@@ -849,8 +847,8 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_itemnumber,
           { "Item Number", "s7comm-plus.item.val.item_number", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Item Number", HFILL }},
-        { &hf_s7commp_itemval_syntaxid,
-          { "Item Syntax-Id", "s7comm-plus.item.val.syntaxid", FT_UINT8, BASE_HEX, VALS(itemval_syntaxid_names), 0x0,
+        { &hf_s7commp_itemval_elementid,
+          { "Element Tag-Id", "s7comm-plus.item.val.elementid", FT_UINT8, BASE_HEX, VALS(itemval_elementid_names), 0x0,
             NULL, HFILL }},
         /* Datatype flags */
         { &hf_s7commp_itemval_datatype_flags,
@@ -1902,7 +1900,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     guint32 length_of_value;
     guint32 vlq_value;
     guint8 octet_count = 0;
-    guint8 syntax_id;
+    guint8 element_id;
     int i;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -1951,12 +1949,12 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 2, "Tag description - Unknown : 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
     i = 1;
-    syntax_id = tvb_get_guint8(tvb, offset);
-    while (syntax_id != S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC) {
+    element_id = tvb_get_guint8(tvb, offset);
+    while (element_id != S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC) {
         vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Unknown-VLQ [%d]: %u", i++, vlq_value);
         offset += octet_count;
-        syntax_id = tvb_get_guint8(tvb, offset);
+        element_id = tvb_get_guint8(tvb, offset);
     }
 
     return offset;
@@ -1977,17 +1975,17 @@ s7commp_decode_object(tvbuff_t *tvb,
     guint32 uint32_value;
     guint16 data_len;
     guint8 octet_count = 0;
-    guint8 syntax_id;
+    guint8 element_id;
     gboolean terminate = FALSE;
 
     do {
         start_offset = offset;
-        syntax_id = tvb_get_guint8(tvb, offset);
-        switch (syntax_id) {
-            case S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT:              /* 0xa1 */
+        element_id = tvb_get_guint8(tvb, offset);
+        switch (element_id) {
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT:              /* 0xa1 */
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_object, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_object);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 uint32_value = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, 4, "Relation Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
@@ -2012,15 +2010,15 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_object(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_TERMOBJECT:               /* 0xa2 */
-                proto_tree_add_uint(tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:               /* 0xa2 */
+                proto_tree_add_uint(tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 terminate = TRUE;
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_RELATION:                 /* 0xa4 */
+            case S7COMMP_ITEMVAL_ELEMENTID_RELATION:                 /* 0xa4 */
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_relation, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_relation);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Relation Id: %s (%u)", val_to_str_ext(uint32_value, &id_number_names_ext, "Unknown"), uint32_value);
@@ -2029,26 +2027,26 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 4;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_STARTTAGDESC:             /* 0xa7 */
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC:             /* 0xa7 */
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_tagdescription);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_TERMTAGDESC:              /* 0xa8 */
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC:              /* 0xa8 */
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAB:                /* 0xab */
-            case S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAC:                /* 0xac */
+            case S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAB:                /* 0xab */
+            case S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAC:                /* 0xac */
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_block, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_block);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
-                if (syntax_id == S7COMMP_ITEMVAL_SYNTAXID_BLOCK0xAB) {
+                if (element_id == S7COMMP_ITEMVAL_ELEMENTID_BLOCK0xAB) {
                     proto_item_append_text(data_item_tree, ": Block0xAB");
                 } else {
                     proto_item_append_text(data_item_tree, ": Block0xAC");
@@ -2062,10 +2060,10 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 2;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_SYNTAXID_ATTRIBUTE:                /* 0xa3 */
+            case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:                /* 0xa3 */
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_attribute, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_attribute);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_syntaxid, tvb, offset, 1, syntax_id);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 offset = s7commp_decode_id_value_recursive(tvb, data_item_tree, offset, FALSE);
                 proto_item_set_len(data_item_tree, offset - start_offset);
@@ -2118,7 +2116,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
      * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
      */
     next_byte = tvb_get_guint8(tvb, offset);
-    if (pdutype == S7COMMP_PDUTYPE_DATA && next_byte != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+    if (pdutype == S7COMMP_PDUTYPE_DATA && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
@@ -2622,7 +2620,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 offset += 2;
                 proto_tree_add_text(tree, tvb, offset, 1, "Part 2 - Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
-                if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+                if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
                     offset =  s7commp_decode_object(tvb, tree, offset);
                     add_data_info_column = TRUE;
                 }
@@ -2823,7 +2821,7 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
      * wie die nachfolgenden Bytes interpretiert werden sollen ist unklar. So wird erstmal geprüft ob eine entsprechende
      * Object-Start-ID folgt. Das funktioniert zumindest soweit, dass es für weitere Analysen verwendet werden kann.
      */
-    if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+    if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         offset = s7commp_decode_object(tvb, tree, offset);
     } else {
         proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
@@ -3128,7 +3126,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
         /* Es kann sein dass hier noch ein Wert VLQ, wenn nicht ein STARTOBJECT (0xa1) folgt.
          * Welche Logik dahinterstecken mag. Das macht auch nur die 1500.
          */
-        if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+        if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
             id_number = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
             offset += octet_count;
@@ -3136,7 +3134,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
         /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
          * zur Terminierung der Liste eingefügt werden.
          */
-        if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_SYNTAXID_STARTOBJECT) {
+        if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
             offset = s7commp_decode_object(tvb, tree, offset);
         }
     }
