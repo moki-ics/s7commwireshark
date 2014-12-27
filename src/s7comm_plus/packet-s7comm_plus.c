@@ -461,6 +461,7 @@ static gint hf_s7commp_data_unknown3 = -1;
 static gint hf_s7commp_data_function = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
+static gint hf_s7commp_objectqualifier = -1;
 
 static gint hf_s7commp_trailer = -1;
 static gint hf_s7commp_trailer_protid = -1;
@@ -520,6 +521,7 @@ static gint ett_s7commp_notification_set = -1;          /* Subtree for notificat
 
 static gint ett_s7commp_itemaddr_area = -1;             /* Subtree for item address area */
 static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value is an array */
+static gint ett_s7commp_objectqualifier = -1;           /* Subtree for object qualifier data */
 static gint ett_s7commp_integrity = -1;                 /* Subtree for integrity block */
 
 /* Item Address */
@@ -1012,6 +1014,9 @@ proto_register_s7commp (void)
           { "Block", "s7comm-plus.block", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
+        { &hf_s7commp_objectqualifier,
+          { "ObjectQualifier", "s7comm-plus.objectqualifier", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
         /* Integrity part for 1500 */
         { &hf_s7commp_integrity,
           { "Integrity part", "s7comm-plus.integrity", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -1093,6 +1098,7 @@ proto_register_s7commp (void)
         &ett_s7commp_element_relation,
         &ett_s7commp_element_tagdescription,
         &ett_s7commp_element_block,
+        &ett_s7commp_objectqualifier,
         &ett_s7commp_integrity,
         &ett_s7commp_fragments,
         &ett_s7commp_fragment
@@ -3142,6 +3148,50 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decode the object qualifier
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_objectqualifier(tvbuff_t *tvb,
+                                proto_tree *tree,
+                                gint16 dlength,
+                                guint32 offset)
+{
+    guint32 offset_save;
+    guint32 offsetmax;
+    guint16 id;
+    proto_item *objectqualifier_item = NULL;
+    proto_tree *objectqualifier_tree = NULL;
+
+    offset_save = offset;
+    offsetmax = offset + dlength-2;
+
+    while (offset < offsetmax) {
+        id = tvb_get_ntohs(tvb, offset);
+        if (id == 0x4e8) {
+            /* alles dazwischen mit Dummy-Bytes auffüllen */
+            if ((offset+2 - offset_save) > 0) {
+                proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
+            }
+            dlength = dlength - (offset - offset_save);
+            offset_save = offset;
+            objectqualifier_item = proto_tree_add_item(tree, hf_s7commp_objectqualifier, tvb, offset, -1, FALSE );
+            objectqualifier_tree = proto_item_add_subtree(objectqualifier_item, ett_s7commp_objectqualifier);
+            proto_tree_add_uint(objectqualifier_tree, hf_s7commp_data_id_number, tvb, offset, 2, id);
+            offset += 2;
+            offset = s7commp_decode_id_value_list(tvb, objectqualifier_tree, offset);
+            proto_item_set_len(objectqualifier_tree, offset - offset_save);
+            break;
+        }
+        offset += 1;
+    }
+    if (id != 0x4e8) {
+        offset = offset_save; /* zurücksetzen wenn nicht gefunden */
+    }
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decodes the data part
  *
  *******************************************************************************************************/
@@ -3164,7 +3214,6 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint16 unknown2 = 0;
     guint8 opcode = 0;
     guint32 offset_save = 0;
-    guint32 offsetmax;
     guint8 octet_count = 0;
     guint32 integrity_id = 0;
     guint8 integrity_len = 0;
@@ -3322,26 +3371,8 @@ s7commp_decode_data(tvbuff_t *tvb,
      */
     if (has_objectqualifier && dlength > 10) {
         offset_save = offset;
-        offsetmax = offset + dlength-2;
-        while (offset < offsetmax) {
-            unknown1 = tvb_get_ntohs(tvb, offset);  /* hier kein VLQ! */
-            if (unknown1 == 0x4e8) {    /* gefunden! */
-                /* alles dazwischen mit Dummy-Bytes auffüllen */
-                if ((offset+2 - offset_save) > 0) {
-                    proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
-                }
-                proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 2, unknown1);
-                offset += 2;
-                /* Ab hier Standard: ID, Flags, Typ, Wert */
-                offset = s7commp_decode_id_value_list(tvb, tree, offset);
-                dlength = dlength - (offset - offset_save);
-                break;
-            }
-            offset += 1;    /* byteweise durchgehen */
-        }
-        if (unknown1 != 0x4e8) {
-            offset = offset_save; /* zurücksetzen wenn nicht gefunden */
-        }
+        offset = s7commp_decode_objectqualifier(tvb, tree, dlength, offset);
+        dlength = dlength - (offset - offset_save);
     }
 
     /* Request GetVarSubStreamed has two bytes of unknown meaning, request SetVariable session one single byte */
