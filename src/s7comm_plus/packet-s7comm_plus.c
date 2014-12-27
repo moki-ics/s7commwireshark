@@ -1431,6 +1431,8 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
+    guint32 stringblobspecial_id;
+    int i;
     const gchar *str_arr_prefix = "Unknown";
 
     guint8 string_actlength = 0;
@@ -1590,26 +1592,41 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_WSTRING:       /* 0x15 */
-                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
-                length_of_value = 0;
+                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127
+                /* So wie es aussieht steht das Flag 0x40 für ein Array. Bei dem beginnt es mit einer Nummer, der Stringlänge, dem String, bis
+                 * als Nummer eine Null gelesen wird.
+                 */
                 if (datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) {
-                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special length or ID: %u", length_of_value);
-                    offset += octet_count;
-                    if (length_of_value > 0) {
-                        length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u (without trailing end-byte)", length_of_value);
+                    i = 0;
+                    do {
+                        stringblobspecial_id = tvb_get_varuint32(tvb, &octet_count, offset);
+                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special number or ID: %u", stringblobspecial_id);
                         offset += octet_count;
-                        /* additional terminating null */
-                        length_of_value += 1;
-                    }
+                        if (stringblobspecial_id > 0) {
+                            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", uint32val);
+                            offset += octet_count;
+                            /* TODO: String schon hier anfügen, da das Prinzip mit der Array-Darstellung hier intern nicht funktioniert */
+                            proto_tree_add_text(data_item_tree, tvb, offset, uint32val, "Value: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA));
+                            if (i == 0) {
+                                g_snprintf(str_val, sizeof(str_val), "%s",
+                                    tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA));
+                            } else {
+                                g_strlcat(str_val, ", ", sizeof(str_val));
+                                g_strlcat(str_val, tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA), sizeof(str_val));
+                            }
+                            offset += uint32val;
+                            i++;
+                        }
+                    } while (stringblobspecial_id > 0);
+                    length_of_value = 0;    /* Länge auf Null setzen, weil Strings schon vorher eingefügt wurden. */
                 } else {
                     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                     proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
                     offset += octet_count;
-                }
-                g_snprintf(str_val, sizeof(str_val), "%s",
+                    g_snprintf(str_val, sizeof(str_val), "%s",
                            tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+                }
                 offset += length_of_value;
                 break;
             case S7COMMP_ITEM_DATATYPE_VARIANT:
