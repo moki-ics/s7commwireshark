@@ -187,7 +187,7 @@ static const value_string item_datatype_names[] = {
 /* Datatype flags */
 #define S7COMMP_DATATYPE_FLAG_ARRAY             0x10
 #define S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY     0x20
-#define S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL 0x40
+#define S7COMMP_DATATYPE_FLAG_SPARSEARRAY       0x40
 
 /**************************************************************************
  * Item value syntax Ids
@@ -542,13 +542,13 @@ static gint hf_s7commp_itemval_syntaxid = -1;
 static gint hf_s7commp_itemval_datatype_flags = -1;
 static gint hf_s7commp_itemval_datatype_flags_array = -1;               /* 0x10 for array */
 static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 for address-array */
-static gint hf_s7commp_itemval_datatype_flags_string_spec = -1;         /* 0x40 String with special header */
+static gint hf_s7commp_itemval_datatype_flags_sparsearray = -1;         /* 0x40 for nullterminated array with key/value */
 static gint hf_s7commp_itemval_datatype_flags_0x80unkn = -1;            /* 0x80 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
 static const int *s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
     &hf_s7commp_itemval_datatype_flags_address_array,
-    &hf_s7commp_itemval_datatype_flags_string_spec,
+    &hf_s7commp_itemval_datatype_flags_sparsearray,
     &hf_s7commp_itemval_datatype_flags_0x80unkn,
     NULL
 };
@@ -862,9 +862,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_datatype_flags_address_array,
           { "Addressarray", "s7comm-plus.item.val.datatype_flags.address_array", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY,
             "Array of values for Item Address via CRC and LID", HFILL }},
-        { &hf_s7commp_itemval_datatype_flags_string_spec,
-          { "String/Blob-special", "s7comm-plus.item.val.datatype_flags.stringblob_special", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL,
-            "String or blob has a value before length, and terminating null", HFILL }},
+        { &hf_s7commp_itemval_datatype_flags_sparsearray,
+          { "Sparsearray", "s7comm-plus.item.val.datatype_flags.sparsearray", FT_BOOLEAN, 8, NULL, S7COMMP_DATATYPE_FLAG_SPARSEARRAY,
+            "Nullterminated Array with key/value for each element", HFILL }},
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
           { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
             "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
@@ -1414,12 +1414,14 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 datatype_flags;
     gboolean is_array = FALSE;
     gboolean is_address_array = FALSE;
+    gboolean is_sparsearray = FALSE;
     gboolean unknown_type_occured = FALSE;
     guint32 array_size = 1;     /* use 1 as default, so non-arrays can dissected in the same manner as arrays */
     guint32 array_index = 0;
 
     proto_item *array_item = NULL;
     proto_tree *array_item_tree = NULL;
+    proto_tree *current_tree = NULL;
 
     guint64 uint64val = 0;
     guint32 uint32val = 0;
@@ -1431,8 +1433,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar str_val[128];     /* Value of one single item */
     gchar str_arrval[512];  /* Value of array values */
-    guint32 stringblobspecial_id;
-    int i;
+    guint32 sparsearray_key;
     const gchar *str_arr_prefix = "Unknown";
 
     guint8 string_actlength = 0;
@@ -1448,19 +1449,28 @@ s7commp_decode_value(tvbuff_t *tvb,
         ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
     is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY);
     is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY);
+    is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     offset += 1;
 
     datatype = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
-    if (is_array || is_address_array) {
-        array_size = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, octet_count, array_size);
+    if (is_array || is_address_array || is_sparsearray) {
+        if (is_sparsearray) {
+            /* Bei diesem Array-Typ gibt es keine Angabe über die Anzahl. Das Array ist Null-terminiert.
+             * Damit die for-Schleife aber auch hierfür verwendet werden kann, wird die Anzahl auf 999999 gesetzt,
+             * und die Schleife bei erreichen der terminierenden Null explizit verlassen.
+             */
+            array_size = 999999;
+        } else {
+            array_size = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, octet_count, array_size);
+            offset += octet_count;
+        }
         /* To Display an array value, build a separate tree for the complete array.
          * Under the array tree the array values are displayed.
          */
-        offset += octet_count;
         array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
         array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
         start_offset = offset;
@@ -1468,11 +1478,32 @@ s7commp_decode_value(tvbuff_t *tvb,
             str_arr_prefix = "Array";
         } else if (is_address_array) {
             str_arr_prefix = "Addressarray";
+        } else if (is_sparsearray) {
+            str_arr_prefix = "Sparsearray";
         }
+        current_tree = array_item_tree;
+    } else {
+        current_tree = data_item_tree;
     }
 
     /* Use array loop also for non-arrays */
     for (array_index = 1; array_index <= array_size; array_index++) {
+        if (is_sparsearray) {
+            sparsearray_key = tvb_get_varuint32(tvb, &octet_count, offset);
+            if (sparsearray_key == 0) {
+                proto_tree_add_text(current_tree, tvb, offset, octet_count, "Sparsearray key: Terminating Null");
+                offset += octet_count;
+                break;
+            } else {
+                if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
+                    proto_tree_add_text(current_tree, tvb, offset, octet_count, "Sparsearray Variant Type-ID: %u", sparsearray_key);
+                } else {
+                    proto_tree_add_text(current_tree, tvb, offset, octet_count, "Sparsearray key: %u", sparsearray_key);
+                }
+                offset += octet_count;
+            }
+        }
+
         switch (datatype) {
             case S7COMMP_ITEM_DATATYPE_NULL:
                 /* No value following */
@@ -1591,100 +1622,30 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
-            case S7COMMP_ITEM_DATATYPE_WSTRING:       /* 0x15 */
-                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127
-                /* So wie es aussieht steht das Flag 0x40 für ein Array. Bei dem beginnt es mit einer Nummer, der Stringlänge, dem String, bis
-                 * als Nummer eine Null gelesen wird.
-                 */
-                if (datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) {
-                    i = 0;
-                    do {
-                        stringblobspecial_id = tvb_get_varuint32(tvb, &octet_count, offset);
-                        proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String special number or ID: %u", stringblobspecial_id);
-                        offset += octet_count;
-                        if (stringblobspecial_id > 0) {
-                            uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                            proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", uint32val);
-                            offset += octet_count;
-                            /* TODO: String schon hier anfügen, da das Prinzip mit der Array-Darstellung hier intern nicht funktioniert */
-                            proto_tree_add_text(data_item_tree, tvb, offset, uint32val, "Value: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA));
-                            if (i == 0) {
-                                g_snprintf(str_val, sizeof(str_val), "%s",
-                                    tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA));
-                            } else {
-                                g_strlcat(str_val, ", ", sizeof(str_val));
-                                g_strlcat(str_val, tvb_get_string_enc(wmem_packet_scope(), tvb, offset, uint32val, ENC_UTF_8|ENC_NA), sizeof(str_val));
-                            }
-                            offset += uint32val;
-                            i++;
-                        }
-                    } while (stringblobspecial_id > 0);
-                    length_of_value = 0;    /* Länge auf Null setzen, weil Strings schon vorher eingefügt wurden. */
-                } else {
-                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
-                    offset += octet_count;
-                    g_snprintf(str_val, sizeof(str_val), "%s",
-                           tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
-                }
+            case S7COMMP_ITEM_DATATYPE_WSTRING:
+                length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(current_tree, tvb, offset, octet_count, "String actual length: %u", length_of_value);
+                offset += octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%s",
+                       tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
             case S7COMMP_ITEM_DATATYPE_VARIANT:
-                /* Dieser Typ wurde bisher erst einmal in Kombination mit den S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL flags gesehen.
-                 * Es folgt eine Typkennung und ein Wert immer? als VLQ, bis Typkennung 0 als Endekennung folgt. Ob die Typkennung mit den anderen Typen übereinstimmt ist nicht sicher.
-                 * Die Dokumentation des Variant-Typs im SPS verwendet andere Typkennungen (identisch mit denen des ANY-Pointers aus den S7-300/400).
-                 */
-                uint8val = tvb_get_guint8(tvb, offset);
-                while (uint8val != 0) {
-                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Variant Datatype-ID: 0x%02x", uint8val);
-                    offset += 1;
-                    uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Variant Value: %u", uint32val);
-                    offset += octet_count;
-                    uint8val = tvb_get_guint8(tvb, offset);
-                };
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Terminating Variant Value-List", uint8val);
-                offset += 1;
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                offset += octet_count;
+                length_of_value = octet_count;
+                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
-                /* Special flag: see S7-1200-Uploading-OB1-TIAV12.pcap #127 */
-                if ((datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) == 0) {
-                    proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x", tvb_get_guint8(tvb, offset));
-                    offset += 1;
-                    /* Wenn keine Flags da sind, immer 1 Byte offset.
-                     * Haben wir schonmal beobachtet, dass das Flag nicht gesetzt ist UND die Länge 0 ist??
-                     */
-                } else {
-                    /* special string flag ist gesetzt
-                     * Jetzt kommt es drauf an, ob das erste Byte 0 ist oder nicht
-                     * Ist es null, können wir sofort terminieren
-                     */
-                    if (tvb_get_guint8(tvb,offset) == 0) {
-                        length_of_value = 0;
-                        proto_tree_add_text(data_item_tree, tvb, offset, 1, "Blob Reserved: 0x%02x (empty Blob)", tvb_get_guint8(tvb, offset));
-                        offset += 1;
-                        /* Wir sind fertig hier. */
-                        break;
-                    } else {
-                        /* Sind wir nicht null, so müssen wir ZWEI byte (bedeutung unbekannt) überhüpfen */
-                        proto_tree_add_text(data_item_tree, tvb, offset, 2, "Blob Reserved: %s", tvb_bytes_to_ep_str(tvb, offset, 2));
-                        offset += 2;
-                    }
-                }
+                proto_tree_add_text(current_tree, tvb, offset, 1, "Blob Reserved: 0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                if (datatype_flags & S7COMMP_DATATYPE_FLAG_STRINGBLOBSPECIAL) {
-                    /* Wenn spezial Flag gesetzt, folgt noch ein Ende-Byte */
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u (without trailing end-byte)", length_of_value);
-                    length_of_value += 1;
-                } else {
-                    proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
-                }
+                proto_tree_add_text(current_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
                 offset += octet_count;
                 g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
                 offset += length_of_value;
                 break;
             default:
-                /* zur Zeit unbekannter Typ, muss abgebrochen werden solange der Aufbau nicht bekannt */
                 unknown_type_occured = TRUE;
                 g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", sizeof(str_val));
                 break;
@@ -1694,18 +1655,25 @@ s7commp_decode_value(tvbuff_t *tvb,
             break;
         }
 
-        if (is_array || is_address_array) {
+        if (is_array || is_address_array || is_sparsearray) {
             /* Build a string of all array values. Maximum number of 10 values */
             if (array_index < S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
-                g_strlcat(str_arrval, str_val, sizeof(str_arrval));
-                if (array_index < array_size) {
+                if (array_index > 1 && array_size > 1) {
                     g_strlcat(str_arrval, ", ", sizeof(str_arrval));
                 }
+                g_strlcat(str_arrval, str_val, sizeof(str_arrval));
             } else if (array_index == S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
                 /* truncate */
                 g_strlcat(str_arrval, "...", sizeof(str_arrval));
             }
-            proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value[%u]: %s", array_index, str_val);
+            if (is_sparsearray) {
+                proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
+                if (sparsearray_key == 0) {
+                    break;
+                }
+            } else {
+                proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value[%u]: %s", array_index, str_val);
+            }
         }
     } /* for */
 
@@ -1713,6 +1681,10 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_append_text(array_item_tree, " %s[%u] = %s", str_arr_prefix, array_size, str_arrval);
         proto_item_set_len(array_item_tree, offset - start_offset);
         proto_item_append_text(data_item_tree, " (%s) %s[%u] = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_arr_prefix, array_size, str_arrval);
+    } else if (is_sparsearray) {
+        proto_item_append_text(array_item_tree, " %s = %s", str_arr_prefix, str_arrval);
+        proto_item_set_len(array_item_tree, offset - start_offset);
+        proto_item_append_text(data_item_tree, " (%s) %s = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_arr_prefix, str_arrval);
     } else { /* not an array or address array */
         if (length_of_value > 0) {
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
