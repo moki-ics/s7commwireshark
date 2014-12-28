@@ -2494,6 +2494,83 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
+ * Notification Value List
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_notification_value_list(tvbuff_t *tvb,
+                                       proto_tree *tree,
+                                       guint32 offset,
+                                       gboolean looping)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint32 item_number;
+    guint32 start_offset;
+    guint8 octet_count;
+    guint8 item_return_value;
+    int struct_level;
+    /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
+     * Aufbau aus den anderen Telegrammen.
+     * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
+     * Folgende Rückgabewerte wurden gesichtet:
+     *  0x13 -> Fehler bei einer Adresse (S7-1200)
+     *  0x92 -> Erfolg (S7-1200)
+     *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
+     *  0x9b -> Bei 1500 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
+     * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
+     */
+    do {
+        struct_level = 0;
+        item_return_value = tvb_get_guint8(tvb, offset);
+        if (item_return_value == 0) {
+            proto_tree_add_text(tree, tvb, offset, 1, "Terminating Item/List");
+            offset += 1;
+            return offset;
+        } else {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_tree_add_text(data_item_tree, tvb, offset, 1, "Return value: 0x%02x", item_return_value);
+            offset += 1;
+            if (item_return_value == 0x92) {
+                /* Item reference number. Is sent to plc on the subscription-telegram for the addresses. */
+                item_number = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
+                offset += 4;
+                proto_item_append_text(data_item_tree, " [%u]:", item_number);
+                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            } else if (item_return_value == 0x9b) {
+                item_number = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
+                offset += octet_count;
+                proto_item_append_text(data_item_tree, " [%u]:", item_number);
+                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            } else if (item_return_value == 0x9c) {
+                item_number = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown value after value 0x9c: 0x%08x", item_number);
+                proto_item_append_text(data_item_tree, " Returncode 0x9c, Value: 0x%08x", item_number);
+                offset += 4;
+            } else if (item_return_value == 0x13) {
+                item_number = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
+                proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
+                offset += 4;
+            } else {
+                proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
+                proto_item_set_len(data_item_tree, offset - start_offset);
+                break;
+            }
+            if (struct_level > 0) {
+                offset = s7commp_decode_notification_value_list(tvb, data_item_tree, offset, TRUE);
+            }
+            proto_item_set_len(data_item_tree, offset - start_offset);
+        }
+    } while (looping);
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Notification
  *
  *******************************************************************************************************/
@@ -2506,20 +2583,15 @@ s7commp_decode_notification(tvbuff_t *tvb,
 {
     guint16 unknown2;
     guint32 subscr_object_id;
-
     guint8 credit_tick;
     guint32 seqnum;
     guint8 item_return_value;
-
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
-    guint32 item_number;
-    guint32 start_offset;
-    int struct_level;
-    guint8 octet_count = 0;
-    gboolean add_data_info_column = FALSE;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
+    guint8 octet_count = 0;
+    gboolean add_data_info_column = FALSE;
     guint32 list_start_offset;
 
     /* 4 Bytes Subscription Object Id */
@@ -2575,74 +2647,15 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_text(tree, tvb, offset, 1, "Unknown 5: 0x%02x", item_return_value);
             offset += 1;
         }
-        /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
-         * Aufbau aus den anderen Telegrammen.
-         * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
-         * Folgende Rückgabewerte wurden gesichtet:
-         *  0x13 -> Fehler bei einer Adresse (S7-1200)
-         *  0x92 -> Erfolg (S7-1200)
-         *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-         *  0x9b -> Bei 1500 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
-         * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
-         */
+
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
         list_start_offset = offset;
-        struct_level = 1;
-        while (struct_level > 0) {
-            item_return_value = tvb_get_guint8(tvb, offset);
-            start_offset = offset;
-
-            if (item_return_value == 0) {
-                struct_level--;
-                if (struct_level <= 0) {
-                    proto_tree_add_text(list_item_tree, tvb, offset, 1, "Terminating Struct / Terminating Dataset");
-                    offset += 1;
-                    break;
-                } else {
-                    proto_tree_add_text(list_item_tree, tvb, offset, 1, "Terminating Struct (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
-                    offset += 1;
-                }
-            } else {
-                add_data_info_column = TRUE;    /* set flag, to add information into Info-Column at the end */
-
-                data_item = proto_tree_add_item(list_item_tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
-                data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-
-                proto_tree_add_text(data_item_tree, tvb, offset, 1, "Return value: 0x%02x", item_return_value);
-                offset += 1;
-                if (item_return_value == 0x92) {
-                    /* Item reference number. Is sent to plc on the subscription-telegram for the addresses. */
-                    item_number = tvb_get_ntohl(tvb, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
-                    offset += 4;
-                    proto_item_append_text(data_item_tree, " [%u]:", item_number);
-                    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
-                } else if (item_return_value == 0x9b) {
-                    item_number = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
-                    offset += octet_count;
-                    proto_item_append_text(data_item_tree, " [%u]:", item_number);
-                    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
-                } else if (item_return_value == 0x9c) {
-                    item_number = tvb_get_ntohl(tvb, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown value after value 0x9c: 0x%08x", item_number);
-                    proto_item_append_text(data_item_tree, " Returncode 0x9c, Value: 0x%08x", item_number);
-                    offset += 4;
-                } else if (item_return_value == 0x13) {
-                    item_number = tvb_get_ntohl(tvb, offset);
-                    proto_tree_add_text(data_item_tree, tvb, offset, 4, "Item reference number: %u", item_number);
-                    proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
-                    offset += 4;
-                } else {
-                    proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
-                    proto_item_set_len(data_item_tree, offset - start_offset);
-                    break;
-                }
-                proto_item_set_len(data_item_tree, offset - start_offset);
-            }
-        }
+        offset = s7commp_decode_notification_value_list(tvb, list_item_tree, offset, TRUE);
         proto_item_set_len(list_item_tree, offset - list_start_offset);
+        if (offset - list_start_offset > 1) {
+            add_data_info_column = TRUE;
+        }
 
         /* Nur wenn die id > 0x70000000 dann folgt optional noch ein weiterer Datensatz, wenn die nächsten 4 Bytes nicht Null sind. */
         if (subscr_object_id > 0x70000000) {
