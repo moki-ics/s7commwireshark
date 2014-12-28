@@ -2582,7 +2582,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                             guint32 offset)
 {
     guint16 unknown2;
-    guint32 subscr_object_id;
+    guint32 subscr_object_id, subscr_object_id2;
     guint8 credit_tick;
     guint32 seqnum;
     guint8 item_return_value;
@@ -2657,11 +2657,11 @@ s7commp_decode_notification(tvbuff_t *tvb,
             add_data_info_column = TRUE;
         }
 
-        /* Nur wenn die id > 0x70000000 dann folgt optional noch ein weiterer Datensatz, wenn die nächsten 4 Bytes nicht Null sind. */
-        if (subscr_object_id > 0x70000000) {
-            subscr_object_id = tvb_get_ntohl(tvb, offset);
-            if (subscr_object_id != 0) {
-                proto_tree_add_text(tree, tvb, offset, 4, "Part 2 - Subscription Object Id: 0x%08x", subscr_object_id);
+        /* Noch ein spezial Datensatz, mit ein paar unbekannten Werten davor und einer Standard Objekt-Datenstruktur. */
+        if (tvb_get_guint8(tvb, offset) != 0) {
+            subscr_object_id2 = tvb_get_ntohl(tvb, offset);
+            if (subscr_object_id2 != 0) {
+                proto_tree_add_text(tree, tvb, offset, 4, "Part 2 - Subscription Object Id: 0x%08x", subscr_object_id2);
                 offset += 4;
                 proto_tree_add_text(tree, tvb, offset, 2, "Part 2 - Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
@@ -2672,6 +2672,9 @@ s7commp_decode_notification(tvbuff_t *tvb,
                     add_data_info_column = TRUE;
                 }
             }
+        }
+        /* Nur wenn die id > 0x70000000 dann folgen noch 3 Bytes, die bisher immer null waren. */
+        if (subscr_object_id > 0x70000000) {
             proto_tree_add_text(tree, tvb, offset, 3, "Unknown additional 3 bytes, because 1st Object ID > 0x70000000");
             offset += 3;
         }
