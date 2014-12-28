@@ -3285,6 +3285,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
         offset_save = offset;
         offset = s7commp_decode_notification(tvb, pinfo, item_tree, dlength, offset);
+        proto_item_set_len(item_tree, offset - offset_save);
         dlength = dlength - (offset - offset_save);
     } else {
         proto_tree_add_uint(tree, hf_s7commp_data_reserved1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
