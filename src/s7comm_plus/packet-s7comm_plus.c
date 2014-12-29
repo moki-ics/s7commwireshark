@@ -1459,8 +1459,6 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 sparsearray_key;
     const gchar *str_arr_prefix = "Unknown";
 
-    guint8 string_actlength = 0;
-
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
 
@@ -2082,7 +2080,6 @@ static guint32
 s7commp_decode_request_createobject(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset,
-                                    const guint32 offsetmax,
                                     guint8 pdutype)
 {
     int struct_level = 1;
@@ -2129,7 +2126,6 @@ static guint32
 s7commp_decode_response_createobject(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset,
-                                    const guint32 offsetmax,
                                     guint8 pdutype)
 {
     guint8 object_id_count = 0;
@@ -2352,7 +2348,6 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
     guint32 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
-    guint32 offsetmax = offset + dlength;
     guint8 octet_count = 0;
     guint32 item_address_count;
     guint32 id_number;
@@ -2432,7 +2427,6 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
 static guint32
 s7commp_decode_request_getmultivar(tvbuff_t *tvb,
                                    proto_tree *tree,
-                                   gint16 dlength,
                                    guint32 offset)
 {
     guint32 item_count = 0;
@@ -2440,7 +2434,6 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     guint8 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
-    guint32 offsetmax = offset + dlength;
     guint8 octet_count = 0;
     guint32 id_number;
     guint32 item_address_count;
@@ -2493,7 +2486,6 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
 static guint32
 s7commp_decode_response_getmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
-                                    gint16 dlength,
                                     guint32 offset)
 {
     offset = s7commp_decode_returnvalue(tvb, tree, offset, NULL);
@@ -2510,7 +2502,6 @@ s7commp_decode_response_getmultivar(tvbuff_t *tvb,
 static guint32
 s7commp_decode_response_setmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
-                                    gint16 dlength,
                                     guint32 offset)
 {
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
@@ -2608,7 +2599,6 @@ static guint32
 s7commp_decode_notification(tvbuff_t *tvb,
                             packet_info *pinfo,
                             proto_tree *tree,
-                            gint16 dlength,
                             guint32 offset)
 {
     guint16 unknown2;
@@ -2616,8 +2606,6 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint8 credit_tick;
     guint32 seqnum;
     guint8 item_return_value;
-    proto_item *data_item = NULL;
-    proto_tree *data_item_tree = NULL;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint8 octet_count = 0;
@@ -2899,7 +2887,6 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
                                      gint16 dlength,
                                      guint32 offset)
 {
-    guint32 max_offset = offset + dlength;
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 2, "Request unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
@@ -3041,8 +3028,6 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
     guint32 area;
-    guint16 db1 = 0;
-    guint16 db2 = 0;
     guint8 exp_class;
     guint8 sub_class;
     guint16 section;
@@ -3197,12 +3182,9 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_response_explore(tvbuff_t *tvb,
-                                packet_info *pinfo,
                                 proto_tree *tree,
-                                gint16 dlength,
                                 guint32 offset)
 {
-    guint32 max_offset = offset + dlength;
     guint32 id_number;
     gint16 errorcode = 0;
     guint8 octet_count = 0;
@@ -3243,7 +3225,7 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
 {
     guint32 offset_save;
     guint32 offsetmax;
-    guint16 id;
+    guint16 id = 0;
     proto_item *objectqualifier_item = NULL;
     proto_tree *objectqualifier_tree = NULL;
 
@@ -3314,7 +3296,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
         item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
         offset_save = offset;
-        offset = s7commp_decode_notification(tvb, pinfo, item_tree, dlength, offset);
+        offset = s7commp_decode_notification(tvb, pinfo, item_tree, offset);
         proto_item_set_len(item_tree, offset - offset_save);
         dlength = dlength - (offset - offset_save);
     } else {
@@ -3356,7 +3338,7 @@ s7commp_decode_data(tvbuff_t *tvb,
 
             switch (functioncode) {
                 case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
-                    offset = s7commp_decode_request_getmultivar(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_getmultivar(tvb, item_tree, offset);
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
@@ -3368,7 +3350,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_request_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
+                    offset = s7commp_decode_request_createobject(tvb, item_tree, offset, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_request_deleteobject(tvb, pinfo, item_tree, offset);
@@ -3407,16 +3389,16 @@ s7commp_decode_data(tvbuff_t *tvb,
 
             switch (functioncode) {
                 case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
-                    offset = s7commp_decode_response_getmultivar(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_getmultivar(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
-                    offset = s7commp_decode_response_setmultivar(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_setmultivar(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_SETVARIABLE:
                     offset = s7commp_decode_response_setvariable(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_response_createobject(tvb, item_tree, offset, offset + dlength, pdutype);
+                    offset = s7commp_decode_response_createobject(tvb, item_tree, offset, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);
@@ -3425,7 +3407,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_getvarsubstr(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, dlength, offset);
+                    offset = s7commp_decode_response_explore(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_GETLINK:
                     offset = s7commp_decode_response_getlink(tvb, item_tree, offset);
@@ -3751,7 +3733,6 @@ dissect_s7commp(tvbuff_t *tvb,
                                              tvb, offset, pinfo,
                                              frag_id,               /* ID for fragments belonging together */
                                              NULL,                  /* void *data */
-                                             /*frag_number,           /* fragment sequence number */
                                              frag_data_len,         /* fragment length - to the end */
                                              more_frags);           /* More fragments? */
 
