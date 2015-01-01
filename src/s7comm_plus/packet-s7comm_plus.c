@@ -1896,6 +1896,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     guint32 vlq_value;
     guint8 octet_count = 0;
     guint8 element_id;
+    guint8 datatype;
     int i;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -1912,7 +1913,8 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
     offset += 1;
 
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_datatype, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    datatype = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown3, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -1932,8 +1934,18 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_lid, tvb, offset, octet_count, lid);
     offset += octet_count;
 
+    /* Dieser Wert hat je nach Datentyp eine unterschiedliche Funktion.
+     * Ist das Element eine Struktur, so kann mir einer folgenden Abfrage die einer Sub-Elements im Datenbaustein anhand der ID
+     * die Beziehung zu dem übergeordneten Element hergestellt werden.
+     */
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Length (only if type is S7String): %u", length_of_value);
+    if (datatype == S7COMMP_ITEM_DATATYPE_S7STRING) {
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Length of S7String: %u", length_of_value);
+    } else if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Relation Id for Struct: %u", length_of_value);
+    } else {
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Unknown for this datatype: %u", length_of_value);
+    }
     offset += octet_count;
 
     /* 1 word scheint fix, danach eine wie auch immer zu bestimmende Anzahl an VLQ.
