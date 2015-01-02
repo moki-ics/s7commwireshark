@@ -461,15 +461,15 @@ static const value_string tagdescr_offsetinfotype_names[] = {
 };
 
 static const value_string tagdescr_section_names[] = {
-    { 0x00,                                             "Undefined" },
-    { 0x01,                                             "Input" },
-    { 0x02,                                             "Output" },
-    { 0x03,                                             "InOut" },
-    { 0x04,                                             "Static" },
-    { 0x05,                                             "Dynamic" },
-    { 0x06,                                             "Retval" },
-    { 0x07,                                             "Operand" },
-    { 0,                                                NULL }
+    { 0x00,                                     "Undefined" },
+    { 0x01,                                     "Input" },
+    { 0x02,                                     "Output" },
+    { 0x03,                                     "InOut" },
+    { 0x04,                                     "Static" },
+    { 0x05,                                     "Dynamic" },
+    { 0x06,                                     "Retval" },
+    { 0x07,                                     "Operand" },
+    { 0,                                        NULL }
 };
 
 static const value_string tagdescr_softdatatype_names[] = {
@@ -601,6 +601,18 @@ static const value_string tagdescr_softdatatype_names[] = {
     { 0,         NULL }
 };
 static value_string_ext tagdescr_softdatatype_names_ext = VALUE_STRING_EXT_INIT(tagdescr_softdatatype_names);
+
+static const value_string tagdescr_accessability_names[] = {
+    { 0,                                        "Public" },
+    { 1,                                        "ReadOnly" },
+    { 2,                                        "Internal" },
+    { 3,                                        "InternalReadOnly" },
+    { 4,                                        "Protected" },
+    { 5,                                        "ProtectedReadOnly" },
+    { 6,                                        "Constant" },
+    { 7,                                        "ConstantReadOnly" },
+    { 0,                                        NULL }
+};
 
 /**************************************************************************
  **************************************************************************/
@@ -1181,7 +1193,7 @@ proto_register_s7commp (void)
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
         { &hf_s7commp_tagdescr_accessability,
-          { "Accessability", "s7comm-plus.tagdescr.accessability", FT_UINT32, BASE_DEC, NULL, 0x0,
+          { "Accessability", "s7comm-plus.tagdescr.accessability", FT_UINT32, BASE_DEC, VALS(tagdescr_accessability_names), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_section,
           { "Section", "s7comm-plus.tagdescr.section", FT_UINT32, BASE_DEC, VALS(tagdescr_section_names), 0x0,
