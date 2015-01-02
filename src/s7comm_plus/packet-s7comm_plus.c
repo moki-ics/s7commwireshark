@@ -441,6 +441,36 @@ static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "
 #define S7COMMP_TAGDESCR_ATTRIBUTE_APPWRITEABLE       0x0000002
 #define S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE        0x0000001
 
+/* Offsetinfo type for tag description */
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT      0x00
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOLINUDT       0x01
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYINSTRUCT   0x02
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_PLAINSTATIC     0x04
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL            0x05
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY           0x06
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_MULTIDIMARRAY   0x07
+static const value_string tagdescr_offsetinfotype_names[] = {
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT,       "LibraryElement" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOLINUDT,        "BoolInUdt" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYINSTRUCT,    "ArrayInStruct" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_PLAINSTATIC,      "Plain/Static" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL,             "Bool" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY,            "Array" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_MULTIDIMARRAY,    "Multidimensional Array" },
+    { 0,                                                NULL }
+};
+static const value_string tagdescr_section_names[] = {
+    { 0x00,                                             "Undefined" },
+    { 0x01,                                             "Input" },
+    { 0x02,                                             "Output" },
+    { 0x03,                                             "InOut" },
+    { 0x04,                                             "Static" },
+    { 0x05,                                             "Dynamic" },
+    { 0x06,                                             "Retval" },
+    { 0x07,                                             "Operand" },
+    { 0,                                                NULL }
+};
+
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
@@ -572,12 +602,16 @@ static gint hf_s7commp_explore_req_area_structindex = -1;
 static gint hf_s7commp_explore_req_area_section = -1;
 
 /* Explore result, variable (tag) description */
-static gint hf_s7commp_tagdescr_unknown1 = -1;
+static gint hf_s7commp_tagdescr_offsetinfo = -1;
+static gint ett_s7commp_tagdescr_offsetinfo = -1;
+static gint hf_s7commp_tagdescr_offsetinfotype = -1;
 static gint hf_s7commp_tagdescr_namelength = -1;
 static gint hf_s7commp_tagdescr_name = -1;
 static gint hf_s7commp_tagdescr_unknown2 = -1;
 static gint hf_s7commp_tagdescr_datatype = -1;
-static gint hf_s7commp_tagdescr_unknown3 = -1;
+static gint hf_s7commp_tagdescr_softdatatype = -1;
+static gint hf_s7commp_tagdescr_accessability = -1;
+static gint hf_s7commp_tagdescr_section = -1;
 
 static gint hf_s7commp_tagdescr_attributeflags = -1;
 static gint hf_s7commp_tagdescr_attributeflags_hostrelevant = -1;
@@ -916,26 +950,29 @@ proto_register_s7commp (void)
             NULL, HFILL }},
 
          /* Explore result, variable (tag) description */
-        { &hf_s7commp_tagdescr_unknown1,
-          { "Tag description - Unknown 1", "s7comm-plus.tagdescr.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_tagdescr_offsetinfo,
+          { "Offset Info", "s7comm-plus.tagdescr.offsetinfo", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_tagdescr_offsetinfotype,
+          { "Offsetinfo Type", "s7comm-plus.tagdescr.offsetinfotype", FT_UINT8, BASE_HEX, VALS(tagdescr_offsetinfotype_names), 0x0,
+            "Describes how to interpret the last VLQ values", HFILL }},
         { &hf_s7commp_tagdescr_namelength,
-          { "Tag description - Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
+          { "Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - Length of name", HFILL }},
         { &hf_s7commp_tagdescr_name,
-          { "Tag description - Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
+          { "Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown2,
-          { "Tag description - Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
+          { "Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_datatype,
-          { "Tag description - Datatype", "s7comm-plus.tagdescr.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
+          { "Datatype", "s7comm-plus.tagdescr.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_unknown3,
-          { "Tag description - Unknown 3", "s7comm-plus.tagdescr.unknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_tagdescr_softdatatype,
+          { "SoftDataType", "s7comm-plus.tagdescr.softdatatype", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_attributeflags,
-          { "Tag description - Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_attributeflags_hostrelevant,
           { "Hostrelevant", "s7comm-plus.tagdescr.attributeflags.hostrelevant", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT,
@@ -1004,14 +1041,20 @@ proto_register_s7commp (void)
           { "App-Readable", "s7comm-plus.tagdescr.attributeflags.appreadable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown4,
-          { "Tag description - Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
+          { "Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown5,
-          { "Tag description - Unknown 5", "s7comm-plus.tagdescr.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
+          { "Unknown 5", "s7comm-plus.tagdescr.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_lid,
-          { "Tag description - LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
+          { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
+        { &hf_s7commp_tagdescr_accessability,
+          { "Accessability", "s7comm-plus.tagdescr.accessability", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_section,
+          { "Section", "s7comm-plus.tagdescr.section", FT_UINT32, BASE_DEC, VALS(tagdescr_section_names), 0x0,
+            NULL, HFILL }},
 
         /* Fields for object traversion */
         { &hf_s7commp_element_object,
@@ -1108,6 +1151,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
         &ett_s7commp_tagdescr_attributeflags,
+        &ett_s7commp_tagdescr_offsetinfo,
         &ett_s7commp_explore_req_area,
         &ett_s7commp_element_object,
         &ett_s7commp_element_attribute,
@@ -1894,12 +1938,20 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     guint32 lid;
     guint32 length_of_value;
     guint32 vlq_value;
+    gint32 svlq_value;
     guint8 octet_count = 0;
     guint8 element_id;
     guint8 datatype;
+    guint8 offsetinfotype;
     int i;
+    proto_item *offsetinfo_item = NULL;
+    proto_tree *offsetinfo_tree = NULL;
+    guint32 start_offset;
+    guint32 number_of_array_dimensions;
+    guint32 array_dimension;
 
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offsetinfotype = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_offsetinfotype, tvb, offset, 1, offsetinfotype);
     offset += 1;
 
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -1917,15 +1969,10 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown3, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-    offset += 1;
-    /* Die Option nur sichbar ohne erreichbar ist nicht einstellbar.
-     * Die Option "Einstellwert" findet sich nicht wieder.
-     * Typ              ErreichbarHMI   Sichbar in HMI  Remanenz    Byte 5  Byte 6
-     * Variable im DB   Ja              Nein            Nicht       0x80    0x10
-     * Variable im DB   Ja              Ja              Nicht       0x80    0x90
-     * Variable im DB   Ja              Ja              Remanent    0x82    0x90
-     */
+    vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, octet_count, vlq_value);
+    offset += octet_count;
+
     proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_tagdescr_attributeflags,
         ett_s7commp_tagdescr_attributeflags, s7commp_tagdescr_attributeflags_fields, ENC_BIG_ENDIAN);
     offset += 4;
@@ -1940,30 +1987,164 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
      */
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
     if (datatype == S7COMMP_ITEM_DATATYPE_S7STRING) {
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Length of S7String: %u", length_of_value);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Length of S7String: %u", length_of_value);
     } else if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Relation Id for Struct: %u", length_of_value);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Relation Id for Struct: %u", length_of_value);
     } else {
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Unknown for this datatype: %u", length_of_value);
+        proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown for this datatype: %u", length_of_value);
     }
     offset += octet_count;
 
-    /* 1 word scheint fix, danach eine wie auch immer zu bestimmende Anzahl an VLQ.
-     * Bei Variablen die auch absolut addressiert werden können, scheint hier die Absolutadresse hinterlegt zu sein.
-     * Dann folgen die byteadresse doppelt, und die bitadresse doppelt.
-     * Solange nicht klar ist wie das funktioniert, wird bis zum terminierenden 0xa8 eingelesen
-     */
-    proto_tree_add_text(tree, tvb, offset, 2, "Tag description - Unknown : 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    i = 1;
-    element_id = tvb_get_guint8(tvb, offset);
-    while (element_id != S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC) {
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Tag description - Unknown-VLQ [%d]: %u", i++, vlq_value);
-        offset += octet_count;
-        element_id = tvb_get_guint8(tvb, offset);
+    offsetinfo_item = proto_tree_add_item(tree, hf_s7commp_tagdescr_offsetinfo, tvb, offset, -1, FALSE);
+    offsetinfo_tree = proto_item_add_subtree(offsetinfo_item, ett_s7commp_tagdescr_offsetinfo);
+    start_offset = offset;
+    switch (offsetinfotype) {
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT: /* 0x00 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOLINUDT: /* 0x01 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "BitOffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "BitOffsetType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYINSTRUCT: /* 0x02 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            svlq_value = tvb_get_varint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array lower bounds : %d", svlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array element count: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_PLAINSTATIC: /* 0x04 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_section, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL: /* 0x05 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_section, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "BitOffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "BitOffsetType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY: /* 0x06*/
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_section, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            svlq_value = tvb_get_varint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array lower bounds : %d", svlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array element count: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType2: %u", vlq_value);
+            offset += octet_count;
+            break;
+        case S7COMMP_TAGDESCR_OFFSETINFOTYPE_MULTIDIMARRAY: /* 0x07 */
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_section, tvb, offset, octet_count, vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "OffsetType2: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType1: %u", vlq_value);
+            offset += octet_count;
+            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "PaddingType2: %u", vlq_value);
+            offset += octet_count;
+            number_of_array_dimensions = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Number of array dimensions: %u", number_of_array_dimensions);
+            offset += octet_count;
+            for (array_dimension = 1; array_dimension <= number_of_array_dimensions; array_dimension++) {
+                svlq_value = tvb_get_varint32(tvb, &octet_count, offset);
+                proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array [Dimension %d] lower bounds : %d", array_dimension, svlq_value);
+                offset += octet_count;
+                vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Array [Dimension %d] element count: %u", array_dimension, vlq_value);
+                offset += octet_count;
+            }
+            break;
+        default:
+            /* use search algorithm for unknown types */
+            i = 1;
+            element_id = tvb_get_guint8(tvb, offset);
+            while (element_id != S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC) {
+                vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown-VLQ [%d]: %u", i++, vlq_value);
+                offset += octet_count;
+                element_id = tvb_get_guint8(tvb, offset);
+            }
+            break;
     }
-
+    proto_item_set_len(offsetinfo_tree, offset - start_offset);
     return offset;
 }
 /*******************************************************************************************************
