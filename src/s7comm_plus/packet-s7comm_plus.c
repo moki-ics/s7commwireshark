@@ -71,11 +71,13 @@ static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *t
  */
 #define S7COMMP_PDUTYPE_CONNECT                 0x01
 #define S7COMMP_PDUTYPE_DATA                    0x02
+#define S7COMMP_PDUTYPE_DATAFW1_5               0x03
 #define S7COMMP_PDUTYPE_KEEPALIVE               0xff
 
 static const value_string pdutype_names[] = {
     { S7COMMP_PDUTYPE_CONNECT,                  "Connect" },
     { S7COMMP_PDUTYPE_DATA,                     "Data" },
+    { S7COMMP_PDUTYPE_DATAFW1_5,                "DataFW1_5" },
     { S7COMMP_PDUTYPE_KEEPALIVE,                "Keep Alive" },
     { 0,                                        NULL }
 };
@@ -2446,7 +2448,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
      * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
      */
     next_byte = tvb_get_guint8(tvb, offset);
-    if (pdutype == S7COMMP_PDUTYPE_DATA && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+    if (((pdutype == S7COMMP_PDUTYPE_DATA) || (pdutype == S7COMMP_PDUTYPE_DATAFW1_5)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
@@ -3594,6 +3596,54 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decode the integrity part
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_integrity(tvbuff_t *tvb,
+                         packet_info *pinfo,
+                         proto_tree *tree,
+                         gboolean has_integrity_id,
+                         guint32 offset)
+{
+    guint32 offset_save;
+    guint32 integrity_id = 0;
+    guint8 integrity_len = 0;
+    guint8 octet_count = 0;
+
+    proto_item *integrity_item = NULL;
+    proto_tree *integrity_tree = NULL;
+
+    offset_save = offset;
+    integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
+    integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
+    /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
+     * This check is done by the decoding function for deleteobject. By default there is an Id.
+     */
+    if (has_integrity_id) {
+        integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+        offset += octet_count;
+    }
+
+    integrity_len = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_digestlen, tvb, offset, 1, integrity_len);
+    offset += 1;
+    /* Length should always be 32. If not, then the previous decoding was not correct.
+     * To prevent malformed packet errors, check this.
+     */
+    if (integrity_len == 32) {
+        proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+        offset += integrity_len;
+    } else {
+        proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
+        col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that somthing went wrong */
+    }
+    proto_item_set_len(integrity_tree, offset - offset_save);
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decodes the data part
  *
  *******************************************************************************************************/
@@ -3607,18 +3657,20 @@ s7commp_decode_data(tvbuff_t *tvb,
 {
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
-    proto_item *integrity_item = NULL;
-    proto_tree *integrity_tree = NULL;
 
     guint16 seqnum = 0;
     guint16 functioncode = 0;
     guint8 opcode = 0;
     guint32 offset_save = 0;
     guint8 octet_count = 0;
-    guint32 integrity_id = 0;
-    guint8 integrity_len = 0;
     gboolean has_integrity_id = TRUE;
     gboolean has_objectqualifier = FALSE;
+
+    if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+        offset_save = offset;
+        offset = s7commp_decode_integrity(tvb, pinfo, tree, FALSE, offset);
+        dlength = dlength - (offset - offset_save);
+    }
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
@@ -3785,39 +3837,10 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
     }
 
-    /* The trailing undecoded data of the S7-1500 seems to start with 1 byte / VLQ id,
-     * followed by one byte length (0x20) and 32 bytes of data.
-     */
     if (dlength >= 32) {
         offset_save = offset;
-        integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
-        integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
-        /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
-         * This check is done by the decoding function for deleteobject. By default there is an Id.
-         */
-        if (has_integrity_id) {
-            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-            dlength -= octet_count;
-            offset += octet_count;
-        }
-
-        integrity_len = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_digestlen, tvb, offset, 1, integrity_len);
-        dlength -= 1;
-        offset += 1;
-        /* Length should always be 32. If not, then the previous decoding was not correct.
-         * To prevent malformed packet errors, check this.
-         */
-        if (integrity_len == 32) {
-            proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
-            dlength -= integrity_len;
-            offset += integrity_len;
-        } else {
-            proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
-            col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that somthing went wrong */
-        }
-        proto_item_set_len(integrity_tree, offset - offset_save);
+        offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
+        dlength = dlength - (offset - offset_save);
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
