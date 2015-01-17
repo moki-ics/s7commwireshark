@@ -3666,12 +3666,6 @@ s7commp_decode_data(tvbuff_t *tvb,
     gboolean has_integrity_id = TRUE;
     gboolean has_objectqualifier = FALSE;
 
-    if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
-        offset_save = offset;
-        offset = s7commp_decode_integrity(tvb, pinfo, tree, FALSE, offset);
-        dlength = dlength - (offset - offset_save);
-    }
-
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
     proto_item_append_text(tree, ", Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
@@ -3942,6 +3936,18 @@ dissect_s7commp(tvbuff_t *tvb,
         dlength = tvb_get_ntohs(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
+
+        /* Bei einer 1500 mit Firmware version >= V1.5 wurde der Integritätsteil vom Ende des Datenteils an den Anfang verschoben.
+         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritätsteil. 
+         * Bei >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritätsteil. Der Integritätsteil
+         * zählt aber von der Längenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
+         * der Integritätsteil außerhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
+         * dieser beim Reassemblieren innerhalb der Datenteile liegen würde. 
+         * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefügt.
+         */
+        if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+            offset = s7commp_decode_integrity(tvb, pinfo, s7commp_tree, FALSE, offset);
+        }
 
         /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
         has_trailer = ((signed) packetlength) > (dlength + 4);
