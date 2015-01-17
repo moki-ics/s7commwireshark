@@ -3663,6 +3663,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint8 opcode = 0;
     guint32 offset_save = 0;
     guint8 octet_count = 0;
+    guint32 integrity_id;
     gboolean has_integrity_id = TRUE;
     gboolean has_objectqualifier = FALSE;
 
@@ -3831,10 +3832,22 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
     }
 
-    if (dlength >= 32) {
-        offset_save = offset;
-        offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
-        dlength = dlength - (offset - offset_save);
+    if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+        /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
+         * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
+         */
+        if ((dlength > 4) && has_integrity_id) {
+            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+            offset += octet_count;
+            dlength -= octet_count;
+        }
+    } else {
+        if (dlength >= 32) {
+            offset_save = offset;
+            offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
+            dlength = dlength - (offset - offset_save);
+        }
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
