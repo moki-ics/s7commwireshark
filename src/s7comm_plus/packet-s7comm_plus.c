@@ -3619,6 +3619,9 @@ s7commp_decode_integrity(tvbuff_t *tvb,
     integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
     /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
      * This check is done by the decoding function for deleteobject. By default there is an Id.
+     *
+     * The integrity_id seems to be increased by one in each telegram. The integrity_id in the corresponding
+     * response is calculated by adding the sequencenumber to the integrity_id from request.
      */
     if (has_integrity_id) {
         integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -3951,11 +3954,11 @@ dissect_s7commp(tvbuff_t *tvb,
         offset += 2;
 
         /* Bei einer 1500 mit Firmware version >= V1.5 wurde der Integritätsteil vom Ende des Datenteils an den Anfang verschoben.
-         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritätsteil. 
+         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritätsteil.
          * Bei >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritätsteil. Der Integritätsteil
          * zählt aber von der Längenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
          * der Integritätsteil außerhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
-         * dieser beim Reassemblieren innerhalb der Datenteile liegen würde. 
+         * dieser beim Reassemblieren innerhalb der Datenteile liegen würde.
          * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefügt.
          */
         if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
