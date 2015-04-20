@@ -2032,8 +2032,10 @@ s7comm_decode_ud_pbc_subfunc(tvbuff_t *tvb,
      * and display the data as payload bytes.
      */
     dlength = dlength - 4 - 8;  /* 4 bytes data header, 8 bytes varspec */
-    proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength, ENC_NA);
-    offset += dlength;
+    if (dlength > 0) {
+        proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength, ENC_NA);
+        offset += dlength;
+    }
 
     return offset;
 }
