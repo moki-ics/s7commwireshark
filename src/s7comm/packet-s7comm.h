@@ -42,10 +42,13 @@
 #define S7COMM_UD_SUBF_CPU_READSZL          0x01
 #define S7COMM_UD_SUBF_CPU_MSGS             0x02
 #define S7COMM_UD_SUBF_CPU_TRANSSTOP        0x03
-#define S7COMM_UD_SUBF_CPU_ALARMIND         0x11
-#define S7COMM_UD_SUBF_CPU_ALARMINIT        0x13
-#define S7COMM_UD_SUBF_CPU_ALARMACK1        0x0b
-#define S7COMM_UD_SUBF_CPU_ALARMACK2        0x0c
+#define S7COMM_UD_SUBF_CPU_ALARM8_IND       0x05
+#define S7COMM_UD_SUBF_CPU_NOTIFY_IND       0x06
+#define S7COMM_UD_SUBF_CPU_ALARMSQ_IND      0x11
+#define S7COMM_UD_SUBF_CPU_ALARMS_IND       0x12
+#define S7COMM_UD_SUBF_CPU_ALARMQUERY       0x13
+#define S7COMM_UD_SUBF_CPU_ALARMACK         0x0b
+#define S7COMM_UD_SUBF_CPU_ALARMACK_IND     0x0c
 
 /**************************************************************************
  * Names of types in userdata parameter part
